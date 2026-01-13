@@ -6,7 +6,6 @@ import authRoute from "./routes/auth.route.js";
 
 config();
 
-
 const app = express();
 const PORT = process.env.PORT || 4000;
 
@@ -16,34 +15,37 @@ const corsOptions = {
   optionSuccessStatus: 200,
 };
 
-
-
+// Connect to database
 connectDB();
 
-const server = app.listen(PORT, () => {
-    console.log(`Server is running on  PORT ${PORT}`)
-})
-
+// Middleware - BEFORE routes
 app.use(cors(corsOptions));
-
-// Body parsing middlwares
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Routes
 app.use("/api/v1/auth", authRoute);
 
-
 app.get("/message", (req, res) => {
   res.status(200).json({
     status: "success",
     message: "Welcome to HRMS API",
   });
-})
+});
 
+app.get("/api/v1/test/check", (req, res) => {
+  res.status(200).json({
+    status: "success",
+    message: "Test",
+  });
+});
 
+// Start server AFTER everything is set up
+const server = app.listen(PORT, () => {
+  console.log(`Server is running on PORT ${PORT}`);
+});
 
-// Handle unhandled promise rejections (e.g., database connection errors)
+// Error handlers remain the same
 process.on("unhandledRejection", (err) => {
   console.error("Unhandled Rejection:", err);
   server.close(async () => {
@@ -52,14 +54,12 @@ process.on("unhandledRejection", (err) => {
   });
 });
 
-// Handle uncaught exceptions
 process.on("uncaughtException", async (err) => {
   console.error("Uncaught Exception:", err);
   await disconnectDB();
   process.exit(1);
 });
 
-// Graceful shutdown
 process.on("SIGTERM", async () => {
   console.log("SIGTERM received, shutting down gracefully");
   server.close(async () => {
