@@ -1,85 +1,131 @@
-import { prisma } from "../config/db.js";
+import { getConnection } from "../config/db.js";
+import oracledb from "oracledb";
 import bcrypt from "bcryptjs";
 import { generateToken } from "../utils/auth-token.js";
-
+import { v4 as uuidv4 } from "uuid";
 
 const register = async (req, res) => {
-   
-  const { name, email, password } = req.body;
+  let connection;
+  
+  try {
+    const { name, email, password } = req.body;
 
-  // Check if user already exists
-  const userExists = await prisma.user.findUnique({
-    where: { email: email },
-  });
+    connection = await getConnection();
 
-  if (userExists) {
-    return res
-      .status(400)
-      .json({ error: "User already exists with this email" });
-  }
+    // Check if user already exists
+    const userExists = await connection.execute(
+      `SELECT id FROM users WHERE email = :email`,
+      { email },
+      { outFormat: oracledb.OUT_FORMAT_OBJECT }
+    );
 
-  // Hash Password
-  const salt = await bcrypt.genSalt(10);
-  const hashedPassword = await bcrypt.hash(password, salt);
+    if (userExists.rows.length > 0) {
+      return res
+        .status(400)
+        .json({ error: "User already exists with this email" });
+    }
 
-  // Create User
-  const user = await prisma.user.create({
-    data: {
-      name,
-      email,
-      password: hashedPassword,
-    },
-  });
+    // Hash Password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
 
-  // Generate JWT Token
-  const token = generateToken(user.id, res);
-
-  res.status(201).json({
-    status: "success",
-    data: {
-      user: {
-        id: user.id,
-        name: name,
-        email: email,
+    // Create User
+    const userId = uuidv4();
+    
+    await connection.execute(
+      `INSERT INTO users (id, name, email, password, created_at) 
+       VALUES (:id, :name, :email, :password, CURRENT_TIMESTAMP)`,
+      {
+        id: userId,
+        name: name || null,
+        email,
+        password: hashedPassword,
       },
-      token,
-    },
-  });
+      { autoCommit: true }
+    );
+
+    // Generate JWT Token
+    const token = generateToken(userId, res);
+
+    res.status(201).json({
+      status: "success",
+      data: {
+        user: {
+          id: userId,
+          name: name,
+          email: email,
+        },
+        token,
+      },
+    });
+  } catch (error) {
+    console.error("❌ Register error:", error);
+    res.status(500).json({ error: "Registration failed" });
+  } finally {
+    if (connection) {
+      try {
+        await connection.close();
+      } catch (err) {
+        console.error("Error closing connection:", err);
+      }
+    }
+  }
 };
 
 const login = async (req, res) => {
-    console.log(req.body, "login")
-  const { email, password } = req.body;
+  let connection;
+  
+  try {
+    console.log(req.body, "login");
+    const { email, password } = req.body;
 
-  // Check if user email exists in the table
-  const user = await prisma.user.findUnique({
-    where: { email: email },
-  });
+    connection = await getConnection();
 
-  if (!user) {
-    return res.status(401).json({ error: "Invalid email or password" });
-  }
+    // Check if user email exists in the table
+    const result = await connection.execute(
+      `SELECT id, email, password FROM users WHERE email = :email`,
+      { email },
+      { outFormat: oracledb.OUT_FORMAT_OBJECT }
+    );
 
-  // verify password
-  const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (result.rows.length === 0) {
+      return res.status(401).json({ error: "Invalid email or password" });
+    }
 
-  if (!isPasswordValid) {
-    return res.status(401).json({ error: "Invalid email or password" });
-  }
+    const user = result.rows[0];
 
-  // Generate JWT Token
-  const token = generateToken(user.id, res);
+    // Verify password
+    const isPasswordValid = await bcrypt.compare(password, user.PASSWORD);
 
-  res.status(201).json({
-    status: "success",
-    data: {
-      user: {
-        id: user.id,
-        email: email,
+    if (!isPasswordValid) {
+      return res.status(401).json({ error: "Invalid email or password" });
+    }
+
+    // Generate JWT Token
+    const token = generateToken(user.ID, res);
+
+    res.status(201).json({
+      status: "success",
+      data: {
+        user: {
+          id: user.ID,
+          email: user.EMAIL,
+        },
+        token,
       },
-      token,
-    },
-  });
+    });
+  } catch (error) {
+    console.error("❌ Login error:", error);
+    res.status(500).json({ error: "Login failed" });
+  } finally {
+    if (connection) {
+      try {
+        await connection.close();
+      } catch (err) {
+        console.error("Error closing connection:", err);
+      }
+    }
+  }
 };
 
 const logout = async (req, res) => {
