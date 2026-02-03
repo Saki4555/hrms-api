@@ -32,8 +32,8 @@ const corsOptions = {
   optionSuccessStatus: 200,
 };
 
-// Connect DB
-connectDB();
+// Connect DB - Oracle connection will now be used
+await connectDB();
 
 // Middleware
 app.use(cors(corsOptions));
