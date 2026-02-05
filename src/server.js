@@ -7,6 +7,9 @@ import twilio from "twilio";
 import { connectDB, disconnectDB } from "./config/db.js";
 import authRoute from "./routes/auth.route.js";
 
+import hrOrgRoute from "./routes/hrOrg.route.js"
+import hrOrgPositionRoute from "./routes/hr-org-position.route.js";
+
 import { v2 as cloudinary } from "cloudinary";
 
 config();
@@ -160,6 +163,12 @@ app.get("/api/v1/test/check", (req, res) => {
     message: "Test",
   });
 });
+
+
+app.use("/api/hr-org", hrOrgRoute);
+app.use("/api/hr-org-position", hrOrgPositionRoute);
+
+
 
 /* ===========================
    SERVER
