@@ -51,13 +51,20 @@ export const updateHrOrg = async (id, data) => {
   }
 };
 
-export const deleteHrOrg = async (id) => {
+export const deleteHrOrg = async (id, updatedBy) => {
   const conn = await getConnection();
 
   try {
     const result = await conn.execute(
-      `DELETE FROM HCM.HR_ORG WHERE ID = :ID`,
-      { ID: id },
+      `UPDATE HCM.HR_ORG
+       SET STATUS = 0,
+           UPDATED_BY = :UPDATED_BY,
+           UPDATED_DATE = SYSTIMESTAMP
+       WHERE ID = :ID`,
+      {
+        ID: id,
+        UPDATED_BY: updatedBy
+      },
       { autoCommit: true }
     );
 
@@ -67,12 +74,30 @@ export const deleteHrOrg = async (id) => {
   }
 };
 
+
+// export const deleteHrOrg = async (id) => {
+//   const conn = await getConnection();
+
+//   try {
+//     const result = await conn.execute(
+//       `DELETE FROM HCM.HR_ORG WHERE ID = :ID`,
+//       { ID: id },
+//       { autoCommit: true }
+//     );
+
+//     return result;
+//   } finally {
+//     await conn.close();
+//   }
+// };
+
 export const getHrOrgList = async () => {
   const conn = await getConnection();
 
   try {
     const result = await conn.execute(
-      `SELECT * FROM HCM.HR_ORG`,
+      `SELECT * FROM HCM.HR_ORG 
+       WHERE STATUS = 1`,
       [],
       { outFormat: 4002 } // Object format
     );

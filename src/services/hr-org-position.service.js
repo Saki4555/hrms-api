@@ -68,24 +68,30 @@ export const updateHrOrgPosition = async (id, data) => {
  */
 export const deleteHrOrgPosition = async (id) => {
   const conn = await getConnection();
+
   try {
     const result = await conn.execute(
-      `DELETE FROM HCM.HR_ORG_POSITION WHERE ID = :ID`,
+      `UPDATE HCM.HR_ORG_POSITION
+       SET STATUS = 0
+       WHERE ID = :ID`,
       { ID: id },
       { autoCommit: true }
     );
+
     return result;
   } finally {
     await conn.close();
   }
 };
 
+
 export const getAllHrOrgPositions = async () => {
   const conn = await getConnection();
 
   try {
     const result = await conn.execute(
-      `SELECT * FROM HCM.HR_ORG_POSITION`,
+      `SELECT * FROM HCM.HR_ORG_POSITION
+       WHERE STATUS = 1`,
       [],
       { outFormat: 4002 } // Object format
     );
