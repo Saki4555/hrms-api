@@ -47,15 +47,18 @@ export const updateHrOrgPosition = async (id, data) => {
         ACTUAL_COUNT = :ACTUAL_COUNT,
         EFFECTIVE_START_DATE = :EFFECTIVE_START_DATE,
         EFFECTIVE_END_DATE = :EFFECTIVE_END_DATE,
-        STATUS = :STATUS
+       STATUS = NVL(:STATUS, STATUS)
       WHERE ID = :ID
     `;
 
-    const result = await conn.execute(
-      sql,
-      { ...data, ID: id },
-      { autoCommit: true }
-    );
+   const binds = {
+      ...data,
+      STATUS: data.STATUS ?? null, // ⭐ THIS IS THE FIX
+      ID: id
+    };
+
+    const result = await conn.execute(sql, binds, { autoCommit: true });
+    console.log("binds",result);
 
     return result;
   } finally {
