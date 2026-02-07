@@ -38,6 +38,8 @@ export const create = async (req, res) => {
 export const update = async (req, res) => {
   try {
     const { id } = req.params;
+      console.log("BODY:", req.body);
+
 
     const payload = {
       ...req.body,
@@ -50,6 +52,7 @@ export const update = async (req, res) => {
     };
 
     const result = await updateHrOrgPosition(id, payload);
+    console.log(result)
 
     res.json({
       success: true,

@@ -9,6 +9,7 @@ import authRoute from "./routes/auth.route.js";
 
 import hrOrgRoute from "./routes/hrOrg.route.js"
 import hrOrgPositionRoute from "./routes/hr-org-position.route.js";
+import employeeRoute from "./routes/hr-employee.route.js";
 
 import { v2 as cloudinary } from "cloudinary";
 
@@ -167,6 +168,8 @@ app.get("/api/v1/test/check", (req, res) => {
 
 app.use("/api/hr-org", hrOrgRoute);
 app.use("/api/hr-org-position", hrOrgPositionRoute);
+app.use("/api/hr-employee", employeeRoute);
+
 
 
 
