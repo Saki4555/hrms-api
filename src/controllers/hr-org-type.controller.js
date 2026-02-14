@@ -3,7 +3,7 @@ import * as service from "../services/hr-org-type.service.js";
 export const getAll = async (req, res) => {
   try {
     const data = await service.getAllHrOrgTypes();
-    res.json({ success: true, count:data.length, data:data });
+    res.json({ success: true, count:data.length, data });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

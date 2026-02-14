@@ -1,7 +1,5 @@
 import { getConnection } from "../config/db.js";
-import { v4 as uuidv4 } from "uuid";
 
-/* .............todo................*/
 /**
  * GET ALL (only active records)
  */
@@ -9,10 +7,17 @@ export const getAllHrOrgTypes = async () => {
   const conn = await getConnection();
   try {
     const result = await conn.execute(
-      `SELECT *
-       FROM HCM.HR_ORG_TYPE
-       WHERE STATUS = 1
-       ORDER BY ID`
+      `SELECT 
+  ID,
+  ORG_TYPE,
+  TO_CHAR(EFFECTIVE_START_DATE, 'YYYY-MM-DD') AS EFFECTIVE_START_DATE,
+  TO_CHAR(EFFECTIVE_END_DATE, 'YYYY-MM-DD') AS EFFECTIVE_END_DATE,
+  STATUS
+FROM HCM.HR_ORG_TYPE
+WHERE STATUS = 1
+      `,
+       [],
+      { outFormat: 4002 }
     );
     return result.rows;
   } finally {
@@ -24,30 +29,36 @@ export const getAllHrOrgTypes = async () => {
  * INSERT
  */
 
-
-
 export const createHrOrgType = async (data) => {
   const conn = await getConnection();
+
   try {
-    const id = uuidv4(); // UUID generate
-
     await conn.execute(
-      `INSERT INTO HCM.HR_ORG_TYPE
-       (ID, ORG_TYPE, EFFECTIVE_START_DATE, EFFECTIVE_END_DATE, STATUS)
-       VALUES (:id, :org_type, :start_date, :end_date, 1)`,
+      `INSERT INTO HCM.HR_ORG_TYPE (
+          ID,
+          ORG_TYPE,
+          EFFECTIVE_START_DATE,
+          EFFECTIVE_END_DATE,
+          STATUS
+       )
+       VALUES (
+          HCM.HR_ORG_TYPE_SEQ.nextval,
+          :ORG_TYPE,
+          :EFFECTIVE_START_DATE,
+          :EFFECTIVE_END_DATE,
+          1
+       )`,
       {
-        id: id,
-        org_type: data.org_type,
-        start_date: data.effective_start_date
-          ? new Date(data.effective_start_date)
+        ORG_TYPE: data.ORG_TYPE,
+        EFFECTIVE_START_DATE: data.EFFECTIVE_START_DATE
+          ? new Date(data.EFFECTIVE_START_DATE + "T00:00:00")
           : null,
-        end_date: data.effective_end_date
-          ? new Date(data.effective_end_date)
+        EFFECTIVE_END_DATE: data.EFFECTIVE_END_DATE
+          ? new Date(data.EFFECTIVE_END_DATE + "T00:00:00")
           : null
-      }
+      },
+      { autoCommit: true }
     );
-
-    return id; // inserted id return
 
   } finally {
     await conn.close();
@@ -57,27 +68,36 @@ export const createHrOrgType = async (data) => {
 /**
  * UPDATE
  */
+
+
 export const updateHrOrgType = async (id, data) => {
   const conn = await getConnection();
+
   try {
-    await conn.execute(
+    const result = await conn.execute(
       `UPDATE HCM.HR_ORG_TYPE
-       SET ORG_TYPE = :org_type,
-           EFFECTIVE_START_DATE = :start_date,
-           EFFECTIVE_END_DATE = :end_date
-       WHERE ID = :id`,
+       SET ORG_TYPE = :ORG_TYPE,
+           EFFECTIVE_START_DATE = :EFFECTIVE_START_DATE,
+           EFFECTIVE_END_DATE = :EFFECTIVE_END_DATE
+       WHERE ID = :ID`,
       {
-        id,
-        org_type: data.org_type,
-        start_date: data.effective_start_date,
-        end_date: data.effective_end_date
-      }
+        ID: id,
+        ORG_TYPE: data.ORG_TYPE,
+       EFFECTIVE_START_DATE: data.EFFECTIVE_START_DATE
+          ? new Date(data.EFFECTIVE_START_DATE + "T00:00:00")
+          : null,
+        EFFECTIVE_END_DATE: data.EFFECTIVE_END_DATE
+          ? new Date(data.EFFECTIVE_END_DATE + "T00:00:00")
+          : null
+      },
+      { autoCommit: true }
     );
+
+    return result.rowsAffected;
   } finally {
     await conn.close();
   }
 };
-
 /**
  * SOFT DELETE (STATUS = 0)
  */
@@ -85,12 +105,13 @@ export const deleteHrOrgType = async (id) => {
   const conn = await getConnection();
   try {
     await conn.execute(
-      `UPDATE HCM.HR_ORG_TYPE
-       SET STATUS = 0,
-           EFFECTIVE_END_DATE = SYSDATE
-       WHERE ID = :id`,
-      { id }
-    );
+  `UPDATE HCM.HR_ORG_TYPE
+   SET STATUS = 0,
+       EFFECTIVE_END_DATE = SYSDATE
+   WHERE ID = :id`,
+  { id },
+  { autoCommit: true }
+);
   } finally {
     await conn.close();
   }

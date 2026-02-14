@@ -1,15 +1,15 @@
 import { getConnection } from "../config/db.js";
 
 
-/* .............todo................*/
+
 
 /* INSERT */
 export const create = async (data) => {
-  let conn;
+  const conn = await getConnection();
+  
   try {
-    conn = await getConnection();
-
-    await conn.execute(
+   
+     await conn.execute(
       `INSERT INTO HCM.HR_PERSON_TYPE (
           PERSON_TYPE_ID,
           PERSON_TYPE,
@@ -18,7 +18,7 @@ export const create = async (data) => {
           EFFECTIVE_END_DATE,
           STATUS
       ) VALUES (
-           :PERSON_TYPE_ID,
+          HCM.HR_PERSON_TYPE_SEQ.NEXTVAL,
           :PERSON_TYPE,
           :DESCRIPTION,
           :EFFECTIVE_START_DATE,
@@ -26,24 +26,22 @@ export const create = async (data) => {
           1
       )`,
       {
-         PERSON_TYPE_ID:data.PERSON_TYPE_ID,
         PERSON_TYPE: data.PERSON_TYPE,
         DESCRIPTION: data.DESCRIPTION,
-        EFFECTIVE_START_DATE: new Date(data.EFFECTIVE_START_DATE),
+        EFFECTIVE_START_DATE: data.EFFECTIVE_START_DATE
+          ? new Date(data.EFFECTIVE_START_DATE + "T00:00:00")
+          : null,
         EFFECTIVE_END_DATE: data.EFFECTIVE_END_DATE
-          ? new Date(data.EFFECTIVE_END_DATE)
+          ? new Date(data.EFFECTIVE_END_DATE + "T00:00:00")
           : null
       },
       { autoCommit: true }
     );
 
-    return { message: "Created successfully" };
+   
 
-  } catch (err) {
-    console.error("Create Error:", err);
-    throw err;
-  } finally {
-    if (conn) await conn.close();
+  }  finally {
+     await conn.close();
   }
 };
 
@@ -54,13 +52,19 @@ export const getAll = async () => {
   try {
     conn = await getConnection();
 
-    const result = await conn.execute(
-      `SELECT *
-       FROM HCM.HR_PERSON_TYPE
-       WHERE STATUS = 1`,
-      {},
-      { outFormat: 4002 }
-    );
+   const result = await conn.execute(
+  `SELECT 
+      PERSON_TYPE_ID,
+      PERSON_TYPE,
+      DESCRIPTION,
+      TO_CHAR(EFFECTIVE_START_DATE, 'YYYY-MM-DD') AS EFFECTIVE_START_DATE,
+      TO_CHAR(EFFECTIVE_END_DATE, 'YYYY-MM-DD') AS EFFECTIVE_END_DATE,
+      STATUS
+   FROM HCM.HR_PERSON_TYPE
+   WHERE STATUS = 1`,
+  [],
+  { outFormat: 4002 }
+);
 
     return result.rows;
 
@@ -117,10 +121,12 @@ export const update = async (id, data) => {
         PERSON_TYPE_ID: Number(id),
         PERSON_TYPE: data.PERSON_TYPE,
         DESCRIPTION: data.DESCRIPTION,
-        EFFECTIVE_START_DATE: new Date(data.EFFECTIVE_START_DATE),
-        EFFECTIVE_END_DATE: data.EFFECTIVE_END_DATE
-          ? new Date(data.EFFECTIVE_END_DATE)
-          : null
+       EFFECTIVE_START_DATE: data.EFFECTIVE_START_DATE
+  ? new Date(data.EFFECTIVE_START_DATE + "T00:00:00")
+  : null,
+EFFECTIVE_END_DATE: data.EFFECTIVE_END_DATE
+  ? new Date(data.EFFECTIVE_END_DATE + "T00:00:00")
+  : null
       },
       { autoCommit: true }
     );
