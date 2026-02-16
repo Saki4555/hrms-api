@@ -12,6 +12,8 @@ import hrOrgPositionRoute from "./routes/hr-org-position.route.js";
 import employeeRoute from "./routes/hr-employee.route.js";
 import hrPersonTypeRoutes from "./routes/hr-person-type.route.js";
 import hrOrgTypeRoutes from "./routes/hr-org-type.route.js";
+import locationRoutes from "./routes/hr-location.route.js";
+
 
 
 import { v2 as cloudinary } from "cloudinary";
@@ -174,6 +176,7 @@ app.use("/api/hr-org-position", hrOrgPositionRoute);
 app.use("/api/hr-employee", employeeRoute);
 app.use("/api/hr-person-type", hrPersonTypeRoutes);
 app.use("/api/hr-org-type", hrOrgTypeRoutes);
+app.use("/api/hr-location", locationRoutes);
 
 
 

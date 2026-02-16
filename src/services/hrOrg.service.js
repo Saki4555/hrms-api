@@ -67,7 +67,7 @@ export const deleteHrOrg = async (id, updatedBy) => {
       },
       { autoCommit: true }
     );
-
+    
     return result;
   } finally {
     await conn.close();
@@ -91,19 +91,81 @@ export const deleteHrOrg = async (id, updatedBy) => {
 //   }
 // };
 
+// export const getHrOrgList = async () => {
+//   const conn = await getConnection();
+
+//   const sql = `
+//     SELECT o.*, t.org_type
+//     FROM hr_org o
+//     LEFT JOIN hr_org_type t ON o.org_type_id = t.id
+//     WHERE o.org_type_id = (
+//       SELECT id FROM hr_org_type WHERE org_type = 'Cost Center'
+//     )
+//   `;
+
+//   const result = await conn.execute(sql, [], { outFormat: 4002 });
+//   await conn.close();
+
+//   return result.rows;
+// };
+
 export const getHrOrgList = async () => {
   const conn = await getConnection();
 
-  try {
-    const result = await conn.execute(
-      `SELECT * FROM HCM.HR_ORG 
-       WHERE STATUS = 1`,
-      [],
-      { outFormat: 4002 } // Object format
-    );
+  const sql = `
+    SELECT 
+      o.*,
+      t.org_type,
+      p.name AS parent_org_name,
+      c.name AS cost_center_name
+    FROM hr_org o
+    LEFT JOIN hr_org_type t ON o.org_type_id = t.id
+    LEFT JOIN hr_org p ON o.parent_org_id = p.id
+    LEFT JOIN hr_org c ON o.cost_center_id = c.id
+  `;
 
-    return result.rows;
-  } finally {
-    await conn.close();
-  }
+  const result = await conn.execute(sql, [], { outFormat: 4002 });
+  await conn.close();
+
+  return result.rows;
 };
+
+
+
+
+
+
+
+// export const getHrOrgList = async () => {
+//   const conn = await getConnection();
+
+//   const sql = `
+//     SELECT o.*, t.org_type
+//     FROM hr_org o
+//     LEFT JOIN hr_org_type t ON o.org_type_id = t.id
+//   `;
+
+//   const result = await conn.execute(sql, [], { outFormat: 4002 });
+//   await conn.close();
+
+//   return result.rows;
+// };
+
+
+
+// export const getHrOrgList = async () => {
+//   const conn = await getConnection();
+
+//   try {
+//     const result = await conn.execute(
+//       `SELECT * FROM HCM.HR_ORG 
+//        WHERE STATUS = 1`,
+//       [],
+//       { outFormat: 4002 } // Object format
+//     );
+
+//     return result.rows;
+//   } finally {
+//     await conn.close();
+//   }
+// };
