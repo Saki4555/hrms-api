@@ -1,3 +1,4 @@
+import { success } from "zod";
 import {
   insertHrOrg,
   updateHrOrg,
@@ -20,6 +21,7 @@ export const update = async (req, res) => {
     res.json({ message: "Updated successfully"});
   } catch (err) {
     res.status(500).json({ error: err.message });
+    console.log(err)
   }
 };
 
@@ -35,8 +37,17 @@ export const remove = async (req, res) => {
 export const list = async (req, res) => {
   try {
     const data = await getHrOrgList();
-    res.json({ data });
+    res.json({success:true, count:data.length, data});
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
+
+// export const list = async (req, res) => {
+//   try {
+//     const data = await getHrOrgList();
+//     res.json({ data });
+//   } catch (err) {
+//     res.status(500).json({ error: err.message });
+//   }
+// };

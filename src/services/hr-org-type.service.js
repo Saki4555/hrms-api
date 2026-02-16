@@ -1,5 +1,34 @@
 import { getConnection } from "../config/db.js";
 
+
+
+/**
+ * GET SINGLE BY ID
+ */
+export const getHrOrgTypeById = async (id) => {
+  const conn = await getConnection();
+
+  try {
+    const result = await conn.execute(
+      `SELECT 
+         ID,
+         ORG_TYPE,
+         TO_CHAR(EFFECTIVE_START_DATE, 'YYYY-MM-DD') AS EFFECTIVE_START_DATE,
+         TO_CHAR(EFFECTIVE_END_DATE, 'YYYY-MM-DD') AS EFFECTIVE_END_DATE,
+         STATUS
+       FROM HCM.HR_ORG_TYPE
+       WHERE ID = :ID`,
+      { ID: id },
+      { outFormat: 4002 }
+    );
+
+    return result.rows[0]; // single record
+  } finally {
+    await conn.close();
+  }
+};
+
+
 /**
  * GET ALL (only active records)
  */

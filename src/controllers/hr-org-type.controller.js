@@ -35,3 +35,21 @@ export const softDelete = async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 };
+
+
+
+export const getOrgTypeById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const data = await service.getHrOrgTypeById(id);
+
+    if (!data) {
+      return res.status(404).json({ message: "Org Type Not Found" });
+    }
+
+    res.json(data);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+};
