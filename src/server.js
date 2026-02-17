@@ -13,6 +13,10 @@ import employeeRoute from "./routes/hr-employee.route.js";
 import hrPersonTypeRoutes from "./routes/hr-person-type.route.js";
 import hrOrgTypeRoutes from "./routes/hr-org-type.route.js";
 import locationRoutes from "./routes/hr-location.route.js";
+import positionRoutes from "./routes/hr-position.route.js";
+
+import hrGradeRoutes from "./routes/hr-grade.route.js";
+
 
 
 
@@ -177,6 +181,9 @@ app.use("/api/hr-employee", employeeRoute);
 app.use("/api/hr-person-type", hrPersonTypeRoutes);
 app.use("/api/hr-org-type", hrOrgTypeRoutes);
 app.use("/api/hr-location", locationRoutes);
+app.use("/api/hr-position", positionRoutes);
+app.use("/api/hr-grade", hrGradeRoutes);
+
 
 
 

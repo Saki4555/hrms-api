@@ -88,19 +88,49 @@ export const deleteHrOrgPosition = async (id) => {
 };
 
 
+// export const getAllHrOrgPositions = async () => {
+//   const conn = await getConnection();
+
+//   try {
+//     const result = await conn.execute(
+//       `SELECT * FROM HCM.HR_ORG_POSITION
+//        WHERE STATUS = 1`,
+//       [],
+//       { outFormat: 4002 } // Object format
+//     );
+//     return result.rows;
+//   } finally {
+//     await conn.close();
+//   }
+// };
+
 export const getAllHrOrgPositions = async () => {
-  const conn = await getConnection();
+  const connection = await getConnection();
 
   try {
-    const result = await conn.execute(
-      `SELECT * FROM HCM.HR_ORG_POSITION
-       WHERE STATUS = 1`,
+    const result = await connection.execute(
+      `
+      SELECT 
+        op.*,                     
+        o.name AS org_name,        
+        p.title AS position_title,
+        p.grade,
+        p.levels
+      FROM hr_org_position op
+      LEFT JOIN hr_org o 
+        ON op.org_id = o.id
+      LEFT JOIN hr_position p 
+        ON op.position_id = p.position_id
+      ORDER BY op.id DESC
+      `,
       [],
-      { outFormat: 4002 } // Object format
+      { outFormat: 4002 } // oracledb.OUT_FORMAT_OBJECT
     );
+
     return result.rows;
   } finally {
-    await conn.close();
+    await connection.close();
   }
 };
+
 

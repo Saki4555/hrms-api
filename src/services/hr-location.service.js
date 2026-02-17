@@ -1,15 +1,40 @@
 
 import { getConnection } from "../config/db.js";
 
+// export const createLocation = async (data) => {
+//   const conn = await getConnection();
+//   const sql = `
+//     INSERT INTO HR_LOCATION ( LOCATION_NAME, STATUS)
+//     VALUES ( :name, :1)
+//   `;
+//   await conn.execute(sql, data, { autoCommit: true });
+//   await conn.close();
+// };
+
 export const createLocation = async (data) => {
-  const conn = await getConnection();
-  const sql = `
-    INSERT INTO HR_LOCATION (ID, LOCATION_NAME, STATUS)
-    VALUES (HCM.HR_LOCATION_SEQ.NEXTVAL, :name, :status)
-  `;
-  await conn.execute(sql, data, { autoCommit: true });
-  await conn.close();
+  let conn;
+  try {
+    conn = await getConnection();
+
+    const sql = `
+      INSERT INTO HR_LOCATION (LOCATION_NAME, STATUS)
+      VALUES (:name, 1)
+    `;
+
+    await conn.execute(
+      sql,
+      {
+        name: data.name,
+       
+      },
+       { autoCommit: true }
+    );
+
+  } finally {
+    if (conn) await conn.close();
+  }
 };
+
 
 export const updateLocation = async (id, data) => {
   const conn = await getConnection();
