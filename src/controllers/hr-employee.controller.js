@@ -7,18 +7,36 @@ import {
 } from "../services/hr-employee.service.js";
 
 /* CREATE */
+// export const createEmployeeHandler = async (req, res) => {
+//   try {
+//    const data =  await createEmployee(req.body);
+//  console.log("data",data)
+//     res.status(201).json({
+//       message: "HR_EMPLOYEE created successfully"
+     
+//     });
+//   } catch (error) {
+//     res.status(500).json({ error: error.message });
+//   }
+// };
+
 export const createEmployeeHandler = async (req, res) => {
   try {
-   const data =  await createEmployee(req.body);
- console.log("data",data)
+    const result = await createEmployee(req.body);
     res.status(201).json({
-      message: "HR_EMPLOYEE created successfully"
-     
+      success: true,
+      message: "Employee Created Successfully",
+      // data: result
     });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: "Employee Create Failed",
+      error: err.message
+    });
   }
 };
+
 
 
 /* UPDATE */

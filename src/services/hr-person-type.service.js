@@ -11,14 +11,14 @@ export const create = async (data) => {
    
      await conn.execute(
       `INSERT INTO HCM.HR_PERSON_TYPE (
-          PERSON_TYPE_ID,
+          
           PERSON_TYPE,
           DESCRIPTION,
           EFFECTIVE_START_DATE,
           EFFECTIVE_END_DATE,
           STATUS
       ) VALUES (
-          HCM.HR_PERSON_TYPE_SEQ.NEXTVAL,
+         
           :PERSON_TYPE,
           :DESCRIPTION,
           :EFFECTIVE_START_DATE,
