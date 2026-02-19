@@ -64,14 +64,14 @@ export const createHrOrgType = async (data) => {
   try {
     await conn.execute(
       `INSERT INTO HCM.HR_ORG_TYPE (
-          ID,
+          
           ORG_TYPE,
           EFFECTIVE_START_DATE,
           EFFECTIVE_END_DATE,
           STATUS
        )
        VALUES (
-          HCM.HR_ORG_TYPE_SEQ.nextval,
+          
           :ORG_TYPE,
           :EFFECTIVE_START_DATE,
           :EFFECTIVE_END_DATE,
