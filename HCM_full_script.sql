@@ -2533,7 +2533,7 @@ CREATE OR REPLACE FUNCTION HCM.taka_in_words (p_amount NUMBER)
 RETURN VARCHAR2
 IS
    -------------------------------------------------------------------
-   -- PURE number-to-words function (does NOT add “Taka” or “Paisa”)
+   -- PURE number-to-words function (does NOT add ï¿½Takaï¿½ or ï¿½Paisaï¿½)
    -------------------------------------------------------------------
    FUNCTION num_words(n NUMBER) RETURN VARCHAR2 IS
       w VARCHAR2(4000);

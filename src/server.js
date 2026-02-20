@@ -16,6 +16,7 @@ import locationRoutes from "./routes/hr-location.route.js";
 import positionRoutes from "./routes/hr-position.route.js";
 
 import hrGradeRoutes from "./routes/hr-grade.route.js";
+import companyRoutes from "./routes/hr-company.routes.js";
 
 
 
@@ -183,6 +184,7 @@ app.use("/api/hr-org-type", hrOrgTypeRoutes);
 app.use("/api/hr-location", locationRoutes);
 app.use("/api/hr-position", positionRoutes);
 app.use("/api/hr-grade", hrGradeRoutes);
+app.use("/api/hr-company", companyRoutes);
 
 
 
