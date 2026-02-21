@@ -12,9 +12,9 @@ export const createEmployeeHandler = async (req, res) => {
   try {
     const result = await createEmployee(req.body);
     res.status(201).json({
-      success: true,
+      
       message: "Employee Created Successfully",
-      // data: results
+      ...result
     });
   } catch (err) {
     res.status(500).json({
