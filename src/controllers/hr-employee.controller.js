@@ -6,19 +6,7 @@ import {
   getEmployeeById
 } from "../services/hr-employee.service.js";
 
-/* CREATE */
-// export const createEmployeeHandler = async (req, res) => {
-//   try {
-//    const data =  await createEmployee(req.body);
-//  console.log("data",data)
-//     res.status(201).json({
-//       message: "HR_EMPLOYEE created successfully"
-     
-//     });
-//   } catch (error) {
-//     res.status(500).json({ error: error.message });
-//   }
-// };
+
 
 export const createEmployeeHandler = async (req, res) => {
   try {
@@ -26,7 +14,7 @@ export const createEmployeeHandler = async (req, res) => {
     res.status(201).json({
       success: true,
       message: "Employee Created Successfully",
-      // data: result
+      // data: results
     });
   } catch (err) {
     res.status(500).json({
