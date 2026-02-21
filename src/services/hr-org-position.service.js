@@ -53,7 +53,7 @@ export const updateHrOrgPosition = async (id, data) => {
 
    const binds = {
       ...data,
-      STATUS: data.STATUS ?? null, // ⭐ THIS IS THE FIX
+      STATUS: data.STATUS ?? null, 
       ID: id
     };
 
@@ -88,21 +88,9 @@ export const deleteHrOrgPosition = async (id) => {
 };
 
 
-// export const getAllHrOrgPositions = async () => {
-//   const conn = await getConnection();
 
-//   try {
-//     const result = await conn.execute(
-//       `SELECT * FROM HCM.HR_ORG_POSITION
-//        WHERE STATUS = 1`,
-//       [],
-//       { outFormat: 4002 } // Object format
-//     );
-//     return result.rows;
-//   } finally {
-//     await conn.close();
-//   }
-// };
+
+
 
 export const getAllHrOrgPositions = async () => {
   const connection = await getConnection();
@@ -121,10 +109,11 @@ export const getAllHrOrgPositions = async () => {
         ON op.org_id = o.id
       LEFT JOIN hr_position p 
         ON op.position_id = p.position_id
+         WHERE op.STATUS = 1
       ORDER BY op.id DESC
       `,
       [],
-      { outFormat: 4002 } // oracledb.OUT_FORMAT_OBJECT
+      { outFormat: 4002 } 
     );
 
     return result.rows;
