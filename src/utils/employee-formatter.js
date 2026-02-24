@@ -30,35 +30,74 @@ export const formatEmployee = (row) => {
     LAST_UPDATE_BY:       row.LAST_UPDATE_BY,
     LAST_UPDATE_DATE:     row.LAST_UPDATE_DATE,
 
-    presentAddress: {
-      ADDRESS_TYPE_ID:   1,
-      ADDRESS_TYPE_NAME: "Present",
-      ADDRESS1:          row.PRESENT_ADDRESS1,
-      ADDRESS1_B:        row.PRESENT_ADDRESS1_B,
-      AREA:              row.PRESENT_AREA,
-      UPAZILLA:          row.PRESENT_UPAZILLA,
-      UNIONS:            row.PRESENT_UNIONS,
-      DISTRICT:          row.PRESENT_DISTRICT,
-      REGION:            row.PRESENT_REGION,
-      COUNTRY:           row.PRESENT_COUNTRY,
-      EFFECTIVE_START_DATE: row.PRESENT_EFFECTIVE_START_DATE,
-      EFFECTIVEEND_DATE:    row.PRESENT_EFFECTIVEEND_DATE,
-    },
+    // presentAddress: {
+    //   ADDRESS_TYPE_ID:   1,
+    //   ADDRESS_TYPE_NAME: "Present",
+    //   ADDRESS1:          row.PRESENT_ADDRESS1,
+    //   ADDRESS1_B:        row.PRESENT_ADDRESS1_B,
+    //   AREA:              row.PRESENT_AREA,
+    //   UPAZILLA:          row.PRESENT_UPAZILLA,
+    //   UNIONS:            row.PRESENT_UNIONS,
+    //   DISTRICT:          row.PRESENT_DISTRICT,
+    //   REGION:            row.PRESENT_REGION,
+    //   COUNTRY:           row.PRESENT_COUNTRY,
+    //   EFFECTIVE_START_DATE: row.PRESENT_EFFECTIVE_START_DATE,
+    //   EFFECTIVEEND_DATE:    row.PRESENT_EFFECTIVEEND_DATE,
+    // },
 
-    permanentAddress: {
-      ADDRESS_TYPE_ID:   2,
-      ADDRESS_TYPE_NAME: "Permanent",
-      ADDRESS1:          row.PERMANENT_ADDRESS1,
-      ADDRESS1_B:        row.PERMANENT_ADDRESS1_B,
-      AREA:              row.PERMANENT_AREA,
-      UPAZILLA:          row.PERMANENT_UPAZILLA,
-      UNIONS:            row.PERMANENT_UNIONS,
-      DISTRICT:          row.PERMANENT_DISTRICT,
-      REGION:            row.PERMANENT_REGION,
-      COUNTRY:           row.PERMANENT_COUNTRY,
-      EFFECTIVE_START_DATE: row.PERMANENT_EFFECTIVE_START_DATE,
-      EFFECTIVEEND_DATE:    row.PERMANENT_EFFECTIVEEND_DATE,
-    },
+    // permanentAddress: {
+    //   ADDRESS_TYPE_ID:   2,
+    //   ADDRESS_TYPE_NAME: "Permanent",
+    //   ADDRESS1:          row.PERMANENT_ADDRESS1,
+    //   ADDRESS1_B:        row.PERMANENT_ADDRESS1_B,
+    //   AREA:              row.PERMANENT_AREA,
+    //   UPAZILLA:          row.PERMANENT_UPAZILLA,
+    //   UNIONS:            row.PERMANENT_UNIONS,
+    //   DISTRICT:          row.PERMANENT_DISTRICT,
+    //   REGION:            row.PERMANENT_REGION,
+    //   COUNTRY:           row.PERMANENT_COUNTRY,
+    //   EFFECTIVE_START_DATE: row.PERMANENT_EFFECTIVE_START_DATE,
+    //   EFFECTIVEEND_DATE:    row.PERMANENT_EFFECTIVEEND_DATE,
+    // },
+
+
+presentAddress: {
+  ADDRESS_TYPE_ID:      1,
+  ADDRESS_TYPE_NAME:    "Present",
+  ADDRESS1:             row.PRESENT_ADDRESS1,
+  ADDRESS1_B:           row.PRESENT_ADDRESS1_B,
+  AREA:                 row.PRESENT_AREA,
+  UPAZILLA:             row.PRESENT_UPAZILLA,
+  UPAZILLA_ID:          row.PRESENT_UPAZILLA_ID  ?? null,   // ✅
+  UNIONS:               row.PRESENT_UNIONS,
+  DISTRICT:             row.PRESENT_DISTRICT,
+  DISTRICT_ID:          row.PRESENT_DISTRICT_ID  ?? null,   // ✅
+  REGION:               row.PRESENT_REGION,
+  REGION_ID:            row.PRESENT_REGION_ID    ?? null,   // ✅
+  COUNTRY:              row.PRESENT_COUNTRY,
+  COUNTRY_ID:           row.PRESENT_COUNTRY_ID   ?? null,   // ✅
+  EFFECTIVE_START_DATE: row.PRESENT_EFFECTIVE_START_DATE,
+  EFFECTIVEEND_DATE:    row.PRESENT_EFFECTIVEEND_DATE,
+},
+
+permanentAddress: {
+  ADDRESS_TYPE_ID:      2,
+  ADDRESS_TYPE_NAME:    "Permanent",
+  ADDRESS1:             row.PERMANENT_ADDRESS1,
+  ADDRESS1_B:           row.PERMANENT_ADDRESS1_B,
+  AREA:                 row.PERMANENT_AREA,
+  UPAZILLA:             row.PERMANENT_UPAZILLA,
+  UPAZILLA_ID:          row.PERMANENT_UPAZILLA_ID  ?? null, // ✅
+  UNIONS:               row.PERMANENT_UNIONS,
+  DISTRICT:             row.PERMANENT_DISTRICT,
+  DISTRICT_ID:          row.PERMANENT_DISTRICT_ID  ?? null, // ✅
+  REGION:               row.PERMANENT_REGION,
+  REGION_ID:            row.PERMANENT_REGION_ID    ?? null, // ✅
+  COUNTRY:              row.PERMANENT_COUNTRY,
+  COUNTRY_ID:           row.PERMANENT_COUNTRY_ID   ?? null, // ✅
+  EFFECTIVE_START_DATE: row.PERMANENT_EFFECTIVE_START_DATE,
+  EFFECTIVEEND_DATE:    row.PERMANENT_EFFECTIVEEND_DATE,
+},
 
     assignment: {
       ASSIGNMENT_ID:   row.ASSIGNMENT_ID,

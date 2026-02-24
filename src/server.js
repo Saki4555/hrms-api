@@ -15,8 +15,15 @@ import hrOrgTypeRoutes from "./routes/hr-org-type.route.js";
 import locationRoutes from "./routes/hr-location.route.js";
 import positionRoutes from "./routes/hr-position.route.js";
 
+
 import hrGradeRoutes from "./routes/hr-grade.route.js";
 import companyRoutes from "./routes/hr-company.routes.js";
+import countryRoutes from "./routes/country.routes.js";
+import districtRoutes from "./routes/district.routes.js";
+import regionRoutes from "./routes/region.routes.js";
+import upazillaRoutes from "./routes/upazilla.routes.js";
+import location  from "./routes/location.routes.js";
+
 
 
 
@@ -185,6 +192,11 @@ app.use("/api/hr-location", locationRoutes);
 app.use("/api/hr-position", positionRoutes);
 app.use("/api/hr-grade", hrGradeRoutes);
 app.use("/api/hr-company", companyRoutes);
+app.use("/api/country", countryRoutes);
+app.use("/api/district", districtRoutes);
+app.use("/api/region", regionRoutes);
+app.use("/api/upazilla", upazillaRoutes);
+app.use("/api/locations", location);
 
 
 

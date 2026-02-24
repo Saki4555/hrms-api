@@ -231,9 +231,9 @@ export const updateEmployee = async (personId, data) => {
                EFFECTIVE_START_DATE = TO_DATE(:EFFECTIVE_START_DATE, 'YYYY-MM-DD'),
                EFFECTIVEEND_DATE    = TO_DATE(:EFFECTIVEEND_DATE, 'YYYY-MM-DD'),
                LAST_UPDATE_DATE     = SYSDATE
-         WHERE EMP_NO = :EMP_NO AND ADDRESS_TYPE_ID = :ADDRESS_TYPE_ID
+         WHERE PERSON_ID = :PERSON_ID AND ADDRESS_TYPE_ID = :ADDRESS_TYPE_ID
       `, {
-        EMP_NO:               employee.EMP_NO,
+        PERSON_ID:            personId,
         ADDRESS_TYPE_ID:      typeId,
         ADDRESS1:             addr.ADDRESS1             ?? null,
         ADDRESS1_B:           addr.ADDRESS1_B           ?? null,
@@ -383,6 +383,80 @@ export const softDeleteEmployee = async (personId) => {
 /* ─────────────────────────────────────────
    GET ALL EMPLOYEES
 ───────────────────────────────────────── */
+// export const getEmployeeList = async () => {
+//   const conn = await getConnection();
+
+//   const result = await conn.execute(`
+//     SELECT
+//       e.PERSON_ID, e.EMP_NO, e.TITLE, e.FIRST_NAME, e.LAST_NAME,
+//       e.FATHERS_NAME, e.FATHERS_NAME_B, e.MOTHERS_NAME, e.MOTHERS_NAME_B,
+//       e.GENDER, e.DATE_OF_BIRTH, e.NID, e.BIRTH_REG_NO,
+//       e.TOWN_OF_BIRTH, e.REGION_OF_BIRTH, e.COUNTRY_OF_BIRTH,
+//       e.MARRITIAL_STATUS, e.NATIONALITY, e.JOIN_DATE,
+//       e.PERSON_TYPE_ID, e.REG_DISABILITY,
+//       e.EFFECTIVE_START_DATE AS EMP_EFFECTIVE_START_DATE,
+//       e.EFFECTIVEEND_DATE    AS EMP_EFFECTIVEEND_DATE,
+//       e.STATUS               AS EMP_STATUS,
+//       e.CREATION_DATE, e.LAST_UPDATE_DATE, e.LAST_UPDATE_BY,
+
+//       pt.PERSON_TYPE,
+
+//       pa.ADDRESS1    AS PRESENT_ADDRESS1,
+//       pa.ADDRESS1_B  AS PRESENT_ADDRESS1_B,
+//       pa.COUNTRY     AS PRESENT_COUNTRY,
+//       pa.REGION      AS PRESENT_REGION,
+//       pa.DISTRICT    AS PRESENT_DISTRICT,
+//       pa.UPAZILLA    AS PRESENT_UPAZILLA,
+//       pa.UNIONS      AS PRESENT_UNIONS,
+//       pa.AREA        AS PRESENT_AREA,
+//       pa.EFFECTIVE_START_DATE AS PRESENT_EFFECTIVE_START_DATE,
+//       pa.EFFECTIVEEND_DATE    AS PRESENT_EFFECTIVEEND_DATE,
+
+//       pma.ADDRESS1    AS PERMANENT_ADDRESS1,
+//       pma.ADDRESS1_B  AS PERMANENT_ADDRESS1_B,
+//       pma.COUNTRY     AS PERMANENT_COUNTRY,
+//       pma.REGION      AS PERMANENT_REGION,
+//       pma.DISTRICT    AS PERMANENT_DISTRICT,
+//       pma.UPAZILLA    AS PERMANENT_UPAZILLA,
+//       pma.UNIONS      AS PERMANENT_UNIONS,
+//       pma.AREA        AS PERMANENT_AREA,
+//       pma.EFFECTIVE_START_DATE AS PERMANENT_EFFECTIVE_START_DATE,
+//       pma.EFFECTIVEEND_DATE    AS PERMANENT_EFFECTIVEEND_DATE,
+
+//       s.ASSIGNMENT_ID, s.COMPANY_ID, s.OU_ID, s.ORG_ID,
+//       s.POSITION_ID,   s.PAYROLL_ID, s.GRADE_ID,
+//       s.EFFECTIVE_START_DATE AS ASSIGN_EFFECTIVE_START_DATE,
+//       s.EFFECTIVE_END_DATE   AS ASSIGN_EFFECTIVE_END_DATE,
+
+//       c.COMPANY_NAME,
+//       c.ADDRESS        AS COMPANY_ADDRESS,
+//       o.NAME           AS ORG_NAME,
+//       g.GRADE          AS GRADE_NAME,
+//       op.POSITION_ID   AS MASTER_POSITION_ID,
+//       p.TITLE          AS POSITION_TITLE,
+//       p.LEVELS         AS POSITION_LEVEL
+
+//     FROM hr_employee e
+//     LEFT JOIN hr_person_type pt   ON e.PERSON_TYPE_ID   = pt.PERSON_TYPE_ID
+//     LEFT JOIN hr_emp_address pa   ON e.PERSON_ID = pa.PERSON_ID  AND pa.ADDRESS_TYPE_ID = 1
+//     LEFT JOIN hr_emp_address pma  ON e.PERSON_ID = pma.PERSON_ID AND pma.ADDRESS_TYPE_ID = 2
+//     LEFT JOIN hr_emp_assignment s ON e.PERSON_ID         = s.PERSON_ID
+//     LEFT JOIN hr_company c        ON s.COMPANY_ID        = c.COMPANY_ID
+//     LEFT JOIN hr_org o            ON s.ORG_ID            = o.ID
+//     LEFT JOIN hr_grade g          ON s.GRADE_ID          = g.ID
+//     LEFT JOIN hcm.hr_org_position op ON s.POSITION_ID   = op.ID
+//     LEFT JOIN hr_position p       ON op.POSITION_ID      = p.POSITION_ID
+//    ORDER BY 
+//   GREATEST(
+//     NVL(e.CREATION_DATE, DATE '1900-01-01'),
+//     NVL(e.LAST_UPDATE_DATE, DATE '1900-01-01')
+//   ) DESC NULLS LAST
+//   `, [], { outFormat: oracledb.OUT_FORMAT_OBJECT });
+
+//   await conn.close();
+//   return result.rows.map(formatEmployee);
+// };
+
 export const getEmployeeList = async () => {
   const conn = await getConnection();
 
@@ -412,6 +486,12 @@ export const getEmployeeList = async () => {
       pa.EFFECTIVE_START_DATE AS PRESENT_EFFECTIVE_START_DATE,
       pa.EFFECTIVEEND_DATE    AS PRESENT_EFFECTIVEEND_DATE,
 
+      -- ✅ Present Address IDs (lookup থেকে)
+      cl_pa.COUNTRY_ID   AS PRESENT_COUNTRY_ID,
+      rl_pa.REGION_ID    AS PRESENT_REGION_ID,
+      dl_pa.DISTRICT_ID  AS PRESENT_DISTRICT_ID,
+      ul_pa.UPAZILLA_ID  AS PRESENT_UPAZILLA_ID,
+
       pma.ADDRESS1    AS PERMANENT_ADDRESS1,
       pma.ADDRESS1_B  AS PERMANENT_ADDRESS1_B,
       pma.COUNTRY     AS PERMANENT_COUNTRY,
@@ -422,6 +502,12 @@ export const getEmployeeList = async () => {
       pma.AREA        AS PERMANENT_AREA,
       pma.EFFECTIVE_START_DATE AS PERMANENT_EFFECTIVE_START_DATE,
       pma.EFFECTIVEEND_DATE    AS PERMANENT_EFFECTIVEEND_DATE,
+
+      -- ✅ Permanent Address IDs (lookup থেকে)
+      cl_pma.COUNTRY_ID  AS PERMANENT_COUNTRY_ID,
+      rl_pma.REGION_ID   AS PERMANENT_REGION_ID,
+      dl_pma.DISTRICT_ID AS PERMANENT_DISTRICT_ID,
+      ul_pma.UPAZILLA_ID AS PERMANENT_UPAZILLA_ID,
 
       s.ASSIGNMENT_ID, s.COMPANY_ID, s.OU_ID, s.ORG_ID,
       s.POSITION_ID,   s.PAYROLL_ID, s.GRADE_ID,
@@ -438,15 +524,32 @@ export const getEmployeeList = async () => {
 
     FROM hr_employee e
     LEFT JOIN hr_person_type pt   ON e.PERSON_TYPE_ID   = pt.PERSON_TYPE_ID
-    LEFT JOIN hr_emp_address pa   ON e.EMP_NO = pa.EMP_NO  AND pa.ADDRESS_TYPE_ID = 1
-    LEFT JOIN hr_emp_address pma  ON e.EMP_NO = pma.EMP_NO AND pma.ADDRESS_TYPE_ID = 2
+    LEFT JOIN hr_emp_address pa   ON e.PERSON_ID = pa.PERSON_ID AND pa.ADDRESS_TYPE_ID = 1
+    LEFT JOIN hr_emp_address pma  ON e.PERSON_ID = pma.PERSON_ID AND pma.ADDRESS_TYPE_ID = 2
     LEFT JOIN hr_emp_assignment s ON e.PERSON_ID         = s.PERSON_ID
     LEFT JOIN hr_company c        ON s.COMPANY_ID        = c.COMPANY_ID
     LEFT JOIN hr_org o            ON s.ORG_ID            = o.ID
     LEFT JOIN hr_grade g          ON s.GRADE_ID          = g.ID
     LEFT JOIN hcm.hr_org_position op ON s.POSITION_ID   = op.ID
     LEFT JOIN hr_position p       ON op.POSITION_ID      = p.POSITION_ID
-    ORDER BY e.PERSON_ID
+
+    -- ✅ Present address location lookups
+    LEFT JOIN HCM.COUNTRY_LIST  cl_pa  ON pa.COUNTRY  = cl_pa.COUNTRY_NAME
+    LEFT JOIN HCM.REGION_LIST   rl_pa  ON pa.REGION   = rl_pa.REGION_NAME   AND rl_pa.COUNTRY_ID  = cl_pa.COUNTRY_ID
+    LEFT JOIN HCM.DISTRICT_LIST dl_pa  ON pa.DISTRICT = dl_pa.DISTRICT_NAME  AND dl_pa.REGION_ID   = rl_pa.REGION_ID
+    LEFT JOIN HCM.UPAZILLA_LIST ul_pa  ON pa.UPAZILLA = ul_pa.UPAZILLA_NAME  AND ul_pa.DISTRICT_ID = dl_pa.DISTRICT_ID
+
+    -- ✅ Permanent address location lookups
+    LEFT JOIN HCM.COUNTRY_LIST  cl_pma ON pma.COUNTRY  = cl_pma.COUNTRY_NAME
+    LEFT JOIN HCM.REGION_LIST   rl_pma ON pma.REGION   = rl_pma.REGION_NAME  AND rl_pma.COUNTRY_ID  = cl_pma.COUNTRY_ID
+    LEFT JOIN HCM.DISTRICT_LIST dl_pma ON pma.DISTRICT = dl_pma.DISTRICT_NAME AND dl_pma.REGION_ID   = rl_pma.REGION_ID
+    LEFT JOIN HCM.UPAZILLA_LIST ul_pma ON pma.UPAZILLA = ul_pma.UPAZILLA_NAME AND ul_pma.DISTRICT_ID = dl_pma.DISTRICT_ID
+
+    ORDER BY 
+      GREATEST(
+        NVL(e.CREATION_DATE, DATE '1900-01-01'),
+        NVL(e.LAST_UPDATE_DATE, DATE '1900-01-01')
+      ) DESC NULLS LAST
   `, [], { outFormat: oracledb.OUT_FORMAT_OBJECT });
 
   await conn.close();
@@ -454,9 +557,6 @@ export const getEmployeeList = async () => {
 };
 
 
-/* ─────────────────────────────────────────
-   GET EMPLOYEE BY ID
-───────────────────────────────────────── */
 export const getEmployeeById = async (personId) => {
   const conn = await getConnection();
 
@@ -486,6 +586,12 @@ export const getEmployeeById = async (personId) => {
       pa.EFFECTIVE_START_DATE AS PRESENT_EFFECTIVE_START_DATE,
       pa.EFFECTIVEEND_DATE    AS PRESENT_EFFECTIVEEND_DATE,
 
+      -- ✅ Present Address IDs (lookup থেকে)
+      cl_pa.COUNTRY_ID   AS PRESENT_COUNTRY_ID,
+      rl_pa.REGION_ID    AS PRESENT_REGION_ID,
+      dl_pa.DISTRICT_ID  AS PRESENT_DISTRICT_ID,
+      ul_pa.UPAZILLA_ID  AS PRESENT_UPAZILLA_ID,
+
       pma.ADDRESS1    AS PERMANENT_ADDRESS1,
       pma.ADDRESS1_B  AS PERMANENT_ADDRESS1_B,
       pma.COUNTRY     AS PERMANENT_COUNTRY,
@@ -496,6 +602,12 @@ export const getEmployeeById = async (personId) => {
       pma.AREA        AS PERMANENT_AREA,
       pma.EFFECTIVE_START_DATE AS PERMANENT_EFFECTIVE_START_DATE,
       pma.EFFECTIVEEND_DATE    AS PERMANENT_EFFECTIVEEND_DATE,
+
+      -- ✅ Permanent Address IDs (lookup থেকে)
+      cl_pma.COUNTRY_ID  AS PERMANENT_COUNTRY_ID,
+      rl_pma.REGION_ID   AS PERMANENT_REGION_ID,
+      dl_pma.DISTRICT_ID AS PERMANENT_DISTRICT_ID,
+      ul_pma.UPAZILLA_ID AS PERMANENT_UPAZILLA_ID,
 
       s.ASSIGNMENT_ID, s.COMPANY_ID, s.OU_ID, s.ORG_ID,
       s.POSITION_ID,   s.PAYROLL_ID, s.GRADE_ID,
@@ -512,18 +624,109 @@ export const getEmployeeById = async (personId) => {
 
     FROM hr_employee e
     LEFT JOIN hr_person_type pt   ON e.PERSON_TYPE_ID   = pt.PERSON_TYPE_ID
-    LEFT JOIN hr_emp_address pa   ON e.EMP_NO = pa.EMP_NO  AND pa.ADDRESS_TYPE_ID = 1
-    LEFT JOIN hr_emp_address pma  ON e.EMP_NO = pma.EMP_NO AND pma.ADDRESS_TYPE_ID = 2
+    LEFT JOIN hr_emp_address pa   ON e.PERSON_ID = pa.PERSON_ID AND pa.ADDRESS_TYPE_ID = 1
+    LEFT JOIN hr_emp_address pma  ON e.PERSON_ID = pma.PERSON_ID AND pma.ADDRESS_TYPE_ID = 2
     LEFT JOIN hr_emp_assignment s ON e.PERSON_ID         = s.PERSON_ID
     LEFT JOIN hr_company c        ON s.COMPANY_ID        = c.COMPANY_ID
     LEFT JOIN hr_org o            ON s.ORG_ID            = o.ID
     LEFT JOIN hr_grade g          ON s.GRADE_ID          = g.ID
     LEFT JOIN hcm.hr_org_position op ON s.POSITION_ID   = op.ID
     LEFT JOIN hr_position p       ON op.POSITION_ID      = p.POSITION_ID
-    WHERE e.PERSON_ID = :id
+
+    -- ✅ Present address location lookups
+    LEFT JOIN HCM.COUNTRY_LIST  cl_pa  ON pa.COUNTRY  = cl_pa.COUNTRY_NAME
+    LEFT JOIN HCM.REGION_LIST   rl_pa  ON pa.REGION   = rl_pa.REGION_NAME   AND rl_pa.COUNTRY_ID  = cl_pa.COUNTRY_ID
+    LEFT JOIN HCM.DISTRICT_LIST dl_pa  ON pa.DISTRICT = dl_pa.DISTRICT_NAME  AND dl_pa.REGION_ID   = rl_pa.REGION_ID
+    LEFT JOIN HCM.UPAZILLA_LIST ul_pa  ON pa.UPAZILLA = ul_pa.UPAZILLA_NAME  AND ul_pa.DISTRICT_ID = dl_pa.DISTRICT_ID
+
+    -- ✅ Permanent address location lookups
+    LEFT JOIN HCM.COUNTRY_LIST  cl_pma ON pma.COUNTRY  = cl_pma.COUNTRY_NAME
+    LEFT JOIN HCM.REGION_LIST   rl_pma ON pma.REGION   = rl_pma.REGION_NAME  AND rl_pma.COUNTRY_ID  = cl_pma.COUNTRY_ID
+    LEFT JOIN HCM.DISTRICT_LIST dl_pma ON pma.DISTRICT = dl_pma.DISTRICT_NAME AND dl_pma.REGION_ID   = rl_pma.REGION_ID
+    LEFT JOIN HCM.UPAZILLA_LIST ul_pma ON pma.UPAZILLA = ul_pma.UPAZILLA_NAME AND ul_pma.DISTRICT_ID = dl_pma.DISTRICT_ID
+   WHERE e.PERSON_ID = :id
+    ORDER BY 
+      GREATEST(
+        NVL(e.CREATION_DATE, DATE '1900-01-01'),
+        NVL(e.LAST_UPDATE_DATE, DATE '1900-01-01')
+      ) DESC NULLS LAST
   `, [personId], { outFormat: oracledb.OUT_FORMAT_OBJECT });
 
   await conn.close();
-  if (!result.rows || result.rows.length === 0) return null;
-  return formatEmployee(result.rows[0]);
+  return result.rows.map(formatEmployee);
 };
+
+/* ─────────────────────────────────────────
+   GET EMPLOYEE BY ID
+───────────────────────────────────────── */
+// export const getEmployeeById = async (personId) => {
+
+//   const conn = await getConnection();
+
+//   const result = await conn.execute(`
+//     SELECT
+//       e.PERSON_ID, e.EMP_NO, e.TITLE, e.FIRST_NAME, e.LAST_NAME,
+//       e.FATHERS_NAME, e.FATHERS_NAME_B, e.MOTHERS_NAME, e.MOTHERS_NAME_B,
+//       e.GENDER, e.DATE_OF_BIRTH, e.NID, e.BIRTH_REG_NO,
+//       e.TOWN_OF_BIRTH, e.REGION_OF_BIRTH, e.COUNTRY_OF_BIRTH,
+//       e.MARRITIAL_STATUS, e.NATIONALITY, e.JOIN_DATE,
+//       e.PERSON_TYPE_ID, e.REG_DISABILITY,
+//       e.EFFECTIVE_START_DATE AS EMP_EFFECTIVE_START_DATE,
+//       e.EFFECTIVEEND_DATE    AS EMP_EFFECTIVEEND_DATE,
+//       e.STATUS               AS EMP_STATUS,
+//       e.CREATION_DATE, e.LAST_UPDATE_DATE, e.LAST_UPDATE_BY,
+
+//       pt.PERSON_TYPE,
+
+//       pa.ADDRESS1    AS PRESENT_ADDRESS1,
+//       pa.ADDRESS1_B  AS PRESENT_ADDRESS1_B,
+//       pa.COUNTRY     AS PRESENT_COUNTRY,
+//       pa.REGION      AS PRESENT_REGION,
+//       pa.DISTRICT    AS PRESENT_DISTRICT,
+//       pa.UPAZILLA    AS PRESENT_UPAZILLA,
+//       pa.UNIONS      AS PRESENT_UNIONS,
+//       pa.AREA        AS PRESENT_AREA,
+//       pa.EFFECTIVE_START_DATE AS PRESENT_EFFECTIVE_START_DATE,
+//       pa.EFFECTIVEEND_DATE    AS PRESENT_EFFECTIVEEND_DATE,
+
+//       pma.ADDRESS1    AS PERMANENT_ADDRESS1,
+//       pma.ADDRESS1_B  AS PERMANENT_ADDRESS1_B,
+//       pma.COUNTRY     AS PERMANENT_COUNTRY,
+//       pma.REGION      AS PERMANENT_REGION,
+//       pma.DISTRICT    AS PERMANENT_DISTRICT,
+//       pma.UPAZILLA    AS PERMANENT_UPAZILLA,
+//       pma.UNIONS      AS PERMANENT_UNIONS,
+//       pma.AREA        AS PERMANENT_AREA,
+//       pma.EFFECTIVE_START_DATE AS PERMANENT_EFFECTIVE_START_DATE,
+//       pma.EFFECTIVEEND_DATE    AS PERMANENT_EFFECTIVEEND_DATE,
+
+//       s.ASSIGNMENT_ID, s.COMPANY_ID, s.OU_ID, s.ORG_ID,
+//       s.POSITION_ID,   s.PAYROLL_ID, s.GRADE_ID,
+//       s.EFFECTIVE_START_DATE AS ASSIGN_EFFECTIVE_START_DATE,
+//       s.EFFECTIVE_END_DATE   AS ASSIGN_EFFECTIVE_END_DATE,
+
+//       c.COMPANY_NAME,
+//       c.ADDRESS        AS COMPANY_ADDRESS,
+//       o.NAME           AS ORG_NAME,
+//       g.GRADE          AS GRADE_NAME,
+//       op.POSITION_ID   AS MASTER_POSITION_ID,
+//       p.TITLE          AS POSITION_TITLE,
+//       p.LEVELS         AS POSITION_LEVEL
+
+//     FROM hr_employee e
+//     LEFT JOIN hr_person_type pt   ON e.PERSON_TYPE_ID   = pt.PERSON_TYPE_ID
+//     LEFT JOIN hr_emp_address pa   ON e.PERSON_ID = pa.PERSON_ID  AND pa.ADDRESS_TYPE_ID = 1
+//     LEFT JOIN hr_emp_address pma  ON e.PERSON_ID = pma.PERSON_ID AND pma.ADDRESS_TYPE_ID = 2
+//     LEFT JOIN hr_emp_assignment s ON e.PERSON_ID         = s.PERSON_ID
+//     LEFT JOIN hr_company c        ON s.COMPANY_ID        = c.COMPANY_ID
+//     LEFT JOIN hr_org o            ON s.ORG_ID            = o.ID
+//     LEFT JOIN hr_grade g          ON s.GRADE_ID          = g.ID
+//     LEFT JOIN hcm.hr_org_position op ON s.POSITION_ID   = op.ID
+//     LEFT JOIN hr_position p       ON op.POSITION_ID      = p.POSITION_ID
+//     WHERE e.PERSON_ID = :id
+//   `, [personId], { outFormat: oracledb.OUT_FORMAT_OBJECT });
+
+//   await conn.close();
+//   if (!result.rows || result.rows.length === 0) return null;
+//   return formatEmployee(result.rows[0]);
+// };
