@@ -23,6 +23,12 @@ import districtRoutes from "./routes/district.routes.js";
 import regionRoutes from "./routes/region.routes.js";
 import upazillaRoutes from "./routes/upazilla.routes.js";
 import location  from "./routes/location.routes.js";
+import holidayRoutes from "./routes/hr-holiday-calender.routes.js";
+import holidayTypeRoutes from "./routes/hr-holiday-type.routes.js";
+
+
+
+
 
 
 
@@ -197,6 +203,8 @@ app.use("/api/district", districtRoutes);
 app.use("/api/region", regionRoutes);
 app.use("/api/upazilla", upazillaRoutes);
 app.use("/api/locations", location);
+app.use("/api/holiday", holidayRoutes);
+app.use("/api/holiday-type", holidayTypeRoutes);
 
 
 

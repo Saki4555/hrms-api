@@ -88,10 +88,10 @@ export const getEmployeeByIdController = async (req, res) => {
       });
     }
 
-    res.json({
-      success: true,
-      data
-    });
+    res.json(
+     
+      ...data
+    );
   } catch (err) {
     console.error(err);
     res.status(500).json({
