@@ -5,7 +5,7 @@ export const createRegion = async (data) => {
   const conn = await getConnection();
   try {
     await conn.execute(
-      `INSERT INTO HCM.REGION_LIST
+      `INSERT INTO REGION_LIST
         (COUNTRY_ID, REGION_NAME)
        VALUES ( :COUNTRY_ID, :REGION_NAME)`,
       data,
@@ -17,11 +17,12 @@ export const createRegion = async (data) => {
 };
 
 /* GET ALL REGIONS WITH COUNTRY NAME */
+
 export const getAllRegions = async () => {
   const conn = await getConnection();
   try {
     const result = await conn.execute(
-      `SELECT 
+      `SELECT DISTINCT
           r.REGION_ID,
           r.REGION_NAME,
           r.COUNTRY_ID,
