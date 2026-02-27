@@ -57,7 +57,7 @@ export const createDistrict = async (data) => {
   const conn = await getConnection();
   try {
     await conn.execute(
-      `INSERT INTO HCM.DISTRICT_LIST
+      `INSERT INTO DISTRICT_LIST
         ( COUNTRY_ID, REGION_ID, DISTRICT_NAME)
        VALUES ( :COUNTRY_ID, :REGION_ID, :DISTRICT_NAME)`,
       data,
