@@ -50,20 +50,23 @@ export const deleteEmployeeHandler = async (req, res) => {
 
 
 /* GET LIST — pagination + search + filter + sort
-   
+
    Query params:
-   ┌────────────┬──────────────────────────────────────────────────────────┐
-   │ page       │ page number                         (default: 1)        │
-   │ limit      │ rows per page                       (default: 10)       │
-   │ search     │ FIRST_NAME / LAST_NAME / EMP_NO / NID                   │
-   │ sortBy     │ column to sort                      (default: CREATION_DATE) │
-   │ sortOrder  │ ASC | DESC                          (default: DESC)     │
-   │ personType │ filter by PERSON_TYPE_ID            (exact ID)          │
-   │ gender     │ filter by GENDER                    (M | F)             │
-   │ companyId  │ filter by COMPANY_ID                (exact ID)          │
-   │ positionId │ filter by POSITION_ID               (exact ID)          │
-   │ countryId  │ filter by COUNTRY_LIST.COUNTRY_ID    (exact ID)          │
-   └────────────┴──────────────────────────────────────────────────────────┘
+   ┌────────────┬──────────────────────────────────────────────────────────────────┐
+   │ page       │ page number                              (default: 1)            │
+   │ limit      │ rows per page                            (default: 10)           │
+   │ search     │ FIRST_NAME / LAST_NAME / EMP_NO / NID                            │
+   │ sortBy     │ column to sort  (default: LAST_ACTIVITY)                         │
+   │            │   LAST_ACTIVITY → updated/created employee comes first           │
+   │            │   FIRST_NAME, LAST_NAME, EMP_NO, JOIN_DATE,                      │
+   │            │   DATE_OF_BIRTH, CREATION_DATE, LAST_UPDATE_DATE, NID            │
+   │ sortOrder  │ ASC | DESC                               (default: DESC)         │
+   │ personType │ filter by PERSON_TYPE_ID                 (exact ID)              │
+   │ gender     │ filter by GENDER                         (M | F)                 │
+   │ companyId  │ filter by COMPANY_ID                     (exact ID)              │
+   │ positionId │ filter by POSITION_ID                    (exact ID)              │
+   │ countryId  │ filter by COUNTRY_LIST.COUNTRY_ID        (exact ID)              │
+   └────────────┴──────────────────────────────────────────────────────────────────┘
 
    Examples:
    GET /api/employees?page=1&limit=10
@@ -71,7 +74,7 @@ export const deleteEmployeeHandler = async (req, res) => {
    GET /api/employees?gender=M&companyId=3
    GET /api/employees?personType=2&countryId=18
    GET /api/employees?search=ahmed&sortBy=FIRST_NAME&sortOrder=ASC
-   GET /api/employees?page=2&limit=20&gender=F&companyId=1&countryId=18
+   GET /api/employees?page=2&limit=20&gender=F&companyId=1&positionId=5&countryId=18
 */
 export const getEmployeeHandeler = async (req, res) => {
   try {
@@ -79,13 +82,13 @@ export const getEmployeeHandeler = async (req, res) => {
       page       = 1,
       limit      = 10,
       search     = "",
-      sortBy     = "CREATION_DATE",
+      sortBy     = "LAST_ACTIVITY",  // updated/created employee floats to top
       sortOrder  = "DESC",
       personType = "",
       gender     = "",
       companyId  = "",
-      positionId = "",
-      countryId  = "",
+      positionId       = "",
+      countryId        = "",
     } = req.query;
 
     const result = await getEmployeeList({
