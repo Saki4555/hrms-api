@@ -379,7 +379,7 @@ export const softDeleteEmployee = async (personId) => {
      page      - page number (default: 1)
      limit     - rows per page (default: 10)
      search    - searches EMP_NO, FIRST_NAME, LAST_NAME, NID (optional)
-     sortBy    - column name to sort by (default: CREATION_DATE)
+     sortBy    - column name           (default: LAST_ACTIVITY = newest of created/updated)
      sortOrder - ASC or DESC (default: DESC)
 ───────────────────────────────────────── */
 /* ─────────────────────────────────────────
@@ -390,25 +390,25 @@ export const softDeleteEmployee = async (personId) => {
      page        - page number           (default: 1)
      limit       - rows per page         (default: 10)
      search      - FIRST_NAME / LAST_NAME / EMP_NO / NID
-     sortBy      - column name           (default: CREATION_DATE)
+     sortBy      - column name           (default: LAST_ACTIVITY = newest of created/updated)
      sortOrder   - ASC | DESC            (default: DESC)
      personType  - e.PERSON_TYPE_ID      (exact ID)
      gender      - e.GENDER              (M | F)
      companyId   - s.COMPANY_ID          (exact ID)
-     positionId  - s.POSITION_ID / op.ID (exact ID)
+     positionId  - HR_POSITION.POSITION_ID  (master position in hr_position table)
      countryId   - COUNTRY_LIST.COUNTRY_ID  (present address country ID)
 ───────────────────────────────────────── */
 export const getEmployeeList = async ({
   page       = 1,
   limit      = 10,
   search     = "",
-  sortBy     = "CREATION_DATE",
+  sortBy     = "LAST_ACTIVITY",   // LAST_ACTIVITY = GREATEST(CREATION_DATE, LAST_UPDATE_DATE)
   sortOrder  = "DESC",
   personType = "",
   gender     = "",
   companyId  = "",
-  positionId = "",
-  countryId  = "",
+  positionId = "",          // HR_POSITION.POSITION_ID (master position in hr_position)
+  countryId        = "",
 } = {}) => {
   const conn = await getConnection();
 
@@ -421,12 +421,17 @@ export const getEmployeeList = async ({
   // ── Sanitize sort (whitelist prevents SQL injection) ─────────────
   const ALLOWED_SORT_COLUMNS = [
     "EMP_NO", "FIRST_NAME", "LAST_NAME", "JOIN_DATE",
-    "DATE_OF_BIRTH", "CREATION_DATE", "LAST_UPDATE_DATE", "NID",
+    "DATE_OF_BIRTH", "CREATION_DATE", "LAST_UPDATE_DATE", "NID", "LAST_ACTIVITY",
   ];
-  const safeSortBy    = ALLOWED_SORT_COLUMNS.includes(sortBy.toUpperCase())
-                          ? sortBy.toUpperCase()
-                          : "CREATION_DATE";
+  const rawSortBy     = sortBy.toUpperCase();
+  const safeSortBy    = ALLOWED_SORT_COLUMNS.includes(rawSortBy) ? rawSortBy : "LAST_ACTIVITY";
   const safeSortOrder = sortOrder.toUpperCase() === "ASC" ? "ASC" : "DESC";
+
+  // LAST_ACTIVITY = GREATEST(CREATION_DATE, LAST_UPDATE_DATE)
+  // This ensures updated employees always float to the top
+  const orderByClause = safeSortBy === "LAST_ACTIVITY"
+    ? `GREATEST(NVL(e.CREATION_DATE, DATE '1900-01-01'), NVL(e.LAST_UPDATE_DATE, DATE '1900-01-01')) ${safeSortOrder} NULLS LAST`
+    : `e.${safeSortBy} ${safeSortOrder} NULLS LAST`;
 
   // ── Build dynamic WHERE + bind params ────────────────────────────
   const conditions = [];
@@ -446,7 +451,7 @@ export const getEmployeeList = async ({
   // 🔽 Filter: Person Type ID
   if (personType !== "" && personType != null) {
     conditions.push(`e.PERSON_TYPE_ID = :PERSON_TYPE_ID`);
-    bindParams.PERSON_TYPE_ID = personType;
+    bindParams.PERSON_TYPE_ID = parseInt(personType, 10);
   }
 
   // 🔽 Filter: Gender (M / F)
@@ -458,19 +463,20 @@ export const getEmployeeList = async ({
   // 🔽 Filter: Company ID
   if (companyId !== "" && companyId != null) {
     conditions.push(`s.COMPANY_ID = :COMPANY_ID`);
-    bindParams.COMPANY_ID = companyId;
+    bindParams.COMPANY_ID = parseInt(companyId, 10);
   }
 
-  // 🔽 Filter: Position ID (HR_ORG_POSITION.ID)
+  // 🔽 Filter: Position ID — HR_POSITION.POSITION_ID (master position table)
+  //    p = HR_POSITION alias (joined via op → p)
   if (positionId !== "" && positionId != null) {
-    conditions.push(`s.POSITION_ID = :POSITION_ID`);
-    bindParams.POSITION_ID = positionId;
+    conditions.push(`op.POSITION_ID = :POSITION_ID`);
+    bindParams.POSITION_ID = parseInt(positionId, 10);
   }
 
   // 🔽 Filter: Country ID (COUNTRY_LIST.COUNTRY_ID — present address)
   if (countryId !== "" && countryId != null) {
     conditions.push(`pa.COUNTRY IN (SELECT COUNTRY_NAME FROM HCM.COUNTRY_LIST WHERE COUNTRY_ID = :COUNTRY_ID)`);
-    bindParams.COUNTRY_ID = countryId;
+    bindParams.COUNTRY_ID = parseInt(countryId, 10);
   }
 
   const whereClause = conditions.length > 0
@@ -484,6 +490,8 @@ export const getEmployeeList = async ({
          FROM hr_employee e
          LEFT JOIN hr_emp_address    pa ON e.PERSON_ID = pa.PERSON_ID AND pa.ADDRESS_TYPE_ID = 1
          LEFT JOIN hr_emp_assignment s  ON e.PERSON_ID = s.PERSON_ID
+         LEFT JOIN hcm.hr_org_position op ON s.POSITION_ID = op.ID
+         LEFT JOIN hr_position         p  ON op.POSITION_ID = p.POSITION_ID
          ${whereClause}`,
       bindParams,
       { outFormat: oracledb.OUT_FORMAT_OBJECT }
@@ -570,7 +578,7 @@ export const getEmployeeList = async ({
 
           ${whereClause}
 
-          ORDER BY e.${safeSortBy} ${safeSortOrder} NULLS LAST
+          ORDER BY ${orderByClause}
 
         ) sq WHERE ROWNUM <= ${rownumMax}
       ) WHERE RN >= ${rownumMin}

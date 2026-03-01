@@ -30,89 +30,59 @@ export const formatEmployee = (row) => {
     LAST_UPDATE_BY:       row.LAST_UPDATE_BY,
     LAST_UPDATE_DATE:     row.LAST_UPDATE_DATE,
 
-    // presentAddress: {
-    //   ADDRESS_TYPE_ID:   1,
-    //   ADDRESS_TYPE_NAME: "Present",
-    //   ADDRESS1:          row.PRESENT_ADDRESS1,
-    //   ADDRESS1_B:        row.PRESENT_ADDRESS1_B,
-    //   AREA:              row.PRESENT_AREA,
-    //   UPAZILLA:          row.PRESENT_UPAZILLA,
-    //   UNIONS:            row.PRESENT_UNIONS,
-    //   DISTRICT:          row.PRESENT_DISTRICT,
-    //   REGION:            row.PRESENT_REGION,
-    //   COUNTRY:           row.PRESENT_COUNTRY,
-    //   EFFECTIVE_START_DATE: row.PRESENT_EFFECTIVE_START_DATE,
-    //   EFFECTIVEEND_DATE:    row.PRESENT_EFFECTIVEEND_DATE,
-    // },
+    presentAddress: {
+      ADDRESS_TYPE_ID:      1,
+      ADDRESS_TYPE_NAME:    "Present",
+      ADDRESS1:             row.PRESENT_ADDRESS1,
+      ADDRESS1_B:           row.PRESENT_ADDRESS1_B,
+      AREA:                 row.PRESENT_AREA,
+      UPAZILLA:             row.PRESENT_UPAZILLA,
+      UPAZILLA_ID:          row.PRESENT_UPAZILLA_ID  ?? null,
+      UNIONS:               row.PRESENT_UNIONS,
+      DISTRICT:             row.PRESENT_DISTRICT,
+      DISTRICT_ID:          row.PRESENT_DISTRICT_ID  ?? null,
+      REGION:               row.PRESENT_REGION,
+      REGION_ID:            row.PRESENT_REGION_ID    ?? null,
+      COUNTRY:              row.PRESENT_COUNTRY,
+      COUNTRY_ID:           row.PRESENT_COUNTRY_ID   ?? null,
+      EFFECTIVE_START_DATE: row.PRESENT_EFFECTIVE_START_DATE,
+      EFFECTIVEEND_DATE:    row.PRESENT_EFFECTIVEEND_DATE,
+    },
 
-    // permanentAddress: {
-    //   ADDRESS_TYPE_ID:   2,
-    //   ADDRESS_TYPE_NAME: "Permanent",
-    //   ADDRESS1:          row.PERMANENT_ADDRESS1,
-    //   ADDRESS1_B:        row.PERMANENT_ADDRESS1_B,
-    //   AREA:              row.PERMANENT_AREA,
-    //   UPAZILLA:          row.PERMANENT_UPAZILLA,
-    //   UNIONS:            row.PERMANENT_UNIONS,
-    //   DISTRICT:          row.PERMANENT_DISTRICT,
-    //   REGION:            row.PERMANENT_REGION,
-    //   COUNTRY:           row.PERMANENT_COUNTRY,
-    //   EFFECTIVE_START_DATE: row.PERMANENT_EFFECTIVE_START_DATE,
-    //   EFFECTIVEEND_DATE:    row.PERMANENT_EFFECTIVEEND_DATE,
-    // },
-
-
-presentAddress: {
-  ADDRESS_TYPE_ID:      1,
-  ADDRESS_TYPE_NAME:    "Present",
-  ADDRESS1:             row.PRESENT_ADDRESS1,
-  ADDRESS1_B:           row.PRESENT_ADDRESS1_B,
-  AREA:                 row.PRESENT_AREA,
-  UPAZILLA:             row.PRESENT_UPAZILLA,
-  UPAZILLA_ID:          row.PRESENT_UPAZILLA_ID  ?? null,   // ✅
-  UNIONS:               row.PRESENT_UNIONS,
-  DISTRICT:             row.PRESENT_DISTRICT,
-  DISTRICT_ID:          row.PRESENT_DISTRICT_ID  ?? null,   // ✅
-  REGION:               row.PRESENT_REGION,
-  REGION_ID:            row.PRESENT_REGION_ID    ?? null,   // ✅
-  COUNTRY:              row.PRESENT_COUNTRY,
-  COUNTRY_ID:           row.PRESENT_COUNTRY_ID   ?? null,   // ✅
-  EFFECTIVE_START_DATE: row.PRESENT_EFFECTIVE_START_DATE,
-  EFFECTIVEEND_DATE:    row.PRESENT_EFFECTIVEEND_DATE,
-},
-
-permanentAddress: {
-  ADDRESS_TYPE_ID:      2,
-  ADDRESS_TYPE_NAME:    "Permanent",
-  ADDRESS1:             row.PERMANENT_ADDRESS1,
-  ADDRESS1_B:           row.PERMANENT_ADDRESS1_B,
-  AREA:                 row.PERMANENT_AREA,
-  UPAZILLA:             row.PERMANENT_UPAZILLA,
-  UPAZILLA_ID:          row.PERMANENT_UPAZILLA_ID  ?? null, // ✅
-  UNIONS:               row.PERMANENT_UNIONS,
-  DISTRICT:             row.PERMANENT_DISTRICT,
-  DISTRICT_ID:          row.PERMANENT_DISTRICT_ID  ?? null, // ✅
-  REGION:               row.PERMANENT_REGION,
-  REGION_ID:            row.PERMANENT_REGION_ID    ?? null, // ✅
-  COUNTRY:              row.PERMANENT_COUNTRY,
-  COUNTRY_ID:           row.PERMANENT_COUNTRY_ID   ?? null, // ✅
-  EFFECTIVE_START_DATE: row.PERMANENT_EFFECTIVE_START_DATE,
-  EFFECTIVEEND_DATE:    row.PERMANENT_EFFECTIVEEND_DATE,
-},
+    permanentAddress: {
+      ADDRESS_TYPE_ID:      2,
+      ADDRESS_TYPE_NAME:    "Permanent",
+      ADDRESS1:             row.PERMANENT_ADDRESS1,
+      ADDRESS1_B:           row.PERMANENT_ADDRESS1_B,
+      AREA:                 row.PERMANENT_AREA,
+      UPAZILLA:             row.PERMANENT_UPAZILLA,
+      UPAZILLA_ID:          row.PERMANENT_UPAZILLA_ID  ?? null,
+      UNIONS:               row.PERMANENT_UNIONS,
+      DISTRICT:             row.PERMANENT_DISTRICT,
+      DISTRICT_ID:          row.PERMANENT_DISTRICT_ID  ?? null,
+      REGION:               row.PERMANENT_REGION,
+      REGION_ID:            row.PERMANENT_REGION_ID    ?? null,
+      COUNTRY:              row.PERMANENT_COUNTRY,
+      COUNTRY_ID:           row.PERMANENT_COUNTRY_ID   ?? null,
+      EFFECTIVE_START_DATE: row.PERMANENT_EFFECTIVE_START_DATE,
+      EFFECTIVEEND_DATE:    row.PERMANENT_EFFECTIVEEND_DATE,
+    },
 
     assignment: {
-      ASSIGNMENT_ID:   row.ASSIGNMENT_ID,
-      COMPANY_ID:      row.COMPANY_ID,
-      COMPANY_NAME:    row.COMPANY_NAME,      // ✅ HR_COMPANY থেকে
-      COMPANY_ADDRESS: row.COMPANY_ADDRESS,   // ✅ HR_COMPANY থেকে
-      OU_ID:           row.OU_ID,
-      ORG_ID:          row.ORG_ID,
-      ORG_NAME:        row.ORG_NAME,        // ✅ HR_ORG থেকে
-      POSITION_ID:     row.POSITION_ID,
-      POSITION_TITLE:  row.POSITION_TITLE,  // ✅ HR_POSITION থেকে
-      POSITION_LEVEL:  row.POSITION_LEVEL,  // ✅ HR_POSITION থেকে
-      PAYROLL_ID:      row.PAYROLL_ID,
-      GRADE_ID:        row.GRADE_ID,
-      GRADE_NAME:      row.GRADE_NAME,      // ✅ HR_GRADE থেকে
+      ASSIGNMENT_ID:        row.ASSIGNMENT_ID,
+      COMPANY_ID:           row.COMPANY_ID,
+      COMPANY_NAME:         row.COMPANY_NAME,
+      COMPANY_ADDRESS:      row.COMPANY_ADDRESS,
+      OU_ID:                row.OU_ID,
+      ORG_ID:               row.ORG_ID,
+      ORG_NAME:             row.ORG_NAME,
+      POSITION_ID:          row.POSITION_ID,          // HR_ORG_POSITION.ID  → positionId filter এ use করবেন না
+      MASTER_POSITION_ID:   row.MASTER_POSITION_ID,   // ✅ HR_POSITION.POSITION_ID → এই ID দিয়ে filter করুন
+      POSITION_TITLE:       row.POSITION_TITLE,
+      POSITION_LEVEL:       row.POSITION_LEVEL,
+      PAYROLL_ID:           row.PAYROLL_ID,
+      GRADE_ID:             row.GRADE_ID,
+      GRADE_NAME:           row.GRADE_NAME,
       EFFECTIVE_START_DATE: row.ASSIGN_EFFECTIVE_START_DATE,
       EFFECTIVE_END_DATE:   row.ASSIGN_EFFECTIVE_END_DATE,
     },
