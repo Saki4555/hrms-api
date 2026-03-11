@@ -20,7 +20,7 @@ router.get("/me", (req, res) => {
         : null);
 
     if (!token) {
-      return res.status(401).json({ error: "Token নেই" });
+      return res.status(401).json({ error: "missing token" });
     }
 
    
