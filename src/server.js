@@ -3,6 +3,7 @@ import { config } from "dotenv";
 import cors from "cors";
 import bodyParser from "body-parser";
 import twilio from "twilio";
+import cookieParser from "cookie-parser";
 
 import { connectDB, disconnectDB } from "./config/db.js";
 import authRoute from "./routes/auth.route.js";
@@ -25,6 +26,7 @@ import upazillaRoutes from "./routes/upazilla.routes.js";
 import location  from "./routes/location.routes.js";
 import holidayRoutes from "./routes/hr-holiday-calender.routes.js";
 import holidayTypeRoutes from "./routes/hr-holiday-type.routes.js";
+import attLogRoutes from "./routes/att-log.routes.js";
 
 
 
@@ -62,13 +64,17 @@ const corsOptions = {
   optionsSuccessStatus: 200,
 };
 
+
+
 // Connect DB - Oracle connection will now be used
 await connectDB();
 
 // Middleware
 app.use(cors(corsOptions));
+app.use(cookieParser());
 app.use(bodyParser.json({ limit: "50mb" }));
 app.use(bodyParser.urlencoded({ extended: true, limit: "50mb" }));
+
 
 /* ===========================
    TWILIO SETUP
@@ -208,6 +214,7 @@ app.use("/api/upazilla", upazillaRoutes);
 app.use("/api/locations", location);
 app.use("/api/holiday", holidayRoutes);
 app.use("/api/holiday-type", holidayTypeRoutes);
+app.use("/api", attLogRoutes);
 
 
 

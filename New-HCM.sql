@@ -1,0 +1,2477 @@
+--
+-- Create Schema Script 
+--   Database Version          : 19.0.0.0.0 
+--   Database Compatible Level : 19.0.0 
+--   Script Compatible Level   : 19.0.0 
+--   Toad Version              : 12.1.0.22 
+--   DB Connect String         : 192.168.1.136:1521/PCDB1 
+--   Schema                    : HCM 
+--   Script Created by         : HCM 
+--   Script Created at         : 3/11/2026 10:24:14 AM 
+--   Physical Location         :  
+--   Notes                     :  
+--
+
+-- Object Counts: 
+--   Indexes: 32        Columns: 36         
+--   Tables: 31         Columns: 316        Constraints: 75     
+--   Triggers: 32 
+--   Views: 4           Columns: 33         
+
+
+-- "Set define off" turns off substitution variables. 
+Set define off; 
+
+--
+-- ATT_LOG  (Table) 
+--
+CREATE TABLE HCM.ATT_LOG
+(
+  AM_EMPNO        NUMBER(15)                    NOT NULL,
+  AM_TIME_IN_OUT  VARCHAR2(50 BYTE)             NOT NULL,
+  AM_TYPE_IN_OUT  NUMBER(1)                     NOT NULL,
+  AM_MAC_ID       VARCHAR2(15 BYTE)             NOT NULL,
+  PROCESS_STATUS  VARCHAR2(1 BYTE)              DEFAULT 'N',
+  CREATION_DATE   DATE                          DEFAULT SYSDATE,
+  AM_LAT_IN_OUT   NUMBER,
+  AM_LON_IN_OUT   NUMBER,
+  T_ZONE          NUMBER,
+  LOCATION_ID     NUMBER,
+  TEAM_LEAD_ID    NUMBER
+)
+TABLESPACE HCM_DATA
+RESULT_CACHE (MODE DEFAULT)
+PCTUSED    0
+PCTFREE    10
+INITRANS   1
+MAXTRANS   255
+STORAGE    (
+            INITIAL          64K
+            NEXT             1M
+            MAXSIZE          UNLIMITED
+            MINEXTENTS       1
+            MAXEXTENTS       UNLIMITED
+            PCTINCREASE      0
+            BUFFER_POOL      DEFAULT
+            FLASH_CACHE      DEFAULT
+            CELL_FLASH_CACHE DEFAULT
+           )
+NOCOMPRESS ;
+
+
+--
+-- HR_AUDIT_LOG  (Table) 
+--
+CREATE TABLE HCM.HR_AUDIT_LOG
+(
+  AUDIT_ID    NUMBER,
+  TABLE_NAME  VARCHAR2(100 BYTE)                NOT NULL,
+  OPERATION   VARCHAR2(10 BYTE)                 NOT NULL,
+  CHANGED_BY  VARCHAR2(100 BYTE),
+  CHANGED_ON  TIMESTAMP(6)                      DEFAULT SYSTIMESTAMP,
+  KEY_VALUES  VARCHAR2(1000 BYTE),
+  OLD_VALUES  CLOB,
+  NEW_VALUES  CLOB
+)
+TABLESPACE HCM_DATA
+RESULT_CACHE (MODE DEFAULT)
+PCTUSED    0
+PCTFREE    10
+INITRANS   1
+MAXTRANS   255
+STORAGE    (
+            MAXSIZE          UNLIMITED
+            PCTINCREASE      0
+            BUFFER_POOL      DEFAULT
+            FLASH_CACHE      DEFAULT
+            CELL_FLASH_CACHE DEFAULT
+           )
+NOCOMPRESS ;
+
+
+--
+-- HR_COMPANY  (Table) 
+--
+CREATE TABLE HCM.HR_COMPANY
+(
+  COMPANY_ID            NUMBER,
+  COMPANY_NAME          VARCHAR2(100 BYTE),
+  COMPANY_DETAIL        VARCHAR2(200 BYTE),
+  BIN_NO                VARCHAR2(50 BYTE),
+  ADDRESS               VARCHAR2(200 BYTE),
+  EFFECTIVE_START_DATE  DATE,
+  EFFECTIVE_END_DATE    DATE,
+  STATUS                NUMBER
+)
+TABLESPACE HCM_DATA
+RESULT_CACHE (MODE DEFAULT)
+PCTUSED    0
+PCTFREE    10
+INITRANS   1
+MAXTRANS   255
+STORAGE    (
+            MAXSIZE          UNLIMITED
+            PCTINCREASE      0
+            BUFFER_POOL      DEFAULT
+            FLASH_CACHE      DEFAULT
+            CELL_FLASH_CACHE DEFAULT
+           )
+NOCOMPRESS ;
+
+
+--
+-- HR_DEPARTMENT  (Table) 
+--
+CREATE TABLE HCM.HR_DEPARTMENT
+(
+  DEPARTMENT_ID         NUMBER,
+  NAME                  VARCHAR2(200 BYTE)      NOT NULL,
+  PARENT_DEPARTMENT_ID  NUMBER,
+  LOCATION              VARCHAR2(200 BYTE),
+  COST_CENTER           VARCHAR2(100 BYTE),
+  CREATED_BY            VARCHAR2(100 BYTE),
+  CREATED_DATE          TIMESTAMP(6)            DEFAULT SYSTIMESTAMP,
+  UPDATED_BY            VARCHAR2(100 BYTE),
+  UPDATED_DATE          TIMESTAMP(6)
+)
+TABLESPACE HCM_DATA
+RESULT_CACHE (MODE DEFAULT)
+PCTUSED    0
+PCTFREE    10
+INITRANS   1
+MAXTRANS   255
+STORAGE    (
+            MAXSIZE          UNLIMITED
+            PCTINCREASE      0
+            BUFFER_POOL      DEFAULT
+            FLASH_CACHE      DEFAULT
+            CELL_FLASH_CACHE DEFAULT
+           )
+NOCOMPRESS ;
+
+
+--
+-- HR_EMPLOYEE  (Table) 
+--
+CREATE TABLE HCM.HR_EMPLOYEE
+(
+  PERSON_ID             NUMBER,
+  EMP_NO                VARCHAR2(20 BYTE),
+  TITLE                 VARCHAR2(10 BYTE),
+  FIRST_NAME            VARCHAR2(50 BYTE),
+  LAST_NAME             VARCHAR2(50 BYTE),
+  FATHERS_NAME          VARCHAR2(100 BYTE),
+  FATHERS_NAME_B        VARCHAR2(100 BYTE),
+  MOTHERS_NAME          VARCHAR2(100 BYTE),
+  MOTHERS_NAME_B        VARCHAR2(100 BYTE),
+  GENDER                VARCHAR2(10 BYTE),
+  DATE_OF_BIRTH         DATE,
+  NID                   VARCHAR2(30 BYTE),
+  BIRTH_REG_NO          VARCHAR2(30 BYTE),
+  TOWN_OF_BIRTH         VARCHAR2(30 BYTE),
+  REGION_OF_BIRTH       VARCHAR2(30 BYTE),
+  COUNTRY_OF_BIRTH      VARCHAR2(30 BYTE),
+  MARRITIAL_STATUS      NUMBER,
+  NATIONALITY           VARCHAR2(30 BYTE),
+  JOIN_DATE             DATE,
+  PERSON_TYPE_ID        NUMBER,
+  REG_DISABILITY        NUMBER,
+  EFFECTIVE_START_DATE  DATE,
+  EFFECTIVEEND_DATE     DATE,
+  CREATION_DATE         DATE,
+  LAST_UPDATE_DATE      DATE,
+  LAST_UPDATE_BY        NUMBER,
+  STATUS                NUMBER
+)
+TABLESPACE HCM_DATA
+RESULT_CACHE (MODE DEFAULT)
+PCTUSED    0
+PCTFREE    10
+INITRANS   1
+MAXTRANS   255
+STORAGE    (
+            MAXSIZE          UNLIMITED
+            PCTINCREASE      0
+            BUFFER_POOL      DEFAULT
+            FLASH_CACHE      DEFAULT
+            CELL_FLASH_CACHE DEFAULT
+           )
+NOCOMPRESS ;
+
+
+--
+-- HR_EMP_ADDRESS  (Table) 
+--
+CREATE TABLE HCM.HR_EMP_ADDRESS
+(
+  PERSON_ID             NUMBER,
+  ADDRESS_TYPE_ID       NUMBER,
+  ADDRESS1              VARCHAR2(100 BYTE),
+  ADDRESS1_B            VARCHAR2(100 BYTE),
+  COUNTRY               VARCHAR2(30 BYTE),
+  REGION                VARCHAR2(30 BYTE),
+  DISTRICT              VARCHAR2(30 BYTE),
+  UPAZILLA              VARCHAR2(30 BYTE),
+  UNIONS                VARCHAR2(30 BYTE),
+  AREA                  VARCHAR2(30 BYTE),
+  EFFECTIVE_START_DATE  DATE,
+  EFFECTIVEEND_DATE     DATE,
+  CREATION_DATE         DATE,
+  LAST_UPDATE_DATE      DATE,
+  LAST_UPDATE_BY        NUMBER,
+  STATUS                NUMBER,
+  EMP_NO                VARCHAR2(20 BYTE)
+)
+TABLESPACE HCM_DATA
+RESULT_CACHE (MODE DEFAULT)
+PCTUSED    0
+PCTFREE    10
+INITRANS   1
+MAXTRANS   255
+STORAGE    (
+            MAXSIZE          UNLIMITED
+            PCTINCREASE      0
+            BUFFER_POOL      DEFAULT
+            FLASH_CACHE      DEFAULT
+            CELL_FLASH_CACHE DEFAULT
+           )
+NOCOMPRESS ;
+
+
+--
+-- HR_EMP_ASSIGNMENT  (Table) 
+--
+CREATE TABLE HCM.HR_EMP_ASSIGNMENT
+(
+  ASSIGNMENT_ID         NUMBER,
+  PERSON_ID             NUMBER,
+  COMPANY_ID            NUMBER,
+  OU_ID                 NUMBER,
+  ORG_ID                NUMBER,
+  POSITION_ID           NUMBER,
+  PAYROLL_ID            NUMBER,
+  GRADE_ID              NUMBER,
+  EFFECTIVE_START_DATE  DATE,
+  EFFECTIVE_END_DATE    DATE,
+  STATUS                NUMBER
+)
+TABLESPACE HCM_DATA
+RESULT_CACHE (MODE DEFAULT)
+PCTUSED    0
+PCTFREE    10
+INITRANS   1
+MAXTRANS   255
+STORAGE    (
+            MAXSIZE          UNLIMITED
+            PCTINCREASE      0
+            BUFFER_POOL      DEFAULT
+            FLASH_CACHE      DEFAULT
+            CELL_FLASH_CACHE DEFAULT
+           )
+NOCOMPRESS ;
+
+
+--
+-- HR_GRADE  (Table) 
+--
+CREATE TABLE HCM.HR_GRADE
+(
+  ID                    NUMBER,
+  GRADE                 VARCHAR2(30 BYTE),
+  EFFECTIVE_START_DATE  DATE,
+  EFFECTIVE_END_DATE    DATE,
+  STATUS                NUMBER                  DEFAULT 1
+)
+TABLESPACE HCM_DATA
+RESULT_CACHE (MODE DEFAULT)
+PCTUSED    0
+PCTFREE    10
+INITRANS   1
+MAXTRANS   255
+STORAGE    (
+            MAXSIZE          UNLIMITED
+            PCTINCREASE      0
+            BUFFER_POOL      DEFAULT
+            FLASH_CACHE      DEFAULT
+            CELL_FLASH_CACHE DEFAULT
+           )
+NOCOMPRESS ;
+
+
+--
+-- HR_HOLIDAY_CALENDER  (Table) 
+--
+CREATE TABLE HCM.HR_HOLIDAY_CALENDER
+(
+  ID               NUMBER,
+  LOCATION_ID      NUMBER,
+  TDATE            DATE,
+  HOLIDAY_TYPE_ID  NUMBER,
+  STATUS           NUMBER,
+  LAST_UPDATE      TIMESTAMP(6)                 DEFAULT SYSDATE,
+  UPDATED_BY       NUMBER,
+  DESCRIPTION      VARCHAR2(100 BYTE)
+)
+TABLESPACE HCM_DATA
+RESULT_CACHE (MODE DEFAULT)
+PCTUSED    0
+PCTFREE    10
+INITRANS   1
+MAXTRANS   255
+STORAGE    (
+            MAXSIZE          UNLIMITED
+            PCTINCREASE      0
+            BUFFER_POOL      DEFAULT
+            FLASH_CACHE      DEFAULT
+            CELL_FLASH_CACHE DEFAULT
+           )
+NOCOMPRESS ;
+
+
+--
+-- HR_HOLIDAY_TYPE  (Table) 
+--
+CREATE TABLE HCM.HR_HOLIDAY_TYPE
+(
+  ID      NUMBER,
+  NAME    VARCHAR2(30 BYTE),
+  STATUS  NUMBER                                DEFAULT 1
+)
+TABLESPACE HCM_DATA
+RESULT_CACHE (MODE DEFAULT)
+PCTUSED    0
+PCTFREE    10
+INITRANS   1
+MAXTRANS   255
+STORAGE    (
+            MAXSIZE          UNLIMITED
+            PCTINCREASE      0
+            BUFFER_POOL      DEFAULT
+            FLASH_CACHE      DEFAULT
+            CELL_FLASH_CACHE DEFAULT
+           )
+NOCOMPRESS ;
+
+
+--
+-- HR_LEAVE_BALANCE  (Table) 
+--
+CREATE TABLE HCM.HR_LEAVE_BALANCE
+(
+  EMPLOYEE_ID    NUMBER                         NOT NULL,
+  LEAVE_TYPE_ID  NUMBER                         NOT NULL,
+  YEAR           NUMBER(4)                      NOT NULL,
+  ENTITLEMENT    NUMBER,
+  USED           NUMBER                         DEFAULT 0,
+  BALANCE        NUMBER
+)
+TABLESPACE HCM_DATA
+RESULT_CACHE (MODE DEFAULT)
+PCTUSED    0
+PCTFREE    10
+INITRANS   1
+MAXTRANS   255
+STORAGE    (
+            MAXSIZE          UNLIMITED
+            PCTINCREASE      0
+            BUFFER_POOL      DEFAULT
+            FLASH_CACHE      DEFAULT
+            CELL_FLASH_CACHE DEFAULT
+           )
+NOCOMPRESS ;
+
+
+--
+-- HR_LEAVE_TYPE  (Table) 
+--
+CREATE TABLE HCM.HR_LEAVE_TYPE
+(
+  LEAVE_TYPE_ID   NUMBER,
+  CODE            VARCHAR2(50 BYTE)             NOT NULL,
+  NAME            VARCHAR2(200 BYTE)            NOT NULL,
+  ACCRUAL_POLICY  VARCHAR2(100 BYTE),
+  MAX_BALANCE     NUMBER,
+  CREATED_BY      VARCHAR2(100 BYTE),
+  CREATED_DATE    TIMESTAMP(6)                  DEFAULT SYSTIMESTAMP
+)
+TABLESPACE HCM_DATA
+RESULT_CACHE (MODE DEFAULT)
+PCTUSED    0
+PCTFREE    10
+INITRANS   1
+MAXTRANS   255
+STORAGE    (
+            MAXSIZE          UNLIMITED
+            PCTINCREASE      0
+            BUFFER_POOL      DEFAULT
+            FLASH_CACHE      DEFAULT
+            CELL_FLASH_CACHE DEFAULT
+           )
+NOCOMPRESS ;
+
+
+--
+-- HR_LOAN  (Table) 
+--
+CREATE TABLE HCM.HR_LOAN
+(
+  LOAN_ID             NUMBER,
+  EMPLOYEE_ID         NUMBER                    NOT NULL,
+  LOAN_TYPE           VARCHAR2(100 BYTE),
+  PRINCIPAL_AMOUNT    NUMBER(18,2)              NOT NULL,
+  INTEREST_RATE       NUMBER(5,2),
+  TERM_MONTHS         NUMBER,
+  MONTHLY_DEDUCTION   NUMBER(18,2),
+  START_DATE          DATE,
+  END_DATE            DATE,
+  OUTSTANDING_AMOUNT  NUMBER(18,2),
+  STATUS              VARCHAR2(30 BYTE)         DEFAULT 'ACTIVE',
+  CREATED_BY          VARCHAR2(100 BYTE),
+  CREATED_DATE        TIMESTAMP(6)              DEFAULT SYSTIMESTAMP
+)
+TABLESPACE HCM_DATA
+RESULT_CACHE (MODE DEFAULT)
+PCTUSED    0
+PCTFREE    10
+INITRANS   1
+MAXTRANS   255
+STORAGE    (
+            MAXSIZE          UNLIMITED
+            PCTINCREASE      0
+            BUFFER_POOL      DEFAULT
+            FLASH_CACHE      DEFAULT
+            CELL_FLASH_CACHE DEFAULT
+           )
+NOCOMPRESS ;
+
+
+--
+-- HR_LOCATION  (Table) 
+--
+CREATE TABLE HCM.HR_LOCATION
+(
+  ID             NUMBER,
+  LOCATION_NAME  VARCHAR2(100 BYTE),
+  STATUS         NUMBER
+)
+TABLESPACE HCM_DATA
+RESULT_CACHE (MODE DEFAULT)
+PCTUSED    0
+PCTFREE    10
+INITRANS   1
+MAXTRANS   255
+STORAGE    (
+            MAXSIZE          UNLIMITED
+            PCTINCREASE      0
+            BUFFER_POOL      DEFAULT
+            FLASH_CACHE      DEFAULT
+            CELL_FLASH_CACHE DEFAULT
+           )
+NOCOMPRESS ;
+
+
+--
+-- HR_ORG  (Table) 
+--
+CREATE TABLE HCM.HR_ORG
+(
+  ID              NUMBER,
+  NAME            VARCHAR2(200 BYTE)            NOT NULL,
+  PARENT_ORG_ID   NUMBER,
+  ORG_TYPE_ID     NUMBER,
+  LOCATION        VARCHAR2(200 BYTE),
+  COST_CENTER_ID  NUMBER,
+  CREATED_BY      NUMBER,
+  CREATED_DATE    TIMESTAMP(6)                  DEFAULT SYSTIMESTAMP,
+  UPDATED_BY      NUMBER,
+  UPDATED_DATE    TIMESTAMP(6),
+  STATUS          NUMBER                        DEFAULT 1
+)
+TABLESPACE HCM_DATA
+RESULT_CACHE (MODE DEFAULT)
+PCTUSED    0
+PCTFREE    10
+INITRANS   1
+MAXTRANS   255
+STORAGE    (
+            MAXSIZE          UNLIMITED
+            PCTINCREASE      0
+            BUFFER_POOL      DEFAULT
+            FLASH_CACHE      DEFAULT
+            CELL_FLASH_CACHE DEFAULT
+           )
+NOCOMPRESS ;
+
+
+--
+-- HR_ORG_POSITION  (Table) 
+--
+CREATE TABLE HCM.HR_ORG_POSITION
+(
+  ID                    NUMBER,
+  ORG_ID                NUMBER,
+  POSITION_ID           NUMBER,
+  FTE                   NUMBER,
+  ACTUAL_COUNT          NUMBER,
+  EFFECTIVE_START_DATE  DATE,
+  EFFECTIVE_END_DATE    DATE,
+  STATUS                NUMBER
+)
+TABLESPACE HCM_DATA
+RESULT_CACHE (MODE DEFAULT)
+PCTUSED    0
+PCTFREE    10
+INITRANS   1
+MAXTRANS   255
+STORAGE    (
+            MAXSIZE          UNLIMITED
+            PCTINCREASE      0
+            BUFFER_POOL      DEFAULT
+            FLASH_CACHE      DEFAULT
+            CELL_FLASH_CACHE DEFAULT
+           )
+NOCOMPRESS ;
+
+
+--
+-- HR_ORG_TYPE  (Table) 
+--
+CREATE TABLE HCM.HR_ORG_TYPE
+(
+  ID                    NUMBER,
+  ORG_TYPE              VARCHAR2(100 BYTE),
+  EFFECTIVE_START_DATE  DATE,
+  EFFECTIVE_END_DATE    DATE,
+  STATUS                NUMBER
+)
+TABLESPACE HCM_DATA
+RESULT_CACHE (MODE DEFAULT)
+PCTUSED    0
+PCTFREE    10
+INITRANS   1
+MAXTRANS   255
+STORAGE    (
+            MAXSIZE          UNLIMITED
+            PCTINCREASE      0
+            BUFFER_POOL      DEFAULT
+            FLASH_CACHE      DEFAULT
+            CELL_FLASH_CACHE DEFAULT
+           )
+NOCOMPRESS ;
+
+
+--
+-- HR_PAYROLL_RUN  (Table) 
+--
+CREATE TABLE HCM.HR_PAYROLL_RUN
+(
+  PAYROLL_ID    NUMBER,
+  RUN_MONTH     VARCHAR2(7 BYTE)                NOT NULL,
+  RUN_DATE      DATE                            DEFAULT TRUNC(SYSDATE),
+  RUN_BY        VARCHAR2(100 BYTE),
+  STATUS        VARCHAR2(30 BYTE)               DEFAULT 'DRAFT',
+  TOTAL_GROSS   NUMBER(18,2),
+  TOTAL_NET     NUMBER(18,2),
+  REMARKS       VARCHAR2(2000 BYTE),
+  CREATED_DATE  TIMESTAMP(6)                    DEFAULT SYSTIMESTAMP
+)
+TABLESPACE HCM_DATA
+RESULT_CACHE (MODE DEFAULT)
+PCTUSED    0
+PCTFREE    10
+INITRANS   1
+MAXTRANS   255
+STORAGE    (
+            MAXSIZE          UNLIMITED
+            PCTINCREASE      0
+            BUFFER_POOL      DEFAULT
+            FLASH_CACHE      DEFAULT
+            CELL_FLASH_CACHE DEFAULT
+           )
+NOCOMPRESS ;
+
+
+--
+-- HR_PAY_COMPONENT  (Table) 
+--
+CREATE TABLE HCM.HR_PAY_COMPONENT
+(
+  COMPONENT_ID         NUMBER,
+  CODE                 VARCHAR2(50 BYTE)        NOT NULL,
+  NAME                 VARCHAR2(200 BYTE)       NOT NULL,
+  TYPE                 VARCHAR2(20 BYTE)        NOT NULL,
+  CALCULATION_FORMULA  VARCHAR2(4000 BYTE),
+  TAXABLE              VARCHAR2(3 BYTE)         DEFAULT 'YES',
+  IS_PENULTIMATE       NUMBER(1)                DEFAULT 0,
+  CREATED_BY           VARCHAR2(100 BYTE),
+  CREATED_DATE         TIMESTAMP(6)             DEFAULT SYSTIMESTAMP,
+  UPDATED_BY           VARCHAR2(100 BYTE),
+  UPDATED_DATE         TIMESTAMP(6)
+)
+TABLESPACE HCM_DATA
+RESULT_CACHE (MODE DEFAULT)
+PCTUSED    0
+PCTFREE    10
+INITRANS   1
+MAXTRANS   255
+STORAGE    (
+            MAXSIZE          UNLIMITED
+            PCTINCREASE      0
+            BUFFER_POOL      DEFAULT
+            FLASH_CACHE      DEFAULT
+            CELL_FLASH_CACHE DEFAULT
+           )
+NOCOMPRESS ;
+
+
+--
+-- HR_PAY_STRUCTURE  (Table) 
+--
+CREATE TABLE HCM.HR_PAY_STRUCTURE
+(
+  PAY_STRUCTURE_ID  NUMBER,
+  NAME              VARCHAR2(200 BYTE)          NOT NULL,
+  DESCRIPTION       VARCHAR2(2000 BYTE),
+  CREATED_BY        VARCHAR2(100 BYTE),
+  CREATED_DATE      TIMESTAMP(6)                DEFAULT SYSTIMESTAMP,
+  UPDATED_BY        VARCHAR2(100 BYTE),
+  UPDATED_DATE      TIMESTAMP(6)
+)
+TABLESPACE HCM_DATA
+RESULT_CACHE (MODE DEFAULT)
+PCTUSED    0
+PCTFREE    10
+INITRANS   1
+MAXTRANS   255
+STORAGE    (
+            MAXSIZE          UNLIMITED
+            PCTINCREASE      0
+            BUFFER_POOL      DEFAULT
+            FLASH_CACHE      DEFAULT
+            CELL_FLASH_CACHE DEFAULT
+           )
+NOCOMPRESS ;
+
+
+--
+-- HR_PAY_STRUCTURE_COMPONENT  (Table) 
+--
+CREATE TABLE HCM.HR_PAY_STRUCTURE_COMPONENT
+(
+  PAY_STRUCTURE_ID  NUMBER                      NOT NULL,
+  COMPONENT_ID      NUMBER                      NOT NULL,
+  COMPONENT_ORDER   NUMBER,
+  DEFAULT_VALUE     NUMBER(18,2)
+)
+TABLESPACE HCM_DATA
+RESULT_CACHE (MODE DEFAULT)
+PCTUSED    0
+PCTFREE    10
+INITRANS   1
+MAXTRANS   255
+STORAGE    (
+            MAXSIZE          UNLIMITED
+            PCTINCREASE      0
+            BUFFER_POOL      DEFAULT
+            FLASH_CACHE      DEFAULT
+            CELL_FLASH_CACHE DEFAULT
+           )
+NOCOMPRESS ;
+
+
+--
+-- HR_PERSON_TYPE  (Table) 
+--
+CREATE TABLE HCM.HR_PERSON_TYPE
+(
+  PERSON_TYPE_ID        NUMBER,
+  PERSON_TYPE           VARCHAR2(30 BYTE),
+  DESCRIPTION           VARCHAR2(50 BYTE),
+  EFFECTIVE_START_DATE  DATE,
+  EFFECTIVE_END_DATE    DATE,
+  STATUS                NUMBER
+)
+TABLESPACE HCM_DATA
+RESULT_CACHE (MODE DEFAULT)
+PCTUSED    0
+PCTFREE    10
+INITRANS   1
+MAXTRANS   255
+STORAGE    (
+            MAXSIZE          UNLIMITED
+            PCTINCREASE      0
+            BUFFER_POOL      DEFAULT
+            FLASH_CACHE      DEFAULT
+            CELL_FLASH_CACHE DEFAULT
+           )
+NOCOMPRESS ;
+
+
+--
+-- HR_POSITION  (Table) 
+--
+CREATE TABLE HCM.HR_POSITION
+(
+  POSITION_ID   NUMBER,
+  TITLE         VARCHAR2(200 BYTE)              NOT NULL,
+  GRADE         VARCHAR2(50 BYTE),
+  LEVELS        VARCHAR2(50 BYTE),
+  NOTES         VARCHAR2(4000 BYTE),
+  CREATED_BY    VARCHAR2(100 BYTE),
+  CREATED_DATE  TIMESTAMP(6)                    DEFAULT SYSTIMESTAMP,
+  UPDATED_BY    VARCHAR2(100 BYTE),
+  UPDATED_DATE  TIMESTAMP(6)
+)
+TABLESPACE HCM_DATA
+RESULT_CACHE (MODE DEFAULT)
+PCTUSED    0
+PCTFREE    10
+INITRANS   1
+MAXTRANS   255
+STORAGE    (
+            MAXSIZE          UNLIMITED
+            PCTINCREASE      0
+            BUFFER_POOL      DEFAULT
+            FLASH_CACHE      DEFAULT
+            CELL_FLASH_CACHE DEFAULT
+           )
+NOCOMPRESS ;
+
+
+--
+-- HR_SHIFT  (Table) 
+--
+CREATE TABLE HCM.HR_SHIFT
+(
+  SHIFT_ID           NUMBER,
+  CODE               VARCHAR2(50 BYTE)          NOT NULL,
+  NAME               VARCHAR2(200 BYTE),
+  START_TIME         VARCHAR2(10 BYTE),
+  END_TIME           VARCHAR2(10 BYTE),
+  GRACE_IN_MINUTES   NUMBER                     DEFAULT 0,
+  GRACE_OUT_MINUTES  NUMBER                     DEFAULT 0,
+  OVERNIGHT_FLAG     NUMBER(1)                  DEFAULT 0,
+  CREATED_BY         VARCHAR2(100 BYTE),
+  CREATED_DATE       TIMESTAMP(6)               DEFAULT SYSTIMESTAMP,
+  UPDATED_BY         VARCHAR2(100 BYTE),
+  UPDATED_DATE       TIMESTAMP(6)
+)
+TABLESPACE HCM_DATA
+RESULT_CACHE (MODE DEFAULT)
+PCTUSED    0
+PCTFREE    10
+INITRANS   1
+MAXTRANS   255
+STORAGE    (
+            MAXSIZE          UNLIMITED
+            PCTINCREASE      0
+            BUFFER_POOL      DEFAULT
+            FLASH_CACHE      DEFAULT
+            CELL_FLASH_CACHE DEFAULT
+           )
+NOCOMPRESS ;
+
+
+--
+-- GRADE_LIST_PK  (Index) 
+--
+CREATE UNIQUE INDEX HCM.GRADE_LIST_PK ON HCM.HR_GRADE
+(ID)
+TABLESPACE HCM_DATA
+PCTFREE    10
+INITRANS   2
+MAXTRANS   255
+STORAGE    (
+            INITIAL          64K
+            NEXT             1M
+            MAXSIZE          UNLIMITED
+            MINEXTENTS       1
+            MAXEXTENTS       UNLIMITED
+            PCTINCREASE      0
+            BUFFER_POOL      DEFAULT
+            FLASH_CACHE      DEFAULT
+            CELL_FLASH_CACHE DEFAULT
+           );
+
+
+--
+-- HR_EMPLOYEE_PK  (Index) 
+--
+CREATE UNIQUE INDEX HCM.HR_EMPLOYEE_PK ON HCM.HR_EMPLOYEE
+(PERSON_ID)
+TABLESPACE HCM_DATA
+PCTFREE    10
+INITRANS   2
+MAXTRANS   255
+STORAGE    (
+            INITIAL          64K
+            NEXT             1M
+            MAXSIZE          UNLIMITED
+            MINEXTENTS       1
+            MAXEXTENTS       UNLIMITED
+            PCTINCREASE      0
+            BUFFER_POOL      DEFAULT
+            FLASH_CACHE      DEFAULT
+            CELL_FLASH_CACHE DEFAULT
+           );
+
+
+--
+-- HR_EMPLOYEE_U01  (Index) 
+--
+CREATE UNIQUE INDEX HCM.HR_EMPLOYEE_U01 ON HCM.HR_EMPLOYEE
+(EMP_NO)
+TABLESPACE HCM_DATA
+PCTFREE    10
+INITRANS   2
+MAXTRANS   255
+STORAGE    (
+            INITIAL          64K
+            NEXT             1M
+            MAXSIZE          UNLIMITED
+            MINEXTENTS       1
+            MAXEXTENTS       UNLIMITED
+            PCTINCREASE      0
+            BUFFER_POOL      DEFAULT
+            FLASH_CACHE      DEFAULT
+            CELL_FLASH_CACHE DEFAULT
+           );
+
+
+--
+-- HR_EMP_ASSIGNMENT_PK  (Index) 
+--
+CREATE UNIQUE INDEX HCM.HR_EMP_ASSIGNMENT_PK ON HCM.HR_EMP_ASSIGNMENT
+(ASSIGNMENT_ID)
+TABLESPACE HCM_DATA
+PCTFREE    10
+INITRANS   2
+MAXTRANS   255
+STORAGE    (
+            INITIAL          64K
+            NEXT             1M
+            MAXSIZE          UNLIMITED
+            MINEXTENTS       1
+            MAXEXTENTS       UNLIMITED
+            PCTINCREASE      0
+            BUFFER_POOL      DEFAULT
+            FLASH_CACHE      DEFAULT
+            CELL_FLASH_CACHE DEFAULT
+           );
+
+
+--
+-- HR_ORG_PK  (Index) 
+--
+CREATE UNIQUE INDEX HCM.HR_ORG_PK ON HCM.HR_ORG
+(ID)
+TABLESPACE HCM_DATA
+PCTFREE    10
+INITRANS   2
+MAXTRANS   255
+STORAGE    (
+            INITIAL          64K
+            NEXT             1M
+            MAXSIZE          UNLIMITED
+            MINEXTENTS       1
+            MAXEXTENTS       UNLIMITED
+            PCTINCREASE      0
+            BUFFER_POOL      DEFAULT
+            FLASH_CACHE      DEFAULT
+            CELL_FLASH_CACHE DEFAULT
+           );
+
+
+--
+-- HR_ORG_TYPE_PK  (Index) 
+--
+CREATE UNIQUE INDEX HCM.HR_ORG_TYPE_PK ON HCM.HR_ORG_TYPE
+(ID)
+TABLESPACE HCM_DATA
+PCTFREE    10
+INITRANS   2
+MAXTRANS   255
+STORAGE    (
+            INITIAL          64K
+            NEXT             1M
+            MAXSIZE          UNLIMITED
+            MINEXTENTS       1
+            MAXEXTENTS       UNLIMITED
+            PCTINCREASE      0
+            BUFFER_POOL      DEFAULT
+            FLASH_CACHE      DEFAULT
+            CELL_FLASH_CACHE DEFAULT
+           );
+
+
+--
+-- HR_PERSON_TYPE_PK  (Index) 
+--
+CREATE UNIQUE INDEX HCM.HR_PERSON_TYPE_PK ON HCM.HR_PERSON_TYPE
+(PERSON_TYPE_ID)
+TABLESPACE HCM_DATA
+PCTFREE    10
+INITRANS   2
+MAXTRANS   255
+STORAGE    (
+            INITIAL          64K
+            NEXT             1M
+            MAXSIZE          UNLIMITED
+            MINEXTENTS       1
+            MAXEXTENTS       UNLIMITED
+            PCTINCREASE      0
+            BUFFER_POOL      DEFAULT
+            FLASH_CACHE      DEFAULT
+            CELL_FLASH_CACHE DEFAULT
+           );
+
+
+--
+-- IDX_PS_RUN_MONTH  (Index) 
+--
+CREATE INDEX HCM.IDX_PS_RUN_MONTH ON HCM.HR_PAYROLL_RUN
+(RUN_MONTH)
+TABLESPACE HCM_DATA
+PCTFREE    10
+INITRANS   2
+MAXTRANS   255
+STORAGE    (
+            MAXSIZE          UNLIMITED
+            PCTINCREASE      0
+            BUFFER_POOL      DEFAULT
+            FLASH_CACHE      DEFAULT
+            CELL_FLASH_CACHE DEFAULT
+           );
+
+
+--
+-- VW_USER_DIRECT_PERMISSIONS  (View) 
+--
+CREATE OR REPLACE FORCE VIEW HCM.VW_USER_DIRECT_PERMISSIONS
+(USER_ID, USERNAME, ROLE_ID, ROLE_NAME, PERMISSION_ID, 
+ PERMISSION_CODE, PERMISSION_NAME, MODULE_ID)
+BEQUEATH DEFINER
+AS 
+SELECT u.id AS user_id,
+          u.username,
+          NULL AS role_id,                   -- Placeholder to match structure
+          NULL AS role_name,                 -- Placeholder to match structure
+          p.id AS permission_id,
+          p.permission_code,
+          p.permission_name,
+          p.module_id
+     FROM users u
+          JOIN user_permissions UP ON u.id = UP.user_id
+          JOIN permissions p ON UP.permission_id = p.id;
+
+
+--
+-- HR_COMPANY_TRG  (Trigger) 
+--
+CREATE OR REPLACE TRIGGER HCM.HR_COMPANY_TRG
+BEFORE INSERT
+ON HCM.HR_COMPANY
+REFERENCING NEW AS New OLD AS Old
+FOR EACH ROW
+BEGIN
+-- For Toad:  Highlight column COMPANY_ID
+  :new.COMPANY_ID := HR_COMPANY_SEQ.nextval;
+END HR_COMPANY_TRG;
+/
+
+
+--
+-- HR_EMPLOYEE_TRG  (Trigger) 
+--
+CREATE OR REPLACE TRIGGER HCM.HR_EMPLOYEE_TRG
+BEFORE INSERT
+ON HCM.HR_EMPLOYEE
+REFERENCING NEW AS New OLD AS Old
+FOR EACH ROW
+BEGIN
+-- For Toad:  Highlight column PERSON_ID
+  :new.PERSON_ID := HR_EMPLOYEE_SEQ.nextval;
+END HR_EMPLOYEE_TRG;
+/
+
+
+--
+-- HR_EMP_ASSIGNMENT_TRG  (Trigger) 
+--
+CREATE OR REPLACE TRIGGER HCM.HR_EMP_ASSIGNMENT_TRG
+BEFORE INSERT
+ON HCM.HR_EMP_ASSIGNMENT
+REFERENCING NEW AS New OLD AS Old
+FOR EACH ROW
+BEGIN
+-- For Toad:  Highlight column ASSIGNMENT_ID
+  :new.ASSIGNMENT_ID := HR_EMP_ASSIGNMENT_SEQ.nextval;
+END HR_EMP_ASSIGNMENT_TRG;
+/
+
+
+--
+-- HR_GRADE_TRG  (Trigger) 
+--
+CREATE OR REPLACE TRIGGER HCM.HR_GRADE_TRG
+BEFORE INSERT
+ON HCM.HR_GRADE
+REFERENCING NEW AS New OLD AS Old
+FOR EACH ROW
+BEGIN
+-- For Toad:  Highlight column ID
+  :new.ID := HR_GRADE_SEQ.nextval;
+END HR_GRADE_TRG;
+/
+
+
+--
+-- HR_HOLIDAY_CALENDER_TRG  (Trigger) 
+--
+CREATE OR REPLACE TRIGGER HCM.HR_HOLIDAY_CALENDER_TRG
+BEFORE INSERT
+ON HCM.HR_HOLIDAY_CALENDER
+REFERENCING NEW AS New OLD AS Old
+FOR EACH ROW
+BEGIN
+-- For Toad:  Highlight column ID
+  :new.ID := HR_HOLIDAY_CALENDER_SEQ.nextval;
+END HR_HOLIDAY_CALENDER_TRG;
+/
+
+
+--
+-- HR_HOLIDAY_TYPE_TRG  (Trigger) 
+--
+CREATE OR REPLACE TRIGGER HCM.HR_HOLIDAY_TYPE_TRG
+BEFORE INSERT
+ON HCM.HR_HOLIDAY_TYPE
+REFERENCING NEW AS New OLD AS Old
+FOR EACH ROW
+BEGIN
+-- For Toad:  Highlight column ID
+  :new.ID := HR_HOLIDAY_TYPE_SEQ.nextval;
+END HR_HOLIDAY_TYPE_TRG;
+/
+
+
+--
+-- HR_LOCATION_TRG  (Trigger) 
+--
+CREATE OR REPLACE TRIGGER HCM.HR_LOCATION_TRG
+BEFORE INSERT
+ON HCM.HR_LOCATION
+REFERENCING NEW AS New OLD AS Old
+FOR EACH ROW
+BEGIN
+-- For Toad:  Highlight column ID
+  :new.ID := HR_LOCATION_SEQ.nextval;
+END HR_LOCATION_TRG;
+/
+
+
+--
+-- HR_ORG_POSITION_TRG  (Trigger) 
+--
+CREATE OR REPLACE TRIGGER HCM.HR_ORG_POSITION_TRG
+BEFORE INSERT
+ON HCM.HR_ORG_POSITION
+REFERENCING NEW AS New OLD AS Old
+FOR EACH ROW
+BEGIN
+-- For Toad:  Highlight column ID
+  :new.ID := HR_ORG_POSITION_SEQ.nextval;
+END HR_ORG_POSITION_TRG;
+/
+
+
+--
+-- HR_ORG_TRG  (Trigger) 
+--
+CREATE OR REPLACE TRIGGER HCM.HR_ORG_TRG
+BEFORE INSERT
+ON HCM.HR_ORG
+REFERENCING NEW AS New OLD AS Old
+FOR EACH ROW
+BEGIN
+-- For Toad:  Highlight column ID
+  :new.ID := HR_ORG_SEQ.nextval;
+END HR_ORG_TRG;
+/
+
+
+--
+-- HR_ORG_TYPE_TRG  (Trigger) 
+--
+CREATE OR REPLACE TRIGGER HCM.HR_ORG_TYPE_TRG
+BEFORE INSERT
+ON HCM.HR_ORG_TYPE
+REFERENCING NEW AS New OLD AS Old
+FOR EACH ROW
+BEGIN
+-- For Toad:  Highlight column ID
+  :new.ID := HR_ORG_TYPE_SEQ.nextval;
+END HR_ORG_TYPE_TRG;
+/
+
+
+--
+-- HR_PERSON_TYPE_TRG  (Trigger) 
+--
+CREATE OR REPLACE TRIGGER HCM.HR_PERSON_TYPE_TRG
+BEFORE INSERT
+ON HCM.HR_PERSON_TYPE
+REFERENCING NEW AS New OLD AS Old
+FOR EACH ROW
+BEGIN
+-- For Toad:  Highlight column PERSON_TYPE_ID
+  :new.PERSON_TYPE_ID := HR_PERSON_TYPE_SEQ.nextval;
+END HR_PERSON_TYPE_TRG;
+/
+
+
+--
+-- TRG_AUDIT_HR_LOAN  (Trigger) 
+--
+CREATE OR REPLACE TRIGGER HCM.TRG_AUDIT_HR_LOAN
+AFTER INSERT OR UPDATE OR DELETE ON HCM.HR_LOAN
+FOR EACH ROW
+DECLARE
+  v_old CLOB;
+  v_new CLOB;
+  v_key VARCHAR2(200);
+BEGIN
+  IF INSERTING THEN
+    v_new := 'EMP='||:NEW.employee_id||';PRIN='||NVL(TO_CHAR(:NEW.principal_amount),'0')||';OUT='||NVL(TO_CHAR(:NEW.outstanding_amount),'0');
+    v_key := 'LN='||:NEW.loan_id;
+    hrms_audit_record('HR_LOAN','INSERT',v_key,null,v_new);
+  ELSIF UPDATING THEN
+    v_old := 'PRIN='||NVL(TO_CHAR(:OLD.principal_amount),'0')||';OUT='||NVL(TO_CHAR(:OLD.outstanding_amount),'0');
+    v_new := 'PRIN='||NVL(TO_CHAR(:NEW.principal_amount),'0')||';OUT='||NVL(TO_CHAR(:NEW.outstanding_amount),'0');
+    v_key := 'LN='||NVL(:NEW.loan_id,:OLD.loan_id);
+    hrms_audit_record('HR_LOAN','UPDATE',v_key,v_old,v_new);
+  ELSIF DELETING THEN
+    v_old := 'PRIN='||NVL(TO_CHAR(:OLD.principal_amount),'0')||';OUT='||NVL(TO_CHAR(:OLD.outstanding_amount),'0');
+    v_key := 'LN='||:OLD.loan_id;
+    hrms_audit_record('HR_LOAN','DELETE',v_key,v_old,null);
+  END IF;
+END;
+/
+
+
+--
+-- TRG_AUDIT_HR_PAYROLL_RUN  (Trigger) 
+--
+CREATE OR REPLACE TRIGGER HCM.TRG_AUDIT_HR_PAYROLL_RUN
+AFTER INSERT OR UPDATE OR DELETE ON HCM.HR_PAYROLL_RUN
+FOR EACH ROW
+DECLARE
+  v_old CLOB;
+  v_new CLOB;
+  v_key VARCHAR2(200);
+BEGIN
+  IF INSERTING THEN
+    v_new := 'RUN_MONTH='||:NEW.run_month||';STATUS='||:NEW.status;
+    v_key := 'PR='||:NEW.payroll_id;
+    hrms_audit_record('HR_PAYROLL_RUN','INSERT',v_key,null,v_new);
+  ELSIF UPDATING THEN
+    v_old := 'RUN_MONTH='||:OLD.run_month||';STATUS='||:OLD.status;
+    v_new := 'RUN_MONTH='||:NEW.run_month||';STATUS='||:NEW.status;
+    v_key := 'PR='||NVL(:NEW.payroll_id,:OLD.payroll_id);
+    hrms_audit_record('HR_PAYROLL_RUN','UPDATE',v_key,v_old,v_new);
+  ELSIF DELETING THEN
+    v_old := 'RUN_MONTH='||:OLD.run_month||';STATUS='||:OLD.status;
+    v_key := 'PR='||:OLD.payroll_id;
+    hrms_audit_record('HR_PAYROLL_RUN','DELETE',v_key,v_old,null);
+  END IF;
+END;
+/
+
+
+--
+-- TRG_DEPT_BI  (Trigger) 
+--
+CREATE OR REPLACE TRIGGER HCM.TRG_DEPT_BI
+BEFORE INSERT ON HCM.HR_DEPARTMENT
+FOR EACH ROW
+BEGIN
+  IF :NEW.department_id IS NULL THEN
+    SELECT hr_department_seq.NEXTVAL INTO :NEW.department_id FROM DUAL;
+  END IF;
+  :NEW.created_date := SYSTIMESTAMP;
+  :NEW.updated_date := SYSTIMESTAMP;
+END;
+/
+
+
+--
+-- TRG_LOAN_BI  (Trigger) 
+--
+CREATE OR REPLACE TRIGGER HCM.TRG_LOAN_BI
+BEFORE INSERT ON HCM.HR_LOAN
+FOR EACH ROW
+BEGIN
+  IF :NEW.loan_id IS NULL THEN
+    SELECT hr_loan_seq.NEXTVAL INTO :NEW.loan_id FROM DUAL;
+  END IF;
+  :NEW.created_date := SYSTIMESTAMP;
+END;
+/
+
+
+--
+-- TRG_PAYROLL_RUN_BI  (Trigger) 
+--
+CREATE OR REPLACE TRIGGER HCM.TRG_PAYROLL_RUN_BI
+BEFORE INSERT ON HCM.HR_PAYROLL_RUN
+FOR EACH ROW
+BEGIN
+  IF :NEW.payroll_id IS NULL THEN
+    SELECT hr_payroll_run_seq.NEXTVAL INTO :NEW.payroll_id FROM DUAL;
+  END IF;
+  :NEW.created_date := SYSTIMESTAMP;
+END;
+/
+
+
+--
+-- TRG_PAY_COMPONENT_BI  (Trigger) 
+--
+CREATE OR REPLACE TRIGGER HCM.TRG_PAY_COMPONENT_BI
+BEFORE INSERT ON HCM.HR_PAY_COMPONENT
+FOR EACH ROW
+BEGIN
+  IF :NEW.component_id IS NULL THEN
+    SELECT hr_pay_component_seq.NEXTVAL INTO :NEW.component_id FROM DUAL;
+  END IF;
+  :NEW.created_date := SYSTIMESTAMP;
+  :NEW.updated_date := SYSTIMESTAMP;
+END;
+/
+
+
+--
+-- TRG_PAY_STRUCTURE_BI  (Trigger) 
+--
+CREATE OR REPLACE TRIGGER HCM.TRG_PAY_STRUCTURE_BI
+BEFORE INSERT ON HCM.HR_PAY_STRUCTURE
+FOR EACH ROW
+BEGIN
+  IF :NEW.pay_structure_id IS NULL THEN
+    SELECT hr_pay_structure_seq.NEXTVAL INTO :NEW.pay_structure_id FROM DUAL;
+  END IF;
+  :NEW.created_date := SYSTIMESTAMP;
+  :NEW.updated_date := SYSTIMESTAMP;
+END;
+/
+
+
+--
+-- TRG_POSITION_BI  (Trigger) 
+--
+CREATE OR REPLACE TRIGGER HCM.TRG_POSITION_BI
+BEFORE INSERT ON HCM.HR_POSITION
+FOR EACH ROW
+BEGIN
+  IF :NEW.position_id IS NULL THEN
+    SELECT hr_position_seq.NEXTVAL INTO :NEW.position_id FROM DUAL;
+  END IF;
+  :NEW.created_date := SYSTIMESTAMP;
+  :NEW.updated_date := SYSTIMESTAMP;
+END;
+/
+
+
+--
+-- TRG_SHIFT_BI  (Trigger) 
+--
+CREATE OR REPLACE TRIGGER HCM.TRG_SHIFT_BI
+BEFORE INSERT ON HCM.HR_SHIFT
+FOR EACH ROW
+BEGIN
+  IF :NEW.shift_id IS NULL THEN
+    SELECT hr_shift_seq.NEXTVAL INTO :NEW.shift_id FROM DUAL;
+  END IF;
+  :NEW.created_date := SYSTIMESTAMP;
+  :NEW.updated_date := SYSTIMESTAMP;
+END;
+/
+
+
+--
+-- HR_EMPLOYEES  (Table) 
+--
+CREATE TABLE HCM.HR_EMPLOYEES
+(
+  EMPLOYEE_ID          NUMBER,
+  EMPLOYEE_NUMBER      VARCHAR2(30 BYTE)        NOT NULL,
+  FIRST_NAME           VARCHAR2(100 BYTE)       NOT NULL,
+  LAST_NAME            VARCHAR2(100 BYTE),
+  FULL_NAME            VARCHAR2(201 BYTE) Generated Always as ("FIRST_NAME"||' '||NVL("LAST_NAME",'')),
+  DOB                  DATE,
+  GENDER               VARCHAR2(20 BYTE),
+  NATIONAL_ID          VARCHAR2(100 BYTE),
+  PASSPORT_NO          VARCHAR2(50 BYTE),
+  EMAIL                VARCHAR2(200 BYTE),
+  PHONE                VARCHAR2(50 BYTE),
+  JOIN_DATE            DATE,
+  PROBATION_END_DATE   DATE,
+  TERMINATION_DATE     DATE,
+  STATUS               VARCHAR2(30 BYTE)        DEFAULT 'ACTIVE',
+  POSITION_ID          NUMBER,
+  DEPARTMENT_ID        NUMBER,
+  MANAGER_ID           NUMBER,
+  COST_CENTER          VARCHAR2(100 BYTE),
+  LOCATION             VARCHAR2(200 BYTE),
+  BANK_ACCOUNT_NO      VARCHAR2(100 BYTE),
+  BANK_NAME            VARCHAR2(200 BYTE),
+  TAX_ID               VARCHAR2(100 BYTE),
+  SALARY_STRUCTURE_ID  NUMBER,
+  CREATED_BY           VARCHAR2(100 BYTE),
+  CREATED_DATE         TIMESTAMP(6)             DEFAULT SYSTIMESTAMP,
+  UPDATED_BY           VARCHAR2(100 BYTE),
+  UPDATED_DATE         TIMESTAMP(6)
+)
+TABLESPACE HCM_DATA
+RESULT_CACHE (MODE DEFAULT)
+PCTUSED    0
+PCTFREE    10
+INITRANS   1
+MAXTRANS   255
+STORAGE    (
+            MAXSIZE          UNLIMITED
+            PCTINCREASE      0
+            BUFFER_POOL      DEFAULT
+            FLASH_CACHE      DEFAULT
+            CELL_FLASH_CACHE DEFAULT
+           )
+NOCOMPRESS ;
+
+
+--
+-- HR_LEAVE_REQUEST  (Table) 
+--
+CREATE TABLE HCM.HR_LEAVE_REQUEST
+(
+  LEAVE_ID       NUMBER,
+  EMPLOYEE_ID    NUMBER                         NOT NULL,
+  LEAVE_TYPE_ID  NUMBER                         NOT NULL,
+  START_DATE     DATE                           NOT NULL,
+  END_DATE       DATE                           NOT NULL,
+  DAYS           NUMBER,
+  REASON         VARCHAR2(2000 BYTE),
+  STATUS         VARCHAR2(30 BYTE)              DEFAULT 'PENDING',
+  APPLIED_ON     TIMESTAMP(6)                   DEFAULT SYSTIMESTAMP,
+  APPROVER_ID    NUMBER,
+  APPROVED_ON    TIMESTAMP(6),
+  CREATED_BY     VARCHAR2(100 BYTE),
+  CREATED_DATE   TIMESTAMP(6)                   DEFAULT SYSTIMESTAMP,
+  UPDATED_BY     VARCHAR2(100 BYTE),
+  UPDATED_DATE   TIMESTAMP(6)
+)
+TABLESPACE HCM_DATA
+RESULT_CACHE (MODE DEFAULT)
+PCTUSED    0
+PCTFREE    10
+INITRANS   1
+MAXTRANS   255
+STORAGE    (
+            MAXSIZE          UNLIMITED
+            PCTINCREASE      0
+            BUFFER_POOL      DEFAULT
+            FLASH_CACHE      DEFAULT
+            CELL_FLASH_CACHE DEFAULT
+           )
+NOCOMPRESS ;
+
+
+--
+-- HR_PAYSLIP  (Table) 
+--
+CREATE TABLE HCM.HR_PAYSLIP
+(
+  PAYSLIP_ID    NUMBER,
+  PAYROLL_ID    NUMBER                          NOT NULL,
+  EMPLOYEE_ID   NUMBER                          NOT NULL,
+  GROSS         NUMBER(18,2),
+  NET           NUMBER(18,2),
+  TAX           NUMBER(18,2),
+  DEDUCTIONS    NUMBER(18,2),
+  PAYSLIP_BLOB  BLOB,
+  PAYSLIP_PATH  VARCHAR2(4000 BYTE),
+  CREATED_DATE  TIMESTAMP(6)                    DEFAULT SYSTIMESTAMP
+)
+TABLESPACE HCM_DATA
+RESULT_CACHE (MODE DEFAULT)
+PCTUSED    0
+PCTFREE    10
+INITRANS   1
+MAXTRANS   255
+STORAGE    (
+            MAXSIZE          UNLIMITED
+            PCTINCREASE      0
+            BUFFER_POOL      DEFAULT
+            FLASH_CACHE      DEFAULT
+            CELL_FLASH_CACHE DEFAULT
+           )
+NOCOMPRESS ;
+
+
+--
+-- HR_PERFORMANCE_REVIEW  (Table) 
+--
+CREATE TABLE HCM.HR_PERFORMANCE_REVIEW
+(
+  REVIEW_ID     NUMBER,
+  EMPLOYEE_ID   NUMBER                          NOT NULL,
+  PERIOD_FROM   DATE,
+  PERIOD_TO     DATE,
+  REVIEWER_ID   NUMBER,
+  SCORES        CLOB,
+  FINAL_RATING  VARCHAR2(50 BYTE),
+  COMMENTS      CLOB,
+  STATUS        VARCHAR2(30 BYTE)               DEFAULT 'DRAFT',
+  CREATED_DATE  TIMESTAMP(6)                    DEFAULT SYSTIMESTAMP
+)
+TABLESPACE HCM_DATA
+RESULT_CACHE (MODE DEFAULT)
+PCTUSED    0
+PCTFREE    10
+INITRANS   1
+MAXTRANS   255
+STORAGE    (
+            MAXSIZE          UNLIMITED
+            PCTINCREASE      0
+            BUFFER_POOL      DEFAULT
+            FLASH_CACHE      DEFAULT
+            CELL_FLASH_CACHE DEFAULT
+           )
+NOCOMPRESS ;
+
+
+--
+-- HR_PF_LEDGER  (Table) 
+--
+CREATE TABLE HCM.HR_PF_LEDGER
+(
+  PF_ID                  NUMBER,
+  EMPLOYEE_ID            NUMBER                 NOT NULL,
+  ENTRY_DATE             DATE                   NOT NULL,
+  EMPLOYEE_CONTRIBUTION  NUMBER(18,2)           DEFAULT 0,
+  EMPLOYER_CONTRIBUTION  NUMBER(18,2)           DEFAULT 0,
+  BALANCE                NUMBER(18,2)           DEFAULT 0,
+  REMARKS                VARCHAR2(1000 BYTE),
+  CREATED_DATE           TIMESTAMP(6)           DEFAULT SYSTIMESTAMP
+)
+TABLESPACE HCM_DATA
+RESULT_CACHE (MODE DEFAULT)
+PCTUSED    0
+PCTFREE    10
+INITRANS   1
+MAXTRANS   255
+STORAGE    (
+            MAXSIZE          UNLIMITED
+            PCTINCREASE      0
+            BUFFER_POOL      DEFAULT
+            FLASH_CACHE      DEFAULT
+            CELL_FLASH_CACHE DEFAULT
+           )
+NOCOMPRESS ;
+
+
+--
+-- IDX_EMP_DEPT  (Index) 
+--
+CREATE INDEX HCM.IDX_EMP_DEPT ON HCM.HR_EMPLOYEES
+(DEPARTMENT_ID)
+TABLESPACE HCM_DATA
+PCTFREE    10
+INITRANS   2
+MAXTRANS   255
+STORAGE    (
+            MAXSIZE          UNLIMITED
+            PCTINCREASE      0
+            BUFFER_POOL      DEFAULT
+            FLASH_CACHE      DEFAULT
+            CELL_FLASH_CACHE DEFAULT
+           );
+
+
+--
+-- IDX_EMP_POS  (Index) 
+--
+CREATE INDEX HCM.IDX_EMP_POS ON HCM.HR_EMPLOYEES
+(POSITION_ID)
+TABLESPACE HCM_DATA
+PCTFREE    10
+INITRANS   2
+MAXTRANS   255
+STORAGE    (
+            MAXSIZE          UNLIMITED
+            PCTINCREASE      0
+            BUFFER_POOL      DEFAULT
+            FLASH_CACHE      DEFAULT
+            CELL_FLASH_CACHE DEFAULT
+           );
+
+
+--
+-- IDX_LEAVE_EMP  (Index) 
+--
+CREATE INDEX HCM.IDX_LEAVE_EMP ON HCM.HR_LEAVE_REQUEST
+(EMPLOYEE_ID)
+TABLESPACE HCM_DATA
+PCTFREE    10
+INITRANS   2
+MAXTRANS   255
+STORAGE    (
+            MAXSIZE          UNLIMITED
+            PCTINCREASE      0
+            BUFFER_POOL      DEFAULT
+            FLASH_CACHE      DEFAULT
+            CELL_FLASH_CACHE DEFAULT
+           );
+
+
+--
+-- V_EMPLOYEE_BASIC  (View) 
+--
+CREATE OR REPLACE FORCE VIEW HCM.V_EMPLOYEE_BASIC
+(EMPLOYEE_ID, EMPLOYEE_NUMBER, FIRST_NAME, LAST_NAME, FULL_NAME, 
+ EMAIL, PHONE, STATUS, DEPARTMENT, POSITION, 
+ JOIN_DATE)
+BEQUEATH DEFINER
+AS 
+SELECT e.employee_id,
+          e.employee_number,
+          e.first_name,
+          e.last_name,
+          e.full_name,
+          e.email,
+          e.phone,
+          e.status,
+          d.name AS department,
+          p.title AS position,
+          e.join_date
+     FROM hr_employees e
+          LEFT JOIN hr_department d ON e.department_id = d.department_id
+          LEFT JOIN hr_position p ON e.position_id = p.position_id;
+
+
+--
+-- V_PAYROLL_REGISTER  (View) 
+--
+CREATE OR REPLACE FORCE VIEW HCM.V_PAYROLL_REGISTER
+(PAYSLIP_ID, PAYROLL_ID, RUN_MONTH, EMPLOYEE_ID, EMPLOYEE_NUMBER, 
+ FULL_NAME, GROSS, DEDUCTIONS, TAX, NET)
+BEQUEATH DEFINER
+AS 
+SELECT ps.payslip_id,
+          pr.payroll_id,
+          pr.run_month,
+          ps.employee_id,
+          e.employee_number,
+          e.full_name,
+          ps.gross,
+          ps.deductions,
+          ps.tax,
+          ps.net
+     FROM hr_payslip ps
+          JOIN hr_payroll_run pr ON ps.payroll_id = pr.payroll_id
+          JOIN hr_employees e ON ps.employee_id = e.employee_id;
+
+
+--
+-- TRG_AUDIT_HR_EMPLOYEES  (Trigger) 
+--
+CREATE OR REPLACE TRIGGER HCM.TRG_AUDIT_HR_EMPLOYEES
+AFTER INSERT OR UPDATE OR DELETE ON HCM.HR_EMPLOYEES
+FOR EACH ROW
+DECLARE
+  v_old CLOB;
+  v_new CLOB;
+  v_key VARCHAR2(200);
+BEGIN
+  IF INSERTING THEN
+    v_new := 'FIRST_NAME=' || :NEW.first_name || ';LAST_NAME=' || :NEW.last_name || ';STATUS=' || :NEW.status;
+    v_key := 'EMPLOYEE_ID=' || :NEW.employee_id;
+    hrms_audit_record('hr_employees','INSERT',v_key,null,v_new);
+  ELSIF UPDATING THEN
+    v_old := 'FIRST_NAME=' || :OLD.first_name || ';LAST_NAME=' || :OLD.last_name || ';STATUS=' || :OLD.status;
+    v_new := 'FIRST_NAME=' || :NEW.first_name || ';LAST_NAME=' || :NEW.last_name || ';STATUS=' || :NEW.status;
+    v_key := 'EMPLOYEE_ID=' || NVL(:NEW.employee_id,:OLD.employee_id);
+    hrms_audit_record('hr_employees','UPDATE',v_key,v_old,v_new);
+  ELSIF DELETING THEN
+    v_old := 'FIRST_NAME=' || :OLD.first_name || ';LAST_NAME=' || :OLD.last_name || ';STATUS=' || :OLD.status;
+    v_key := 'EMPLOYEE_ID=' || :OLD.employee_id;
+    hrms_audit_record('hr_employees','DELETE',v_key,v_old,null);
+  END IF;
+END;
+/
+
+
+--
+-- TRG_AUDIT_HR_PAYSLIP  (Trigger) 
+--
+CREATE OR REPLACE TRIGGER HCM.TRG_AUDIT_HR_PAYSLIP
+AFTER INSERT OR UPDATE OR DELETE ON HCM.HR_PAYSLIP
+FOR EACH ROW
+DECLARE
+  v_old CLOB;
+  v_new CLOB;
+  v_key VARCHAR2(200);
+BEGIN
+  IF INSERTING THEN
+    v_new := 'EMP='||:NEW.employee_id||';GROSS='||NVL(TO_CHAR(:NEW.gross),'0')||';NET='||NVL(TO_CHAR(:NEW.net),'0');
+    v_key := 'PS='||:NEW.payslip_id;
+    hrms_audit_record('HR_PAYSLIP','INSERT',v_key,null,v_new);
+  ELSIF UPDATING THEN
+    v_old := 'GROSS='||NVL(TO_CHAR(:OLD.gross),'0')||';NET='||NVL(TO_CHAR(:OLD.net),'0');
+    v_new := 'GROSS='||NVL(TO_CHAR(:NEW.gross),'0')||';NET='||NVL(TO_CHAR(:NEW.net),'0');
+    v_key := 'PS='||NVL(:NEW.payslip_id,:OLD.payslip_id);
+    hrms_audit_record('HR_PAYSLIP','UPDATE',v_key,v_old,v_new);
+  ELSIF DELETING THEN
+    v_old := 'GROSS='||NVL(TO_CHAR(:OLD.gross),'0')||';NET='||NVL(TO_CHAR(:OLD.net),'0');
+    v_key := 'PS='||:OLD.payslip_id;
+    hrms_audit_record('HR_PAYSLIP','DELETE',v_key,v_old,null);
+  END IF;
+END;
+/
+
+
+--
+-- TRG_EMP_BI  (Trigger) 
+--
+CREATE OR REPLACE TRIGGER HCM.TRG_EMP_BI
+BEFORE INSERT ON HCM.HR_EMPLOYEES
+FOR EACH ROW
+BEGIN
+IF :NEW.employee_id IS NULL THEN
+SELECT hr_employee_seq.NEXTVAL INTO :NEW.employee_id FROM DUAL;
+END IF;
+:NEW.created_date := SYSTIMESTAMP;
+:NEW.updated_date := SYSTIMESTAMP;
+END;
+/
+
+
+--
+-- TRG_EMP_BU  (Trigger) 
+--
+CREATE OR REPLACE TRIGGER HCM.TRG_EMP_BU
+BEFORE UPDATE ON HCM.HR_EMPLOYEES
+FOR EACH ROW
+BEGIN
+  :NEW.updated_date := SYSTIMESTAMP;
+END;
+/
+
+
+--
+-- TRG_LEAVE_BI  (Trigger) 
+--
+CREATE OR REPLACE TRIGGER HCM.TRG_LEAVE_BI
+BEFORE INSERT ON HCM.HR_LEAVE_REQUEST
+FOR EACH ROW
+BEGIN
+  IF :NEW.leave_id IS NULL THEN
+    SELECT hr_leave_seq.NEXTVAL INTO :NEW.leave_id FROM DUAL;
+  END IF;
+  :NEW.created_date := SYSTIMESTAMP;
+  :NEW.updated_date := SYSTIMESTAMP;
+END;
+/
+
+
+--
+-- TRG_PAYSLIP_BI  (Trigger) 
+--
+CREATE OR REPLACE TRIGGER HCM.TRG_PAYSLIP_BI
+BEFORE INSERT ON HCM.HR_PAYSLIP
+FOR EACH ROW
+BEGIN
+  IF :NEW.payslip_id IS NULL THEN
+    SELECT hr_payslip_seq.NEXTVAL INTO :NEW.payslip_id FROM DUAL;
+  END IF;
+  :NEW.created_date := SYSTIMESTAMP;
+END;
+/
+
+
+--
+-- TRG_PERF_BI  (Trigger) 
+--
+CREATE OR REPLACE TRIGGER HCM.TRG_PERF_BI
+BEFORE INSERT ON HCM.HR_PERFORMANCE_REVIEW
+FOR EACH ROW
+BEGIN
+  IF :NEW.review_id IS NULL THEN
+    SELECT hr_perf_seq.NEXTVAL INTO :NEW.review_id FROM DUAL;
+  END IF;
+  :NEW.created_date := SYSTIMESTAMP;
+END;
+/
+
+
+--
+-- TRG_PF_BI  (Trigger) 
+--
+CREATE OR REPLACE TRIGGER HCM.TRG_PF_BI
+BEFORE INSERT ON HCM.HR_PF_LEDGER
+FOR EACH ROW
+BEGIN
+  IF :NEW.pf_id IS NULL THEN
+    SELECT hr_pf_seq.NEXTVAL INTO :NEW.pf_id FROM DUAL;
+  END IF;
+  :NEW.created_date := SYSTIMESTAMP;
+END;
+/
+
+
+--
+-- HR_ATTENDANCE  (Table) 
+--
+CREATE TABLE HCM.HR_ATTENDANCE
+(
+  ATTENDANCE_ID    NUMBER,
+  EMPLOYEE_ID      NUMBER                       NOT NULL,
+  ATTENDANCE_DATE  DATE                         NOT NULL,
+  IN_TIME          TIMESTAMP(6) WITH TIME ZONE,
+  OUT_TIME         TIMESTAMP(6) WITH TIME ZONE,
+  SHIFT_ID         NUMBER,
+  DEVICE_ID        VARCHAR2(100 BYTE),
+  PUNCH_TYPE       VARCHAR2(20 BYTE),
+  STATUS           VARCHAR2(50 BYTE),
+  PAYROLL_FLAG     VARCHAR2(10 BYTE)            DEFAULT 'Y',
+  CREATED_BY       VARCHAR2(100 BYTE),
+  CREATED_DATE     TIMESTAMP(6)                 DEFAULT SYSTIMESTAMP,
+  UPDATED_BY       VARCHAR2(100 BYTE),
+  UPDATED_DATE     TIMESTAMP(6)
+)
+TABLESPACE HCM_DATA
+RESULT_CACHE (MODE DEFAULT)
+PCTUSED    0
+PCTFREE    10
+INITRANS   1
+MAXTRANS   255
+STORAGE    (
+            MAXSIZE          UNLIMITED
+            PCTINCREASE      0
+            BUFFER_POOL      DEFAULT
+            FLASH_CACHE      DEFAULT
+            CELL_FLASH_CACHE DEFAULT
+           )
+NOCOMPRESS ;
+
+
+--
+-- HR_CONTRACT  (Table) 
+--
+CREATE TABLE HCM.HR_CONTRACT
+(
+  CONTRACT_ID              NUMBER,
+  EMPLOYEE_ID              NUMBER               NOT NULL,
+  CONTRACT_TYPE            VARCHAR2(50 BYTE),
+  START_DATE               DATE,
+  END_DATE                 DATE,
+  SALARY_CURRENCY          VARCHAR2(10 BYTE)    DEFAULT 'BDT',
+  SALARY_AMOUNT            NUMBER(18,2),
+  PROBATION_PERIOD_MONTHS  NUMBER,
+  NOTICE_PERIOD_DAYS       NUMBER,
+  CREATED_BY               VARCHAR2(100 BYTE),
+  CREATED_DATE             TIMESTAMP(6)         DEFAULT SYSTIMESTAMP,
+  UPDATED_BY               VARCHAR2(100 BYTE),
+  UPDATED_DATE             TIMESTAMP(6)
+)
+TABLESPACE HCM_DATA
+RESULT_CACHE (MODE DEFAULT)
+PCTUSED    0
+PCTFREE    10
+INITRANS   1
+MAXTRANS   255
+STORAGE    (
+            MAXSIZE          UNLIMITED
+            PCTINCREASE      0
+            BUFFER_POOL      DEFAULT
+            FLASH_CACHE      DEFAULT
+            CELL_FLASH_CACHE DEFAULT
+           )
+NOCOMPRESS ;
+
+
+--
+-- IDX_ATT_EMP_DATE  (Index) 
+--
+CREATE INDEX HCM.IDX_ATT_EMP_DATE ON HCM.HR_ATTENDANCE
+(EMPLOYEE_ID, ATTENDANCE_DATE)
+TABLESPACE HCM_DATA
+PCTFREE    10
+INITRANS   2
+MAXTRANS   255
+STORAGE    (
+            INITIAL          64K
+            NEXT             1M
+            MAXSIZE          UNLIMITED
+            MINEXTENTS       1
+            MAXEXTENTS       UNLIMITED
+            PCTINCREASE      0
+            BUFFER_POOL      DEFAULT
+            FLASH_CACHE      DEFAULT
+            CELL_FLASH_CACHE DEFAULT
+           );
+
+
+--
+-- V_ATTENDANCE_SUMMARY  (View) 
+--
+CREATE OR REPLACE FORCE VIEW HCM.V_ATTENDANCE_SUMMARY
+(EMPLOYEE_ID, ATTENDANCE_DATE, FIRST_IN, LAST_OUT)
+BEQUEATH DEFINER
+AS 
+SELECT employee_id,
+            attendance_date,
+            MIN (in_time) AS first_in,
+            MAX (out_time) AS last_out
+       FROM hr_attendance
+   GROUP BY employee_id, attendance_date;
+
+
+--
+-- TRG_ATTENDANCE_BI  (Trigger) 
+--
+CREATE OR REPLACE TRIGGER HCM.TRG_ATTENDANCE_BI
+BEFORE INSERT ON HCM.HR_ATTENDANCE
+FOR EACH ROW
+BEGIN
+  IF :NEW.attendance_id IS NULL THEN
+    SELECT hr_attendance_seq.NEXTVAL INTO :NEW.attendance_id FROM DUAL;
+  END IF;
+  :NEW.created_date := SYSTIMESTAMP;
+  :NEW.updated_date := SYSTIMESTAMP;
+END;
+/
+
+
+--
+-- TRG_ATTENDANCE_BU  (Trigger) 
+--
+CREATE OR REPLACE TRIGGER HCM.TRG_ATTENDANCE_BU
+BEFORE UPDATE ON HCM.HR_ATTENDANCE
+FOR EACH ROW
+BEGIN
+  :NEW.updated_date := SYSTIMESTAMP;
+END;
+/
+
+
+--
+-- TRG_AUDIT_HR_ATTENDANCE  (Trigger) 
+--
+CREATE OR REPLACE TRIGGER HCM.TRG_AUDIT_HR_ATTENDANCE
+AFTER INSERT OR UPDATE OR DELETE ON HCM.HR_ATTENDANCE
+FOR EACH ROW
+DECLARE
+  v_old CLOB;
+  v_new CLOB;
+  v_key VARCHAR2(200);
+BEGIN
+  IF INSERTING THEN
+    v_new := 'EMP='||:NEW.employee_id||';DATE='||TO_CHAR(:NEW.attendance_date,'YYYY-MM-DD')||';IN='||TO_CHAR(:NEW.in_time,'YYYY-MM-DD HH24:MI:SS');
+    v_key := 'ATT='||:NEW.attendance_id;
+    hrms_audit_record('HR_ATTENDANCE','INSERT',v_key,null,v_new);
+  ELSIF UPDATING THEN
+    v_old := 'IN='||TO_CHAR(:OLD.in_time,'YYYY-MM-DD HH24:MI:SS')||';OUT='||TO_CHAR(:OLD.out_time,'YYYY-MM-DD HH24:MI:SS');
+    v_new := 'IN='||TO_CHAR(:NEW.in_time,'YYYY-MM-DD HH24:MI:SS')||';OUT='||TO_CHAR(:NEW.out_time,'YYYY-MM-DD HH24:MI:SS');
+    v_key := 'ATT='||NVL(:NEW.attendance_id,:OLD.attendance_id);
+    hrms_audit_record('HR_ATTENDANCE','UPDATE',v_key,v_old,v_new);
+  ELSIF DELETING THEN
+    v_old := 'IN='||TO_CHAR(:OLD.in_time,'YYYY-MM-DD HH24:MI:SS')||';OUT='||TO_CHAR(:OLD.out_time,'YYYY-MM-DD HH24:MI:SS');
+    v_key := 'ATT='||:OLD.attendance_id;
+    hrms_audit_record('HR_ATTENDANCE','DELETE',v_key,v_old,null);
+  END IF;
+END;
+/
+
+
+--
+-- TRG_CONTRACT_BI  (Trigger) 
+--
+CREATE OR REPLACE TRIGGER HCM.TRG_CONTRACT_BI
+BEFORE INSERT ON HCM.HR_CONTRACT
+FOR EACH ROW
+BEGIN
+  IF :NEW.contract_id IS NULL THEN
+    SELECT hr_contract_seq.NEXTVAL INTO :NEW.contract_id FROM DUAL;
+  END IF;
+  :NEW.created_date := SYSTIMESTAMP;
+  :NEW.updated_date := SYSTIMESTAMP;
+END;
+/
+
+
+-- 
+-- Non Foreign Key Constraints for Table HR_AUDIT_LOG 
+-- 
+ALTER TABLE HCM.HR_AUDIT_LOG ADD (
+  PRIMARY KEY
+  (AUDIT_ID)
+  USING INDEX
+    TABLESPACE HCM_DATA
+    PCTFREE    10
+    INITRANS   2
+    MAXTRANS   255
+    STORAGE    (
+                MAXSIZE          UNLIMITED
+                PCTINCREASE      0
+                BUFFER_POOL      DEFAULT
+                FLASH_CACHE      DEFAULT
+                CELL_FLASH_CACHE DEFAULT
+               )
+  ENABLE VALIDATE);
+
+
+-- 
+-- Non Foreign Key Constraints for Table HR_DEPARTMENT 
+-- 
+ALTER TABLE HCM.HR_DEPARTMENT ADD (
+  PRIMARY KEY
+  (DEPARTMENT_ID)
+  USING INDEX
+    TABLESPACE HCM_DATA
+    PCTFREE    10
+    INITRANS   2
+    MAXTRANS   255
+    STORAGE    (
+                MAXSIZE          UNLIMITED
+                PCTINCREASE      0
+                BUFFER_POOL      DEFAULT
+                FLASH_CACHE      DEFAULT
+                CELL_FLASH_CACHE DEFAULT
+               )
+  ENABLE VALIDATE);
+
+
+-- 
+-- Non Foreign Key Constraints for Table HR_EMPLOYEE 
+-- 
+ALTER TABLE HCM.HR_EMPLOYEE ADD (
+  CONSTRAINT HR_EMPLOYEE_PK
+  PRIMARY KEY
+  (PERSON_ID)
+  USING INDEX HCM.HR_EMPLOYEE_PK
+  ENABLE VALIDATE);
+
+ALTER TABLE HCM.HR_EMPLOYEE ADD (
+  CONSTRAINT HR_EMPLOYEE_U01
+  UNIQUE (EMP_NO)
+  USING INDEX HCM.HR_EMPLOYEE_U01
+  ENABLE VALIDATE);
+
+
+-- 
+-- Non Foreign Key Constraints for Table HR_EMP_ASSIGNMENT 
+-- 
+ALTER TABLE HCM.HR_EMP_ASSIGNMENT ADD (
+  CONSTRAINT HR_EMP_ASSIGNMENT_PK
+  PRIMARY KEY
+  (ASSIGNMENT_ID)
+  USING INDEX HCM.HR_EMP_ASSIGNMENT_PK
+  ENABLE VALIDATE);
+
+
+-- 
+-- Non Foreign Key Constraints for Table HR_GRADE 
+-- 
+ALTER TABLE HCM.HR_GRADE ADD (
+  CONSTRAINT GRADE_LIST_PK
+  PRIMARY KEY
+  (ID)
+  USING INDEX HCM.GRADE_LIST_PK
+  ENABLE VALIDATE);
+
+
+-- 
+-- Non Foreign Key Constraints for Table HR_LEAVE_BALANCE 
+-- 
+ALTER TABLE HCM.HR_LEAVE_BALANCE ADD (
+  PRIMARY KEY
+  (EMPLOYEE_ID, LEAVE_TYPE_ID, YEAR)
+  USING INDEX
+    TABLESPACE HCM_DATA
+    PCTFREE    10
+    INITRANS   2
+    MAXTRANS   255
+    STORAGE    (
+                MAXSIZE          UNLIMITED
+                PCTINCREASE      0
+                BUFFER_POOL      DEFAULT
+                FLASH_CACHE      DEFAULT
+                CELL_FLASH_CACHE DEFAULT
+               )
+  ENABLE VALIDATE);
+
+
+-- 
+-- Non Foreign Key Constraints for Table HR_LEAVE_TYPE 
+-- 
+ALTER TABLE HCM.HR_LEAVE_TYPE ADD (
+  PRIMARY KEY
+  (LEAVE_TYPE_ID)
+  USING INDEX
+    TABLESPACE HCM_DATA
+    PCTFREE    10
+    INITRANS   2
+    MAXTRANS   255
+    STORAGE    (
+                MAXSIZE          UNLIMITED
+                PCTINCREASE      0
+                BUFFER_POOL      DEFAULT
+                FLASH_CACHE      DEFAULT
+                CELL_FLASH_CACHE DEFAULT
+               )
+  ENABLE VALIDATE);
+
+ALTER TABLE HCM.HR_LEAVE_TYPE ADD (
+  UNIQUE (CODE)
+  USING INDEX
+    TABLESPACE HCM_DATA
+    PCTFREE    10
+    INITRANS   2
+    MAXTRANS   255
+    STORAGE    (
+                MAXSIZE          UNLIMITED
+                PCTINCREASE      0
+                BUFFER_POOL      DEFAULT
+                FLASH_CACHE      DEFAULT
+                CELL_FLASH_CACHE DEFAULT
+               )
+  ENABLE VALIDATE);
+
+
+-- 
+-- Non Foreign Key Constraints for Table HR_LOAN 
+-- 
+ALTER TABLE HCM.HR_LOAN ADD (
+  PRIMARY KEY
+  (LOAN_ID)
+  USING INDEX
+    TABLESPACE HCM_DATA
+    PCTFREE    10
+    INITRANS   2
+    MAXTRANS   255
+    STORAGE    (
+                MAXSIZE          UNLIMITED
+                PCTINCREASE      0
+                BUFFER_POOL      DEFAULT
+                FLASH_CACHE      DEFAULT
+                CELL_FLASH_CACHE DEFAULT
+               )
+  ENABLE VALIDATE);
+
+
+-- 
+-- Non Foreign Key Constraints for Table HR_ORG_TYPE 
+-- 
+ALTER TABLE HCM.HR_ORG_TYPE ADD (
+  CONSTRAINT HR_ORG_TYPE_PK
+  PRIMARY KEY
+  (ID)
+  USING INDEX HCM.HR_ORG_TYPE_PK
+  ENABLE VALIDATE);
+
+
+-- 
+-- Non Foreign Key Constraints for Table HR_PAYROLL_RUN 
+-- 
+ALTER TABLE HCM.HR_PAYROLL_RUN ADD (
+  PRIMARY KEY
+  (PAYROLL_ID)
+  USING INDEX
+    TABLESPACE HCM_DATA
+    PCTFREE    10
+    INITRANS   2
+    MAXTRANS   255
+    STORAGE    (
+                MAXSIZE          UNLIMITED
+                PCTINCREASE      0
+                BUFFER_POOL      DEFAULT
+                FLASH_CACHE      DEFAULT
+                CELL_FLASH_CACHE DEFAULT
+               )
+  ENABLE VALIDATE);
+
+
+-- 
+-- Non Foreign Key Constraints for Table HR_PAY_STRUCTURE 
+-- 
+ALTER TABLE HCM.HR_PAY_STRUCTURE ADD (
+  PRIMARY KEY
+  (PAY_STRUCTURE_ID)
+  USING INDEX
+    TABLESPACE HCM_DATA
+    PCTFREE    10
+    INITRANS   2
+    MAXTRANS   255
+    STORAGE    (
+                MAXSIZE          UNLIMITED
+                PCTINCREASE      0
+                BUFFER_POOL      DEFAULT
+                FLASH_CACHE      DEFAULT
+                CELL_FLASH_CACHE DEFAULT
+               )
+  ENABLE VALIDATE);
+
+
+-- 
+-- Non Foreign Key Constraints for Table HR_PAY_STRUCTURE_COMPONENT 
+-- 
+ALTER TABLE HCM.HR_PAY_STRUCTURE_COMPONENT ADD (
+  PRIMARY KEY
+  (PAY_STRUCTURE_ID, COMPONENT_ID)
+  USING INDEX
+    TABLESPACE HCM_DATA
+    PCTFREE    10
+    INITRANS   2
+    MAXTRANS   255
+    STORAGE    (
+                MAXSIZE          UNLIMITED
+                PCTINCREASE      0
+                BUFFER_POOL      DEFAULT
+                FLASH_CACHE      DEFAULT
+                CELL_FLASH_CACHE DEFAULT
+               )
+  ENABLE VALIDATE);
+
+
+-- 
+-- Non Foreign Key Constraints for Table HR_PERSON_TYPE 
+-- 
+ALTER TABLE HCM.HR_PERSON_TYPE ADD (
+  CONSTRAINT HR_PERSON_TYPE_PK
+  PRIMARY KEY
+  (PERSON_TYPE_ID)
+  USING INDEX HCM.HR_PERSON_TYPE_PK
+  ENABLE VALIDATE);
+
+
+-- 
+-- Non Foreign Key Constraints for Table HR_POSITION 
+-- 
+ALTER TABLE HCM.HR_POSITION ADD (
+  PRIMARY KEY
+  (POSITION_ID)
+  USING INDEX
+    TABLESPACE HCM_DATA
+    PCTFREE    10
+    INITRANS   2
+    MAXTRANS   255
+    STORAGE    (
+                INITIAL          64K
+                NEXT             1M
+                MAXSIZE          UNLIMITED
+                MINEXTENTS       1
+                MAXEXTENTS       UNLIMITED
+                PCTINCREASE      0
+                BUFFER_POOL      DEFAULT
+                FLASH_CACHE      DEFAULT
+                CELL_FLASH_CACHE DEFAULT
+               )
+  ENABLE VALIDATE);
+
+
+-- 
+-- Non Foreign Key Constraints for Table HR_SHIFT 
+-- 
+ALTER TABLE HCM.HR_SHIFT ADD (
+  PRIMARY KEY
+  (SHIFT_ID)
+  USING INDEX
+    TABLESPACE HCM_DATA
+    PCTFREE    10
+    INITRANS   2
+    MAXTRANS   255
+    STORAGE    (
+                MAXSIZE          UNLIMITED
+                PCTINCREASE      0
+                BUFFER_POOL      DEFAULT
+                FLASH_CACHE      DEFAULT
+                CELL_FLASH_CACHE DEFAULT
+               )
+  ENABLE VALIDATE);
+
+ALTER TABLE HCM.HR_SHIFT ADD (
+  UNIQUE (CODE)
+  USING INDEX
+    TABLESPACE HCM_DATA
+    PCTFREE    10
+    INITRANS   2
+    MAXTRANS   255
+    STORAGE    (
+                MAXSIZE          UNLIMITED
+                PCTINCREASE      0
+                BUFFER_POOL      DEFAULT
+                FLASH_CACHE      DEFAULT
+                CELL_FLASH_CACHE DEFAULT
+               )
+  ENABLE VALIDATE);
+
+
+-- 
+-- Non Foreign Key Constraints for Table HR_EMPLOYEES 
+-- 
+ALTER TABLE HCM.HR_EMPLOYEES ADD (
+  PRIMARY KEY
+  (EMPLOYEE_ID)
+  USING INDEX
+    TABLESPACE HCM_DATA
+    PCTFREE    10
+    INITRANS   2
+    MAXTRANS   255
+    STORAGE    (
+                MAXSIZE          UNLIMITED
+                PCTINCREASE      0
+                BUFFER_POOL      DEFAULT
+                FLASH_CACHE      DEFAULT
+                CELL_FLASH_CACHE DEFAULT
+               )
+  ENABLE VALIDATE);
+
+ALTER TABLE HCM.HR_EMPLOYEES ADD (
+  UNIQUE (EMPLOYEE_NUMBER)
+  USING INDEX
+    TABLESPACE HCM_DATA
+    PCTFREE    10
+    INITRANS   2
+    MAXTRANS   255
+    STORAGE    (
+                MAXSIZE          UNLIMITED
+                PCTINCREASE      0
+                BUFFER_POOL      DEFAULT
+                FLASH_CACHE      DEFAULT
+                CELL_FLASH_CACHE DEFAULT
+               )
+  ENABLE VALIDATE);
+
+
+-- 
+-- Non Foreign Key Constraints for Table HR_LEAVE_REQUEST 
+-- 
+ALTER TABLE HCM.HR_LEAVE_REQUEST ADD (
+  PRIMARY KEY
+  (LEAVE_ID)
+  USING INDEX
+    TABLESPACE HCM_DATA
+    PCTFREE    10
+    INITRANS   2
+    MAXTRANS   255
+    STORAGE    (
+                MAXSIZE          UNLIMITED
+                PCTINCREASE      0
+                BUFFER_POOL      DEFAULT
+                FLASH_CACHE      DEFAULT
+                CELL_FLASH_CACHE DEFAULT
+               )
+  ENABLE VALIDATE);
+
+
+-- 
+-- Non Foreign Key Constraints for Table HR_PAYSLIP 
+-- 
+ALTER TABLE HCM.HR_PAYSLIP ADD (
+  PRIMARY KEY
+  (PAYSLIP_ID)
+  USING INDEX
+    TABLESPACE HCM_DATA
+    PCTFREE    10
+    INITRANS   2
+    MAXTRANS   255
+    STORAGE    (
+                MAXSIZE          UNLIMITED
+                PCTINCREASE      0
+                BUFFER_POOL      DEFAULT
+                FLASH_CACHE      DEFAULT
+                CELL_FLASH_CACHE DEFAULT
+               )
+  ENABLE VALIDATE);
+
+
+-- 
+-- Non Foreign Key Constraints for Table HR_PERFORMANCE_REVIEW 
+-- 
+ALTER TABLE HCM.HR_PERFORMANCE_REVIEW ADD (
+  PRIMARY KEY
+  (REVIEW_ID)
+  USING INDEX
+    TABLESPACE HCM_DATA
+    PCTFREE    10
+    INITRANS   2
+    MAXTRANS   255
+    STORAGE    (
+                MAXSIZE          UNLIMITED
+                PCTINCREASE      0
+                BUFFER_POOL      DEFAULT
+                FLASH_CACHE      DEFAULT
+                CELL_FLASH_CACHE DEFAULT
+               )
+  ENABLE VALIDATE);
+
+
+-- 
+-- Non Foreign Key Constraints for Table HR_PF_LEDGER 
+-- 
+ALTER TABLE HCM.HR_PF_LEDGER ADD (
+  PRIMARY KEY
+  (PF_ID)
+  USING INDEX
+    TABLESPACE HCM_DATA
+    PCTFREE    10
+    INITRANS   2
+    MAXTRANS   255
+    STORAGE    (
+                MAXSIZE          UNLIMITED
+                PCTINCREASE      0
+                BUFFER_POOL      DEFAULT
+                FLASH_CACHE      DEFAULT
+                CELL_FLASH_CACHE DEFAULT
+               )
+  ENABLE VALIDATE);
+
+
+-- 
+-- Non Foreign Key Constraints for Table HR_ATTENDANCE 
+-- 
+ALTER TABLE HCM.HR_ATTENDANCE ADD (
+  PRIMARY KEY
+  (ATTENDANCE_ID)
+  USING INDEX
+    TABLESPACE HCM_DATA
+    PCTFREE    10
+    INITRANS   2
+    MAXTRANS   255
+    STORAGE    (
+                INITIAL          64K
+                NEXT             1M
+                MAXSIZE          UNLIMITED
+                MINEXTENTS       1
+                MAXEXTENTS       UNLIMITED
+                PCTINCREASE      0
+                BUFFER_POOL      DEFAULT
+                FLASH_CACHE      DEFAULT
+                CELL_FLASH_CACHE DEFAULT
+               )
+  ENABLE VALIDATE);
+
+
+-- 
+-- Non Foreign Key Constraints for Table HR_CONTRACT 
+-- 
+ALTER TABLE HCM.HR_CONTRACT ADD (
+  PRIMARY KEY
+  (CONTRACT_ID)
+  USING INDEX
+    TABLESPACE HCM_DATA
+    PCTFREE    10
+    INITRANS   2
+    MAXTRANS   255
+    STORAGE    (
+                MAXSIZE          UNLIMITED
+                PCTINCREASE      0
+                BUFFER_POOL      DEFAULT
+                FLASH_CACHE      DEFAULT
+                CELL_FLASH_CACHE DEFAULT
+               )
+  ENABLE VALIDATE);
+
+
+-- 
+-- Foreign Key Constraints for Table HR_EMPLOYEES 
+-- 
+ALTER TABLE HCM.HR_EMPLOYEES ADD (
+  CONSTRAINT FK_EMP_DEPT 
+  FOREIGN KEY (DEPARTMENT_ID) 
+  REFERENCES HCM.HR_DEPARTMENT (DEPARTMENT_ID)
+  ENABLE VALIDATE);
+
+ALTER TABLE HCM.HR_EMPLOYEES ADD (
+  CONSTRAINT FK_EMP_MGR 
+  FOREIGN KEY (MANAGER_ID) 
+  REFERENCES HCM.HR_EMPLOYEES (EMPLOYEE_ID)
+  ENABLE VALIDATE);
+
+ALTER TABLE HCM.HR_EMPLOYEES ADD (
+  CONSTRAINT FK_EMP_POS 
+  FOREIGN KEY (POSITION_ID) 
+  REFERENCES HCM.HR_POSITION (POSITION_ID)
+  ENABLE VALIDATE);
+
+
+-- 
+-- Foreign Key Constraints for Table HR_LEAVE_REQUEST 
+-- 
+ALTER TABLE HCM.HR_LEAVE_REQUEST ADD (
+  CONSTRAINT FK_LR_EMP 
+  FOREIGN KEY (EMPLOYEE_ID) 
+  REFERENCES HCM.HR_EMPLOYEES (EMPLOYEE_ID)
+  ENABLE VALIDATE);
+
+ALTER TABLE HCM.HR_LEAVE_REQUEST ADD (
+  CONSTRAINT FK_LR_LT 
+  FOREIGN KEY (LEAVE_TYPE_ID) 
+  REFERENCES HCM.HR_LEAVE_TYPE (LEAVE_TYPE_ID)
+  ENABLE VALIDATE);
+
+
+-- 
+-- Foreign Key Constraints for Table HR_PAYSLIP 
+-- 
+ALTER TABLE HCM.HR_PAYSLIP ADD (
+  CONSTRAINT FK_PS_EMP 
+  FOREIGN KEY (EMPLOYEE_ID) 
+  REFERENCES HCM.HR_EMPLOYEES (EMPLOYEE_ID)
+  ENABLE VALIDATE);
+
+ALTER TABLE HCM.HR_PAYSLIP ADD (
+  CONSTRAINT FK_PS_RUN 
+  FOREIGN KEY (PAYROLL_ID) 
+  REFERENCES HCM.HR_PAYROLL_RUN (PAYROLL_ID)
+  ENABLE VALIDATE);
+
+
+-- 
+-- Foreign Key Constraints for Table HR_PERFORMANCE_REVIEW 
+-- 
+ALTER TABLE HCM.HR_PERFORMANCE_REVIEW ADD (
+  CONSTRAINT FK_PR_EMP 
+  FOREIGN KEY (EMPLOYEE_ID) 
+  REFERENCES HCM.HR_EMPLOYEES (EMPLOYEE_ID)
+  ENABLE VALIDATE);
+
+
+-- 
+-- Foreign Key Constraints for Table HR_PF_LEDGER 
+-- 
+ALTER TABLE HCM.HR_PF_LEDGER ADD (
+  CONSTRAINT FK_PF_EMP 
+  FOREIGN KEY (EMPLOYEE_ID) 
+  REFERENCES HCM.HR_EMPLOYEES (EMPLOYEE_ID)
+  ENABLE VALIDATE);
+
+
+-- 
+-- Foreign Key Constraints for Table HR_ATTENDANCE 
+-- 
+ALTER TABLE HCM.HR_ATTENDANCE ADD (
+  CONSTRAINT FK_ATT_EMP 
+  FOREIGN KEY (EMPLOYEE_ID) 
+  REFERENCES HCM.HR_EMPLOYEES (EMPLOYEE_ID)
+  ENABLE VALIDATE);
+
+
+-- 
+-- Foreign Key Constraints for Table HR_CONTRACT 
+-- 
+ALTER TABLE HCM.HR_CONTRACT ADD (
+  CONSTRAINT FK_CONTRACT_EMPLOYEE 
+  FOREIGN KEY (EMPLOYEE_ID) 
+  REFERENCES HCM.HR_EMPLOYEES (EMPLOYEE_ID)
+  ENABLE VALIDATE);
