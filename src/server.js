@@ -28,6 +28,7 @@ import holidayRoutes from "./routes/hr-holiday-calender.routes.js";
 import holidayTypeRoutes from "./routes/hr-holiday-type.routes.js";
 import attLogRoutes from "./routes/att-log.routes.js";
 import shiftRoutes from "./routes/hr-shift-routes.js";
+import contractRoutes from "./routes/hr-contract.routes.js";
 
 
 
@@ -216,6 +217,7 @@ app.use("/api/holiday", holidayRoutes);
 app.use("/api/holiday-type", holidayTypeRoutes);
 app.use("/api", attLogRoutes);
 app.use("/api/hr-shift", shiftRoutes);
+app.use("/api/hr-contract", contractRoutes);
 
 
 
