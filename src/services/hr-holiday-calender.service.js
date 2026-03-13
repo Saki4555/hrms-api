@@ -24,7 +24,7 @@ export const updateHoliday = async (id, data) => {
     await conn.execute(
       `UPDATE HCM.HR_HOLIDAY_CALENDER SET
         LOCATION_ID = :LOCATION_ID,
-        TDATE = :TO_DATE(:TDATE,'YYYY-MM-DD'),
+        TDATE = TO_DATE(:TDATE,'YYYY-MM-DD'),
         HOLIDAY_TYPE_ID = :HOLIDAY_TYPE_ID,
         UPDATED_BY = :UPDATED_BY,
         DESCRIPTION = :DESCRIPTION,
