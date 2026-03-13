@@ -21,8 +21,8 @@ export const updateHolidayType = async (id, data) => {
   try {
     await conn.execute(
       `UPDATE HCM.HR_HOLIDAY_TYPE
-       SET NAME = :NAME,
-           STATUS = :STATUS
+       SET NAME = :NAME
+         
        WHERE ID = :ID`,
       { ...data, ID: id },
       { autoCommit: true }
