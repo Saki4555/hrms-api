@@ -10,8 +10,6 @@ export const createContract = async (data) => {
 
   try {
 
-   
-
     /*  Insert Contract */
 
     const sql = `
