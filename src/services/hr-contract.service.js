@@ -61,38 +61,132 @@ export const createContract = async (data) => {
 
 
 /* GET ALL */
+// export const getAllContracts = async () => {
+
+//   const conn = await getConnection();
+
+//   const result = await conn.execute(`
+//     SELECT *
+//     FROM HCM.HR_CONTRACT
+//     ORDER BY CONTRACT_ID DESC
+//   `, [], {outFormat: 4002});
+
+//   await conn.close();
+
+//   return result.rows;
+// };
+
 export const getAllContracts = async () => {
 
   const conn = await getConnection();
 
   const result = await conn.execute(`
-    SELECT *
-    FROM HCM.HR_CONTRACT
-    ORDER BY CONTRACT_ID DESC
-  `, [], {outFormat: 4002});
+    SELECT 
+      C.CONTRACT_ID,
+      C.EMPLOYEE_ID,
+
+      E.EMP_NO,
+      E.TITLE,
+      E.FIRST_NAME,
+      E.LAST_NAME,
+
+      O.NAME AS ORG_NAME,
+      P.TITLE AS POSITION_TITLE,
+
+      C.CONTRACT_TYPE,
+      C.START_DATE,
+      C.END_DATE,
+      C.SALARY_CURRENCY,
+      C.SALARY_AMOUNT,
+      C.PROBATION_PERIOD_MONTHS,
+      C.NOTICE_PERIOD_DAYS,
+      C.CREATED_BY,
+      C.CREATED_DATE
+
+    FROM HCM.HR_CONTRACT C
+
+    LEFT JOIN HCM.HR_EMPLOYEE E
+      ON C.EMPLOYEE_ID = E.PERSON_ID
+
+    LEFT JOIN HCM.HR_EMP_ASSIGNMENT A
+      ON C.EMPLOYEE_ID = A.PERSON_ID
+
+    LEFT JOIN HCM.HR_ORG O
+      ON A.ORG_ID = O.ID
+
+    LEFT JOIN HCM.HR_POSITION P
+      ON A.POSITION_ID = P.POSITION_ID
+
+    ORDER BY C.CONTRACT_ID DESC
+  `, [], { outFormat: 4002 });
 
   await conn.close();
 
   return result.rows;
 };
 
+/* GET SINGLE */
+// export const getContractById = async (id) => {
+
+//   const conn = await getConnection();
+
+//   const result = await conn.execute(
+//     `SELECT * FROM HCM.HR_CONTRACT WHERE CONTRACT_ID = :id`,
+//     [id], {outFormat: 4002}
+//   );
+
+//   await conn.close();
+
+//   return result.rows[0];
+// };
 
 /* GET SINGLE */
 export const getContractById = async (id) => {
 
   const conn = await getConnection();
 
-  const result = await conn.execute(
-    `SELECT * FROM HCM.HR_CONTRACT WHERE CONTRACT_ID = :id`,
-    [id], {outFormat: 4002}
-  );
+  const result = await conn.execute(`
+    SELECT 
+      C.CONTRACT_ID,
+      C.EMPLOYEE_ID,
+
+      E.EMP_NO,
+      E.TITLE,
+      E.FIRST_NAME,
+      E.LAST_NAME,
+
+      O.NAME AS ORG_NAME,
+      P.TITLE AS POSITION_TITLE,
+
+      C.CONTRACT_TYPE,
+      C.START_DATE,
+      C.END_DATE,
+      C.SALARY_CURRENCY,
+      C.SALARY_AMOUNT,
+      C.PROBATION_PERIOD_MONTHS,
+      C.NOTICE_PERIOD_DAYS
+
+    FROM HCM.HR_CONTRACT C
+
+    LEFT JOIN HCM.HR_EMPLOYEE E
+      ON C.EMPLOYEE_ID = E.PERSON_ID
+
+    LEFT JOIN HCM.HR_EMP_ASSIGNMENT A
+      ON C.EMPLOYEE_ID = A.PERSON_ID
+
+    LEFT JOIN HCM.HR_ORG O
+      ON A.ORG_ID = O.ID
+
+    LEFT JOIN HCM.HR_POSITION P
+      ON A.POSITION_ID = P.POSITION_ID
+
+    WHERE C.CONTRACT_ID = :id
+  `, [id], { outFormat: 4002 });
 
   await conn.close();
 
   return result.rows[0];
 };
-
-
 /* UPDATE */
 export const updateContract = async (id, data) => {
 
