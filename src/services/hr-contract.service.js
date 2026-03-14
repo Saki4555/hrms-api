@@ -1,4 +1,5 @@
 
+
 import { getConnection } from "../config/db.js";
 
 /* CREATE CONTRACT */
@@ -9,20 +10,9 @@ export const createContract = async (data) => {
 
   try {
 
-    /* 1️⃣ Check Employee Exists */
+   
 
-    const empCheck = await conn.execute(
-      `SELECT PERSON_ID
-       FROM HCM.HR_EMPLOYEE
-       WHERE PERSON_ID = :id`,
-      [data.EMPLOYEE_ID]
-    );
-
-    if (empCheck.rows.length === 0) {
-      throw new Error("Employee ID not found in HR_EMPLOYEE table");
-    }
-
-    /* 2️⃣ Insert Contract */
+    /*  Insert Contract */
 
     const sql = `
       INSERT INTO HCM.HR_CONTRACT
@@ -94,7 +84,7 @@ export const getContractById = async (id) => {
 
   const result = await conn.execute(
     `SELECT * FROM HCM.HR_CONTRACT WHERE CONTRACT_ID = :id`,
-    [id]
+    [id], {outFormat: 4002}
   );
 
   await conn.close();
