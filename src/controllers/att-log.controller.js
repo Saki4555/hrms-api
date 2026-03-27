@@ -1,3 +1,4 @@
+import { success } from "zod";
 import * as service from "../services/att-log.service.js";
 import { verifyToken } from "../utils/auth.js";
 
@@ -32,6 +33,8 @@ export const getAll = async (req, res) => {
     res.json({
       page,
       limit,
+      success: true,
+      count:data.length,
       data
     });
 
