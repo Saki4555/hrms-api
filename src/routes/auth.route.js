@@ -27,6 +27,8 @@ router.get("/me", (req, res) => {
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
+  
+
     res.json({
       status: "success",
       data: {

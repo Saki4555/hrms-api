@@ -94,32 +94,77 @@ export const createEmployee = async (data) => {
       });
     }
 
-    // 3️⃣ Assignment Insert
-    await conn.execute(`
-      INSERT INTO HCM.HR_EMP_ASSIGNMENT (
-        PERSON_ID, COMPANY_ID, OU_ID, ORG_ID,
-        POSITION_ID, PAYROLL_ID, GRADE_ID,
-        EFFECTIVE_START_DATE, EFFECTIVE_END_DATE, STATUS
-      ) VALUES (
-        :PERSON_ID, :COMPANY_ID, :OU_ID, :ORG_ID,
-        :POSITION_ID, :PAYROLL_ID, :GRADE_ID,
-        TO_DATE(:EFFECTIVE_START_DATE,'YYYY-MM-DD'),
-        TO_DATE(:EFFECTIVE_END_DATE,'YYYY-MM-DD'),
-        1
-      )
-    `, {
-      PERSON_ID:            personId,
-      COMPANY_ID:           assignment.COMPANY_ID,
-      OU_ID:                assignment.OU_ID,
-      ORG_ID:               assignment.ORG_ID,
-      POSITION_ID:          assignment.POSITION_ID,
-      PAYROLL_ID:           assignment.PAYROLL_ID       ?? null,
-      GRADE_ID:             assignment.GRADE_ID,
-      EFFECTIVE_START_DATE: assignment.EFFECTIVE_START_DATE,
-      EFFECTIVE_END_DATE:   assignment.EFFECTIVE_END_DATE,
-    });
+    // 3️⃣ Assignment Insert old
+    // await conn.execute(`
+    //   INSERT INTO HCM.HR_EMP_ASSIGNMENT (
+    //     PERSON_ID, COMPANY_ID, OU_ID, ORG_ID,
+    //     POSITION_ID, PAYROLL_ID, GRADE_ID,
+    //     EFFECTIVE_START_DATE, EFFECTIVE_END_DATE, STATUS
+    //   ) VALUES (
+    //     :PERSON_ID, :COMPANY_ID, :OU_ID, :ORG_ID,
+    //     :POSITION_ID, :PAYROLL_ID, :GRADE_ID,
+    //     TO_DATE(:EFFECTIVE_START_DATE,'YYYY-MM-DD'),
+    //     TO_DATE(:EFFECTIVE_END_DATE,'YYYY-MM-DD'),
+    //     1
+    //   )
+    // `, {
+    //   PERSON_ID:            personId,
+    //   COMPANY_ID:           assignment.COMPANY_ID,
+    //   OU_ID:                assignment.OU_ID,
+    //   ORG_ID:               assignment.ORG_ID,
+    //   POSITION_ID:          assignment.POSITION_ID,
+    //   PAYROLL_ID:           assignment.PAYROLL_ID       ?? null,
+    //   GRADE_ID:             assignment.GRADE_ID,
+    //   EFFECTIVE_START_DATE: assignment.EFFECTIVE_START_DATE,
+    //   EFFECTIVE_END_DATE:   assignment.EFFECTIVE_END_DATE,
+    // });
 
-    // 4️⃣ Increment ACTUAL_COUNT in HR_ORG_POSITION
+    // 4️⃣ Increment ACTUAL_COUNT in HR_ORG_POSITION old
+    // const countUpdateResult = await conn.execute(`
+    //   UPDATE HCM.HR_ORG_POSITION
+    //      SET ACTUAL_COUNT = NVL(ACTUAL_COUNT, 0) + 1
+    //    WHERE ID = :ID AND STATUS = 1
+    // `, { ID: assignment.POSITION_ID });
+
+    // if (countUpdateResult.rowsAffected === 0) {
+    //   throw new Error(
+    //     `ACTUAL_COUNT increment failed: no active HCM.HR_ORG_POSITION found with ID ${assignment.POSITION_ID}. ` +
+    //     `Please verify the POSITION_ID is correct and the position is active (STATUS = 1).`
+    //   );
+    // }
+
+
+    // 3️⃣ Assignment Insert — only if at least COMPANY_ID or POSITION_ID exists
+const hasAssignment = assignment.COMPANY_ID || assignment.OU_ID || 
+                      assignment.ORG_ID    || assignment.POSITION_ID;
+
+if (hasAssignment) {
+  await conn.execute(`
+    INSERT INTO HCM.HR_EMP_ASSIGNMENT (
+      PERSON_ID, COMPANY_ID, OU_ID, ORG_ID,
+      POSITION_ID, PAYROLL_ID, GRADE_ID,
+      EFFECTIVE_START_DATE, EFFECTIVE_END_DATE, STATUS
+    ) VALUES (
+      :PERSON_ID, :COMPANY_ID, :OU_ID, :ORG_ID,
+      :POSITION_ID, :PAYROLL_ID, :GRADE_ID,
+      TO_DATE(:EFFECTIVE_START_DATE,'YYYY-MM-DD'),
+      TO_DATE(:EFFECTIVE_END_DATE,'YYYY-MM-DD'),
+      1
+    )
+  `, {
+    PERSON_ID:            personId,
+    COMPANY_ID:           assignment.COMPANY_ID          ?? null,
+    OU_ID:                assignment.OU_ID               ?? null,
+    ORG_ID:               assignment.ORG_ID              ?? null,
+    POSITION_ID:          assignment.POSITION_ID         ?? null,
+    PAYROLL_ID:           assignment.PAYROLL_ID          ?? null,
+    GRADE_ID:             assignment.GRADE_ID            ?? null,
+    EFFECTIVE_START_DATE: assignment.EFFECTIVE_START_DATE,
+    EFFECTIVE_END_DATE:   assignment.EFFECTIVE_END_DATE,
+  });
+
+  // 4️⃣ Increment ACTUAL_COUNT — only if POSITION_ID is provided
+  if (assignment.POSITION_ID) {
     const countUpdateResult = await conn.execute(`
       UPDATE HCM.HR_ORG_POSITION
          SET ACTUAL_COUNT = NVL(ACTUAL_COUNT, 0) + 1
@@ -132,9 +177,13 @@ export const createEmployee = async (data) => {
         `Please verify the POSITION_ID is correct and the position is active (STATUS = 1).`
       );
     }
+  }
+}
 
-    await conn.commit();
-    return { success: true, PERSON_ID: personId };
+await conn.commit();
+return { success: true, PERSON_ID: personId };
+
+   
 
   } catch (err) {
     await conn.rollback();

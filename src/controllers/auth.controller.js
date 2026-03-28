@@ -78,7 +78,7 @@ const register = async (req, res) => {
     await connection.commit();
 
     // ৭. JWT Token বানাও
-   const token = generateToken(userId, [role_name.toUpperCase()], res);
+   const token = generateToken(userId, username, [role_name.toUpperCase()], res);
 
     return res.status(201).json({
       status: "success",
@@ -150,7 +150,7 @@ const login = async (req, res) => {
     const roles = rolesResult.rows.map((r) => r.ROLE_NAME);
 
     // ৫. Token-এ userId + roles রাখো
-    const token = generateToken(user.ID, roles, res);
+    const token = generateToken(user.ID, user.USERNAME, roles, res);
 
     return res.status(200).json({
       status: "success",

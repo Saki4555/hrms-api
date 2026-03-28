@@ -1,10 +1,10 @@
 import jwt from "jsonwebtoken";
 
 // roles = string array, e.g. ["ADMIN", "HR_MANAGER"]
-export const generateToken = (userId, roles = [], res) => {
-  const payload = { id: userId, roles };
+export const generateToken = (userId, userName, roles = [], res) => {
+  const payload = { id: userId, username: userName, roles };
 
-  const token = jwt.sign(payload, process.env.JWT_SECRET, {
+  const token = jwt.sign(payload,  process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRES_IN || "7d",
   });
 
