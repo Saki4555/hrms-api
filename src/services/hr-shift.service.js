@@ -6,16 +6,20 @@ export const createShift = async (data) => {
 
   const conn = await getConnection();
 
-  const sql = `
-    INSERT INTO HR_SHIFT
-    ( CODE, NAME, START_TIME, END_TIME,
-     GRACE_IN_MINUTES, GRACE_OUT_MINUTES, OVERNIGHT_FLAG,
-     CREATED_BY)
-    VALUES
-    ( :CODE, :NAME, :START_TIME, :END_TIME,
-     :GRACE_IN_MINUTES, :GRACE_OUT_MINUTES, :OVERNIGHT_FLAG,
-     :CREATED_BY)
-  `;
+ 
+const sql = `
+  INSERT INTO HR_SHIFT
+  ( CODE, NAME, START_TIME, END_TIME,
+    GRACE_IN_MINUTES, GRACE_OUT_MINUTES, OVERNIGHT_FLAG,
+    WEEKLY_HOLIDAY_1, WEEKLY_HOLIDAY_2,
+    CREATED_BY)
+  VALUES
+  ( :CODE, :NAME, :START_TIME, :END_TIME,
+    :GRACE_IN_MINUTES, :GRACE_OUT_MINUTES, :OVERNIGHT_FLAG,
+    :WEEKLY_HOLIDAY_1, :WEEKLY_HOLIDAY_2,
+    :CREATED_BY)
+`;
+
 
   await conn.execute(sql, data, { autoCommit: true });
 
@@ -63,18 +67,20 @@ export const updateShift = async (id, data) => {
   const conn = await getConnection();
 
   const sql = `
-    UPDATE HCM.HR_SHIFT SET
-      CODE = :CODE,
-      NAME = :NAME,
-      START_TIME = :START_TIME,
-      END_TIME = :END_TIME,
-      GRACE_IN_MINUTES = :GRACE_IN_MINUTES,
-      GRACE_OUT_MINUTES = :GRACE_OUT_MINUTES,
-      OVERNIGHT_FLAG = :OVERNIGHT_FLAG,
-      UPDATED_BY = :UPDATED_BY,
-      UPDATED_DATE = SYSTIMESTAMP
-    WHERE SHIFT_ID = :id
-  `;
+  UPDATE HCM.HR_SHIFT SET
+    CODE = :CODE,
+    NAME = :NAME,
+    START_TIME = :START_TIME,
+    END_TIME = :END_TIME,
+    GRACE_IN_MINUTES = :GRACE_IN_MINUTES,
+    GRACE_OUT_MINUTES = :GRACE_OUT_MINUTES,
+    OVERNIGHT_FLAG = :OVERNIGHT_FLAG,
+    WEEKLY_HOLIDAY_1 = :WEEKLY_HOLIDAY_1,
+    WEEKLY_HOLIDAY_2 = :WEEKLY_HOLIDAY_2,
+    UPDATED_BY = :UPDATED_BY,
+    UPDATED_DATE = SYSTIMESTAMP
+  WHERE SHIFT_ID = :id
+`;
 
   await conn.execute(sql, { ...data, id }, { autoCommit: true });
 
