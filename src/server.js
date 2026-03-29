@@ -33,6 +33,7 @@ import employeeLiteRoutes from "./modules/hr-employee-lite/routes.js";
 import empImageRoutes from "./modules/employee-image/employee-image.routes.js";
 import leaveRoutes from "./routes/hr-leave-request.routes.js";
 
+import leaveTypeRoutes from "./modules/leave-type/leave-type.routes.js";
 
 
 
@@ -224,6 +225,7 @@ app.use("/api/hr-employee-lite", employeeLiteRoutes);
 app.use("/api/emp-images", empImageRoutes);
 app.use("/api/leave-request", leaveRoutes);
 
+app.use("/api/leave-types", leaveTypeRoutes);
 
 
 
