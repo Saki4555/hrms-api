@@ -31,7 +31,12 @@ import shiftRoutes from "./routes/hr-shift-routes.js";
 import contractRoutes from "./routes/hr-contract.routes.js";
 import employeeLiteRoutes from "./modules/hr-employee-lite/routes.js";
 import empImageRoutes from "./modules/employee-image/employee-image.routes.js";
+<<<<<<<<< Temporary merge branch 1
+import leaveTypeRoutes from "./modules/leave-type/leave-type.routes.js";
+=========
+import leaveRoutes from "./routes/hr-leave-request.routes.js";
 
+>>>>>>>>> Temporary merge branch 2
 
 
 
@@ -221,7 +226,12 @@ app.use("/api/hr-shift", shiftRoutes);
 app.use("/api/hr-contract", contractRoutes);
 app.use("/api/hr-employee-lite", employeeLiteRoutes);
 app.use("/api/emp-images", empImageRoutes);
+<<<<<<<<< Temporary merge branch 1
+app.use("/api/leave-types", leaveTypeRoutes);
+=========
+app.use("/api/leave-request", leaveRoutes);
 
+>>>>>>>>> Temporary merge branch 2
 
 
 
