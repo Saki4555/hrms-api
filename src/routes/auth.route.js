@@ -2,6 +2,7 @@ import express from "express";
 import { login, logout, register } from "../controllers/auth.controller.js";
 //  import {  authorizeRoles } from "../middleware/auth.middleware.js";
  import jwt from "jsonwebtoken";
+import { protectRoute } from "../middlewares/auth.middleware.js";
 
 const router = express.Router();
 
@@ -11,7 +12,7 @@ router.post("/login", login);
 router.post("/logout", logout);
 
 // ── Protected: যেকোনো login করা user ──────────
-router.get("/me", (req, res) => {
+router.get("/me", protectRoute, (req, res) => {
   try {
     const token =
       req.cookies?.jwt ||

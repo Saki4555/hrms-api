@@ -1,7 +1,12 @@
 import express from "express";
 import * as ctrl from "./user-management.controller.js";
+import { protectRoute, authorizeRoles } from "../../middlewares/auth.middleware.js";
+import { ADMIN_ONLY } from "../../config/roles.js";
 
 const router = express.Router();
+
+// Apply protectRoute + ADMIN_ONLY to all routes in this file
+router.use(protectRoute, authorizeRoles(...ADMIN_ONLY));
 
 // ── Users ──────────────────────────────────────────────────────────────────
 router.post("/", ctrl.createUser);
