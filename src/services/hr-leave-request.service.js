@@ -26,6 +26,36 @@ export const createLeaveService = async (data) => {
 };
 
 // ── GET ALL ───────────────────────────────────────────────────────────────────
+// export const getAllLeavesService = async () => {
+//   const conn = await getConnection();
+//   try {
+//     const result = await conn.execute(
+//       `SELECT
+//           lr.LEAVE_ID,
+//           lr.EMPLOYEE_ID,
+//           e.EMP_NO,
+//           e.FIRST_NAME,
+//           e.LAST_NAME,
+//           e.FIRST_NAME || ' ' || e.LAST_NAME   AS EMPLOYEE_NAME,
+//           lr.LEAVE_TYPE_ID,
+//           lt.CODE                               AS LEAVE_TYPE_CODE,
+//           lt.NAME                               AS LEAVE_TYPE_NAME,
+//           lr.START_DATE,
+//           lr.END_DATE,
+//           lr.DAYS,
+//           lr.STATUS,
+//           lr.REASON,
+//           lr.APPLIED_ON
+//        FROM HCM.HR_LEAVE_REQUEST  lr
+//        JOIN HCM.HR_LEAVE_TYPE     lt  ON lr.LEAVE_TYPE_ID = lt.LEAVE_TYPE_ID
+//        LEFT JOIN HCM.HR_EMPLOYEE  e   ON lr.EMPLOYEE_ID   = e.PERSON_ID
+//        ORDER BY lr.LEAVE_ID DESC`
+//     );
+//     return result.rows;
+//   } finally {
+//     await conn.close();
+//   }
+// };
 export const getAllLeavesService = async () => {
   const conn = await getConnection();
   try {
@@ -45,10 +75,16 @@ export const getAllLeavesService = async () => {
           lr.DAYS,
           lr.STATUS,
           lr.REASON,
-          lr.APPLIED_ON
+          lr.APPLIED_ON,
+          lr.APPROVER_ID,
+          u.USERNAME                            AS APPROVER_USERNAME,
+          lr.APPROVED_ON,
+          lr.UPDATED_BY,
+          lr.UPDATED_DATE
        FROM HCM.HR_LEAVE_REQUEST  lr
        JOIN HCM.HR_LEAVE_TYPE     lt  ON lr.LEAVE_TYPE_ID = lt.LEAVE_TYPE_ID
        LEFT JOIN HCM.HR_EMPLOYEE  e   ON lr.EMPLOYEE_ID   = e.PERSON_ID
+       LEFT JOIN HCM.USERS        u   ON lr.APPROVER_ID   = u.ID
        ORDER BY lr.LEAVE_ID DESC`
     );
     return result.rows;
@@ -57,7 +93,6 @@ export const getAllLeavesService = async () => {
   }
 };
 
-// ── GET SINGLE ────────────────────────────────────────────────────────────────
 export const getLeaveByIdService = async (id) => {
   const conn = await getConnection();
   try {
@@ -77,10 +112,16 @@ export const getLeaveByIdService = async (id) => {
           lr.DAYS,
           lr.STATUS,
           lr.REASON,
-          lr.APPLIED_ON
+          lr.APPLIED_ON,
+          lr.APPROVER_ID,
+          u.USERNAME                            AS APPROVER_USERNAME,
+          lr.APPROVED_ON,
+          lr.UPDATED_BY,
+          lr.UPDATED_DATE
        FROM HCM.HR_LEAVE_REQUEST  lr
        JOIN HCM.HR_LEAVE_TYPE     lt  ON lr.LEAVE_TYPE_ID = lt.LEAVE_TYPE_ID
        LEFT JOIN HCM.HR_EMPLOYEE  e   ON lr.EMPLOYEE_ID   = e.PERSON_ID
+       LEFT JOIN HCM.USERS        u   ON lr.APPROVER_ID   = u.ID
        WHERE lr.LEAVE_ID = :id`,
       { id }
     );
@@ -90,25 +131,138 @@ export const getLeaveByIdService = async (id) => {
   }
 };
 
+// ── GET SINGLE ────────────────────────────────────────────────────────────────
+// export const getLeaveByIdService = async (id) => {
+//   const conn = await getConnection();
+//   try {
+//     const result = await conn.execute(
+//       `SELECT
+//           lr.LEAVE_ID,
+//           lr.EMPLOYEE_ID,
+//           e.EMP_NO,
+//           e.FIRST_NAME,
+//           e.LAST_NAME,
+//           e.FIRST_NAME || ' ' || e.LAST_NAME   AS EMPLOYEE_NAME,
+//           lr.LEAVE_TYPE_ID,
+//           lt.CODE                               AS LEAVE_TYPE_CODE,
+//           lt.NAME                               AS LEAVE_TYPE_NAME,
+//           lr.START_DATE,
+//           lr.END_DATE,
+//           lr.DAYS,
+//           lr.STATUS,
+//           lr.REASON,
+//           lr.APPLIED_ON
+//        FROM HCM.HR_LEAVE_REQUEST  lr
+//        JOIN HCM.HR_LEAVE_TYPE     lt  ON lr.LEAVE_TYPE_ID = lt.LEAVE_TYPE_ID
+//        LEFT JOIN HCM.HR_EMPLOYEE  e   ON lr.EMPLOYEE_ID   = e.PERSON_ID
+//        WHERE lr.LEAVE_ID = :id`,
+//       { id }
+//     );
+//     return result.rows[0] ?? null;
+//   } finally {
+//     await conn.close();
+//   }
+// };
+
 // ── UPDATE ────────────────────────────────────────────────────────────────────
+// export const updateLeaveService = async (id, data) => {
+//   const conn = await getConnection();
+//   try {
+//     const result = await conn.execute(
+//       `UPDATE HCM.HR_LEAVE_REQUEST
+//        SET START_DATE   = :start_date,
+//            END_DATE     = :end_date,
+//            DAYS         = :days,
+//            REASON       = :reason,
+//            STATUS       = :status,
+//            UPDATED_BY   = :updated_by,
+//            UPDATED_DATE = SYSTIMESTAMP
+//        WHERE LEAVE_ID = :id`,
+//       {
+//         ...data,
+//         id,
+//         start_date: new Date(data.start_date),
+//         end_date:   new Date(data.end_date),
+//       },
+//       { autoCommit: true }
+//     );
+//     return result;
+//   } finally {
+//     await conn.close();
+//   }
+// };
+
+// export const updateLeaveService = async (id, data) => {
+//   const conn = await getConnection();
+//   try {
+//     const isApproved = data.status === "APPROVED";
+
+//     const result = await conn.execute(
+//       `UPDATE HCM.HR_LEAVE_REQUEST
+//        SET EMPLOYEE_ID   = :employee_id,
+//            LEAVE_TYPE_ID = :leave_type_id,
+//            START_DATE    = :start_date,
+//            END_DATE      = :end_date,
+//            DAYS          = :days,
+//            REASON        = :reason,
+//            STATUS        = :status,
+//            APPROVER_ID   = :approver_id,
+//            APPROVED_ON   = :approved_on,
+//            UPDATED_BY    = :updated_by,
+//            UPDATED_DATE  = SYSTIMESTAMP
+//        WHERE LEAVE_ID = :id`,
+//       {
+//         id:            Number(id),
+//         employee_id:   data.employee_id,
+//         leave_type_id: data.leave_type_id,
+//         start_date:    new Date(data.start_date),
+//         end_date:      new Date(data.end_date),
+//         days:          data.days ?? null,
+//         reason:        data.reason ?? null,
+//         status:        data.status,
+//         approver_id:   isApproved ? (data.approver_id ?? null) : null,
+//         approved_on:   isApproved ? new Date() : null,
+//         updated_by:    data.updated_by ?? "SYSTEM",
+//       },
+//       { autoCommit: true }
+//     );
+//     return result;
+//   } finally {
+//     await conn.close();
+//   }
+// };
+
 export const updateLeaveService = async (id, data) => {
   const conn = await getConnection();
   try {
+    const isApproved = data.status === "APPROVED";
+
     const result = await conn.execute(
       `UPDATE HCM.HR_LEAVE_REQUEST
-       SET START_DATE   = :start_date,
-           END_DATE     = :end_date,
-           DAYS         = :days,
-           REASON       = :reason,
-           STATUS       = :status,
-           UPDATED_BY   = :updated_by,
-           UPDATED_DATE = SYSTIMESTAMP
+       SET EMPLOYEE_ID   = :employee_id,
+           LEAVE_TYPE_ID = :leave_type_id,
+           START_DATE    = :start_date,
+           END_DATE      = :end_date,
+           DAYS          = :days,
+           REASON        = :reason,
+           STATUS        = :status,
+           APPROVER_ID   = :approver_id,
+           APPROVED_ON   = :approved_on,
+           UPDATED_BY    = :updated_by,
+           UPDATED_DATE  = SYSTIMESTAMP
        WHERE LEAVE_ID = :id`,
       {
-        ...data,
-        id,
-        start_date: new Date(data.start_date),
-        end_date:   new Date(data.end_date),
+        id:            Number(id),
+        employee_id:   data.employee_id,
+        leave_type_id: data.leave_type_id,
+        start_date:    new Date(data.start_date),
+        end_date:      new Date(data.end_date),
+        days:          data.days ?? null,
+        reason:        data.reason ?? null,
+        status:        data.status,
+        approver_id:   isApproved ? (data.approver_id ?? null) : null,
+        approved_on:   isApproved ? new Date() : null,
+        updated_by:    data.updated_by ?? null,  // ← USERNAME আসবে এখানে
       },
       { autoCommit: true }
     );
