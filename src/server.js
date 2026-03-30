@@ -36,7 +36,7 @@ import leaveTypeRoutes from "./modules/leave-type/leave-type.routes.js";
 
 import leaveRoutes from "./routes/hr-leave-request.routes.js";
 
-
+import userManagementRoutes from "./modules/user-management/user-management.routes.js";
 
 
 
@@ -232,6 +232,7 @@ app.use("/api/leave-types", leaveTypeRoutes);
 app.use("/api/leave-request", leaveRoutes);
 
 
+app.use("/api/users", userManagementRoutes);
 
 
 
