@@ -29,7 +29,7 @@ router.get("/me", protectRoute, (req, res) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
   
-
+console.log("decoded", decoded);
     res.json({
       status: "success",
       data: {

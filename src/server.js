@@ -40,6 +40,9 @@ import userManagementRoutes from "./modules/user-management/user-management.rout
 
 
 
+import supervisorRoutes     from "./modules/employee-supervisor/employee-supervisor.routes.js";
+import notificationRoutes   from "./modules/employee-notification/employee-notification.routes.js";
+
 
 
 
@@ -233,6 +236,9 @@ app.use("/api/leave-request", leaveRoutes);
 
 
 app.use("/api/users", userManagementRoutes);
+
+app.use("/api/supervisors",    supervisorRoutes);
+app.use("/api/notifications",  notificationRoutes);
 
 
 
