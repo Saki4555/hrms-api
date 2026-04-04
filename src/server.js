@@ -39,6 +39,9 @@ import leaveRoutes from "./routes/hr-leave-request.routes.js";
 import userManagementRoutes from "./modules/user-management/user-management.routes.js";
 
 
+import attendanceRoutes from "./modules/attendacne/attendance.routes.js";
+import { startAttendanceScheduler } from "./modules/attendacne/attendance.scheduler.js";
+
 
 import supervisorRoutes     from "./modules/employee-supervisor/employee-supervisor.routes.js";
 import notificationRoutes   from "./modules/employee-notification/employee-notification.routes.js";
@@ -250,6 +253,10 @@ app.use("/api/item-stock",  itemStockRoutes);
 
 
 
+app.use("/api/attendance", attendanceRoutes);
+
+
+startAttendanceScheduler();
 
 /* ===========================
    SERVER
