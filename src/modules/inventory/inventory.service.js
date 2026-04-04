@@ -1,40 +1,114 @@
 import { getConnection } from '../../config/db.js';
 
 // ─── INSERT ───────────────────────────────────────────────────────────────────
+// export const createInventory = async (data) => {
+//   const conn = await getConnection();
+//   try {
+//     const sql = `
+//       INSERT INTO INVENTORIES (
+//          INVQTY, GRNNO, PONO, ITEM, PRICE, STOREID,
+//         INVTDATE, INVSTATUS, INVOICE_STATUS, ITEMTYPE, ACCOUNTED,
+//         UNIT, UNIT_PRICE, UNIT_ID, SELLING_UNIT_PRICE, INVENTORY_TYPE
+//       ) VALUES (
+//          :invQty, :grnNo, :poNo, :item, :price, :storeId,
+//         :invtDate, :invStatus, :invoiceStatus, :itemType, :accounted,
+//         :unit, :unitPrice, :unitId, :sellingUnitPrice, :inventoryType
+//       )
+//     `;
+//     const binds = {
+     
+//       invQty:           data.invQty,
+//       grnNo:            data.grnNo,
+//       poNo:             data.poNo,
+//       item:             data.item,
+//       price:            data.price,
+//       storeId:          data.storeId,
+//       invtDate:          data.invDate ? new Date(data.invtDate) : new Date(),
+//       invStatus:        data.invStatus        ?? 0,
+//       invoiceStatus:    data.invoiceStatus    ?? 0,
+//       itemType:         data.itemType         ?? 0,
+//       accounted:        data.accounted        ?? 0,
+//       unit:             data.unit,
+//       unitPrice:        data.unitPrice,
+//       unitId:           data.unitId,
+//       sellingUnitPrice: data.sellingUnitPrice,
+//       inventoryType:    data.inventoryType,
+//     };
+//    const result = await conn.execute(sql, binds, { autoCommit: true });
+//     return { rowsAffected: result.rowsAffected };
+//   } finally {
+//     await conn.close();
+//   }
+// };
+
+// // ─── UPDATE ───────────────────────────────────────────────────────────────────
+// export const updateInventory = async (tid, data) => {
+//   const conn = await getConnection();
+//   try {
+//     const sql = `
+//       UPDATE INVENTORIES SET
+//         INVQTY           = :invQty,
+//         GRNNO            = :grnNo,
+//         PONO             = :poNo,
+//         ITEM             = :item,
+//         PRICE            = :price,
+//         STOREID          = :storeId,
+//         INVTDATE          = :invtDate,
+//         INVSTATUS        = :invStatus,
+//         INVOICE_STATUS   = :invoiceStatus,
+//         ITEMTYPE         = :itemType,
+//         ACCOUNTED        = :accounted,
+//         UNIT             = :unit,
+//         UNIT_PRICE       = :unitPrice,
+//         UNIT_ID          = :unitId,
+//         SELLING_UNIT_PRICE = :sellingUnitPrice,
+//         INVENTORY_TYPE   = :inventoryType,
+//         UPDATE_DATE      = SYSDATE
+//       WHERE TID = :tid
+//     `;
+//     const binds = { tid, ...data, invtDate: data.invtDate ? new Date(data.invtDate) : undefined };
+//     const result = await conn.execute(sql, binds, { autoCommit: true });
+//     return { rowsAffected: result.rowsAffected };
+//   } finally {
+//     await conn.close();
+//   }
+// };
+
 export const createInventory = async (data) => {
   const conn = await getConnection();
   try {
     const sql = `
       INSERT INTO INVENTORIES (
-         INVQTY, GRNNO, PONO, ITEM, PRICE, STOREID,
+        INVQTY, GRNNO, PONO, ITEM, PRICE, STOREID,
         INVTDATE, INVSTATUS, INVOICE_STATUS, ITEMTYPE, ACCOUNTED,
         UNIT, UNIT_PRICE, UNIT_ID, SELLING_UNIT_PRICE, INVENTORY_TYPE
       ) VALUES (
-         :invQty, :grnNo, :poNo, :item, :price, :storeId,
+        :invQty, :grnNo, :poNo, :item, :price, :storeId,
         :invtDate, :invStatus, :invoiceStatus, :itemType, :accounted,
         :unit, :unitPrice, :unitId, :sellingUnitPrice, :inventoryType
       )
     `;
     const binds = {
-     
-      invQty:           data.invQty,
-      grnNo:            data.grnNo,
-      poNo:             data.poNo,
+      invQty:           data.invQty           ?? null,
+      grnNo:            data.grnNo            ?? null,
+      poNo:             data.poNo             ?? null,
       item:             data.item,
-      price:            data.price,
+      price:            data.price            ?? null,
       storeId:          data.storeId,
-      invtDate:          data.invDate ? new Date(data.invtDate) : new Date(),
-      invStatus:        data.invStatus        ?? 0,
+      // ✅ Fix: was data.invDate (typo), now data.invtDate
+      invtDate:         data.invtDate ? new Date(data.invtDate) : new Date(),
+      invStatus:        data.invStatus        ?? 1,
       invoiceStatus:    data.invoiceStatus    ?? 0,
-      itemType:         data.itemType         ?? 0,
-      accounted:        data.accounted        ?? 0,
-      unit:             data.unit,
-      unitPrice:        data.unitPrice,
-      unitId:           data.unitId,
-      sellingUnitPrice: data.sellingUnitPrice,
-      inventoryType:    data.inventoryType,
+      itemType:         data.itemType         ?? null,
+      accounted:        data.accounted        ?? null,
+      unit:             data.unit             ?? null,
+      // ✅ Fix: unitPrice must be numeric for trigger UNIT_PRICE
+      unitPrice:        data.unitPrice ? Number(data.unitPrice) : null,
+      unitId:           data.unitId           ?? null,
+      sellingUnitPrice: data.sellingUnitPrice ?? null,
+      inventoryType:    data.inventoryType    ?? null,
     };
-   const result = await conn.execute(sql, binds, { autoCommit: true });
+    const result = await conn.execute(sql, binds, { autoCommit: true });
     return { rowsAffected: result.rowsAffected };
   } finally {
     await conn.close();
@@ -47,26 +121,46 @@ export const updateInventory = async (tid, data) => {
   try {
     const sql = `
       UPDATE INVENTORIES SET
-        INVQTY           = :invQty,
-        GRNNO            = :grnNo,
-        PONO             = :poNo,
-        ITEM             = :item,
-        PRICE            = :price,
-        STOREID          = :storeId,
-        INVTDATE          = :invtDate,
-        INVSTATUS        = :invStatus,
-        INVOICE_STATUS   = :invoiceStatus,
-        ITEMTYPE         = :itemType,
-        ACCOUNTED        = :accounted,
-        UNIT             = :unit,
-        UNIT_PRICE       = :unitPrice,
-        UNIT_ID          = :unitId,
+        INVQTY             = :invQty,
+        GRNNO              = :grnNo,
+        PONO               = :poNo,
+        ITEM               = :item,
+        PRICE              = :price,
+        STOREID            = :storeId,
+        INVTDATE           = :invtDate,
+        INVSTATUS          = :invStatus,
+        INVOICE_STATUS     = :invoiceStatus,
+        ITEMTYPE           = :itemType,
+        ACCOUNTED          = :accounted,
+        UNIT               = :unit,
+        UNIT_PRICE         = :unitPrice,
+        UNIT_ID            = :unitId,
         SELLING_UNIT_PRICE = :sellingUnitPrice,
-        INVENTORY_TYPE   = :inventoryType,
-        UPDATE_DATE      = SYSDATE
+        INVENTORY_TYPE     = :inventoryType,
+        UPDATE_DATE        = SYSDATE
       WHERE TID = :tid
     `;
-    const binds = { tid, ...data, invtDate: data.invtDate ? new Date(data.invtDate) : undefined };
+   
+const binds = {
+  tid,
+  invQty:           data.invQty           ? Number(data.invQty)           : null,
+  // ✅ VARCHAR2 column তাই STRING রাখুন, trigger এ TO_NUMBER() করবে
+  unitPrice:        data.unitPrice != null ? String(data.unitPrice)        : null,
+  invStatus:        Number(data.invStatus  ?? 1),
+  invoiceStatus:    Number(data.invoiceStatus ?? 0),
+  item:             data.item,
+  storeId:          data.storeId,
+  grnNo:            data.grnNo            || null,
+  poNo:             data.poNo             ? Number(data.poNo)             : null,
+  price:            data.price            ? Number(data.price)            : null,
+  sellingUnitPrice: data.sellingUnitPrice ? Number(data.sellingUnitPrice) : null,
+  unit:             data.unit             || null,
+  unitId:           data.unitId           ? Number(data.unitId)           : null,
+  inventoryType:    data.inventoryType    ? Number(data.inventoryType)    : null,
+  itemType:         data.itemType         ? Number(data.itemType)         : null,
+  accounted:        data.accounted        ? Number(data.accounted)        : null,
+  invtDate:         data.invtDate         ? new Date(data.invtDate)       : null,
+};
     const result = await conn.execute(sql, binds, { autoCommit: true });
     return { rowsAffected: result.rowsAffected };
   } finally {
@@ -102,6 +196,14 @@ export const getAllInventories = async ({ page = 1, limit = 20 } = {}) => {
           inv.UNIT            AS INV_UNIT,
           inv.UNIT_PRICE,
           inv.GRNNO,
+
+            -- ✅ STORE JOIN — Store Name 
+          st.STORE_NAME,
+          st.LOCATION         AS STORE_LOCATION,
+
+          -- ✅ UOM JOIN — UOM Name 
+          uom.NAME            AS UOM_NAME,
+
  
           -- ITEM_STOCK columns
           ist.STOCK_QTY,
@@ -132,11 +234,15 @@ export const getAllInventories = async ({ page = 1, limit = 20 } = {}) => {
  
           ROWNUM AS RN
         FROM INVENTORIES inv
-        LEFT JOIN ITEM_STOCK ist
-          ON  inv.ITEM    = ist.ITEM_ID
-          AND inv.STOREID = ist.STORE_ID
-        LEFT JOIN ITEM itm
-          ON  ist.ITEM_ID = itm.ITEM_ID
+       LEFT JOIN ITEM itm ON inv.ITEM = itm.ITEM_ID    
+LEFT JOIN ITEM_STOCK ist ON inv.ITEM = ist.ITEM_ID 
+                        AND inv.STOREID = ist.STORE_ID
+
+
+                         -- ✅ STORE table JOIN
+        LEFT JOIN STORES        st ON inv.STOREID = st.STORE_ID
+        -- ✅ INV_UOM table JOIN
+        LEFT JOIN INV_UOM     uom ON inv.UNIT_ID = uom.ID
         ORDER BY inv.TID DESC
       )
       WHERE RN > :offset AND RN <= :endRow
@@ -174,6 +280,14 @@ export const getInventoryById = async (tid) => {
         inv.UNIT            AS INV_UNIT,
         inv.UNIT_PRICE,
         inv.GRNNO,
+
+
+         -- ✅ STORE JOIN — Store Name 
+          st.STORE_NAME,
+          st.LOCATION         AS STORE_LOCATION,
+
+          -- ✅ UOM JOIN — UOM Name 
+          uom.NAME            AS UOM_NAME,
  
         -- ITEM_STOCK columns
         ist.STORE_ID,
@@ -204,11 +318,15 @@ export const getInventoryById = async (tid) => {
         itm.UNIT            AS ITEM_UNIT
  
       FROM INVENTORIES inv
-      LEFT JOIN ITEM_STOCK ist
-        ON  inv.ITEM    = ist.ITEM_ID
-        AND inv.STOREID = ist.STORE_ID
-      LEFT JOIN ITEM itm
-        ON  ist.ITEM_ID = itm.ITEM_ID
+     LEFT JOIN ITEM itm ON inv.ITEM = itm.ITEM_ID     
+LEFT JOIN ITEM_STOCK ist ON inv.ITEM = ist.ITEM_ID 
+                        AND inv.STOREID = ist.STORE_ID
+
+
+                          -- ✅ STORE table JOIN
+        LEFT JOIN STORES        st ON inv.STOREID = st.STORE_ID
+        -- ✅ INV_UOM table JOIN
+        LEFT JOIN INV_UOM     uom ON inv.UNIT_ID = uom.ID
       WHERE inv.TID = :tid
     `;
     const result = await conn.execute(sql, { tid });

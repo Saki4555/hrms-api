@@ -40,12 +40,16 @@ import userManagementRoutes from "./modules/user-management/user-management.rout
 
 
 
+
+
 import supervisorRoutes     from "./modules/employee-supervisor/employee-supervisor.routes.js";
 import notificationRoutes   from "./modules/employee-notification/employee-notification.routes.js";
 
 import inventoriesRoutes     from './modules/inventory/inventory.route.js';
 import itemRoutes     from './modules/item/item.route.js';
 import itemStockRoutes     from './modules/item-stock/item-stock.route.js';
+import storeRoutes     from './modules/store/store.route.js';
+import uomRoutes from "./modules/inv_uom/inv-uom.route.js";
 
 
 import { v2 as cloudinary } from "cloudinary";
@@ -245,6 +249,9 @@ app.use("/api/notifications",  notificationRoutes);
 app.use("/api/inventory",  inventoriesRoutes);
 app.use("/api/item",  itemRoutes);
 app.use("/api/item-stock",  itemStockRoutes);
+
+app.use("/api/stores", storeRoutes);
+app.use("/api/inv-uom", uomRoutes);
 
 
 
