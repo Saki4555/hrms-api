@@ -4,12 +4,29 @@ import { getConnection } from "../config/db.js";
 export const createAttLog = async (data) => {
   const conn = await getConnection();
   try {
+    // creates duplicate
+    // const sql = `INSERT INTO ATT_LOG
+    // (AM_EMPNO, AM_TIME_IN_OUT, AM_TYPE_IN_OUT, AM_MAC_ID,
+    //  AM_LAT_IN_OUT, AM_LON_IN_OUT, T_ZONE, LOCATION_ID, TEAM_LEAD_ID)
+    // VALUES
+    // (:AM_EMPNO, :AM_TIME_IN_OUT, :AM_TYPE_IN_OUT, :AM_MAC_ID,
+    //  :AM_LAT_IN_OUT, :AM_LON_IN_OUT, :T_ZONE, :LOCATION_ID, :TEAM_LEAD_ID)`;
+
+
+    //! prevents duplicate (not tested yet)
     const sql = `INSERT INTO ATT_LOG
     (AM_EMPNO, AM_TIME_IN_OUT, AM_TYPE_IN_OUT, AM_MAC_ID,
      AM_LAT_IN_OUT, AM_LON_IN_OUT, T_ZONE, LOCATION_ID, TEAM_LEAD_ID)
-    VALUES
-    (:AM_EMPNO, :AM_TIME_IN_OUT, :AM_TYPE_IN_OUT, :AM_MAC_ID,
-     :AM_LAT_IN_OUT, :AM_LON_IN_OUT, :T_ZONE, :LOCATION_ID, :TEAM_LEAD_ID)`;
+    SELECT
+    :AM_EMPNO, :AM_TIME_IN_OUT, :AM_TYPE_IN_OUT, :AM_MAC_ID,
+    :AM_LAT_IN_OUT, :AM_LON_IN_OUT, :T_ZONE, :LOCATION_ID, :TEAM_LEAD_ID
+    FROM DUAL
+    WHERE NOT EXISTS (
+      SELECT 1 FROM ATT_LOG
+      WHERE AM_EMPNO = :AM_EMPNO
+      AND AM_TIME_IN_OUT = :AM_TIME_IN_OUT
+      AND AM_MAC_ID = :AM_MAC_ID
+    )`;
 
     await conn.execute(sql, data, { autoCommit: true });
   } finally {

@@ -34,7 +34,10 @@ export const getAttendance = async (req, res) => {
       locationId: req.query.locationId,
       status:     req.query.status,
       search:     req.query.search,
+      sortBy:     req.query.sortBy,     // ← add
+      sortOrder:  req.query.sortOrder,  // ← add
     });
+
     res.json({ success: true, ...result });
   } catch (err) {
     console.error("[Attendance] getAttendance error:", err.message);
