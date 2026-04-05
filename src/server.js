@@ -54,6 +54,9 @@ import itemStockRoutes     from './modules/item-stock/item-stock.route.js';
 import storeRoutes     from './modules/store/store.route.js';
 import uomRoutes from "./modules/inv_uom/inv-uom.route.js";
 
+import reqMasterRouter from './modules/requisition/req-master.route.js';
+import reqDetailRouter from './modules/requisition/req-detail.route.js';
+
 
 import { v2 as cloudinary } from "cloudinary";
 
@@ -257,7 +260,8 @@ app.use("/api/stores", storeRoutes);
 app.use("/api/inv-uom", uomRoutes);
 
 
-
+app.use('/api/reqmaster', reqMasterRouter);
+app.use('/api/reqdetail', reqDetailRouter);
 
 
 app.use("/api/attendance", attendanceRoutes);
