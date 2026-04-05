@@ -65,31 +65,100 @@ const mapRows = (rows) =>
  * @param {object} meta    - { dateLabel, companyName }
  * @returns {string}       - CSV content
  */
+
+// Escape a value for CSV
+const escapeCsv = (value) => {
+  const str = value == null ? "" : String(value);
+  return `"${str.replace(/"/g, '""')}"`;
+};
+
+
+
+
+
+
+
 export const generateCSV = (rows, meta = {}) => {
   const mapped = mapRows(rows);
 
   const headers = [
-    "#", "Emp No", "Employee Name", "Date",
-    "In Time", "Out Time", "Shift", "Shift Hours",
-    "Status", "Company", "Location", "Payroll",
+    "#",
+    "Emp No",
+    "Employee Name",
+    "Date",
+    "In Time",
+    "Out Time",
+    "Shift",
+    "Shift Hours",
+    "Status",
+    "Company",
+    "Location",
+    "Payroll",
   ];
 
-  const lines = [
-    // Meta header
-    `# Attendance Report — ${meta.dateLabel ?? ""}`,
-    `# Company: ${meta.companyName ?? "All"}`,
-    `# Generated: ${format(new Date(), "dd MMM yyyy HH:mm")}`,
-    "",
-    headers.join(","),
-    ...mapped.map((r) => [
-      r.no, r.empNo, `"${r.name}"`, r.date,
-      r.inTime, r.outTime, `"${r.shift}"`, r.shiftHours,
-      r.statusLabel, `"${r.company}"`, `"${r.location}"`, r.payroll,
-    ].join(",")),
-  ];
+  const lines = [];
 
-  return lines.join("\n");
+  // Excel-friendly UTF-8 BOM
+  lines.push("\uFEFF");
+
+  // Optional metadata as plain text rows
+  lines.push([escapeCsv(`Attendance Report — ${meta.dateLabel ?? ""}`)].join(","));
+  lines.push([escapeCsv(`Company: ${meta.companyName ?? "All"}`)].join(","));
+  lines.push([escapeCsv(`Generated: ${format(new Date(), "dd MMM yyyy HH:mm")}`)].join(","));
+  lines.push("");
+
+  // Header row
+  lines.push(headers.map(escapeCsv).join(","));
+
+  // Data rows
+  mapped.forEach((r) => {
+    lines.push(
+      [
+        r.no,
+        r.empNo,
+        r.name,
+        r.date,
+        r.inTime,
+        r.outTime,
+        r.shift,
+        r.shiftHours,
+        r.statusLabel,
+        r.company,
+        r.location,
+        r.payroll,
+      ]
+        .map(escapeCsv)
+        .join(",")
+    );
+  });
+
+  return lines.join("\r\n");
 };
+// export const generateCSV = (rows, meta = {}) => {
+//   const mapped = mapRows(rows);
+
+//   const headers = [
+//     "#", "Emp No", "Employee Name", "Date",
+//     "In Time", "Out Time", "Shift", "Shift Hours",
+//     "Status", "Company", "Location", "Payroll",
+//   ];
+
+//   const lines = [
+//     // Meta header
+//     `# Attendance Report — ${meta.dateLabel ?? ""}`,
+//     `# Company: ${meta.companyName ?? "All"}`,
+//     `# Generated: ${format(new Date(), "dd MMM yyyy HH:mm")}`,
+//     "",
+//     headers.join(","),
+//     ...mapped.map((r) => [
+//       r.no, r.empNo, `"${r.name}"`, r.date,
+//       r.inTime, r.outTime, `"${r.shift}"`, r.shiftHours,
+//       r.statusLabel, `"${r.company}"`, `"${r.location}"`, r.payroll,
+//     ].join(",")),
+//   ];
+
+//   return lines.join("\n");
+// };
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  EXCEL EXPORT
@@ -352,7 +421,7 @@ export const generatePDF = async (rows, meta = {}) => {
       doc.y = rowY + rowH;
     });
 
-    // ── SUMMARY FOOTER ─────────────────────────────────────────────────
+   // ── SUMMARY FOOTER ─────────────────────────────────────────────────
     doc.moveDown(1);
 
     const counts = {
@@ -362,10 +431,15 @@ export const generatePDF = async (rows, meta = {}) => {
       ABSENT:      mapped.filter((r) => r.status === "ABSENT").length,
     };
 
+    // Capture the starting Y position for the summary section
+    const summaryY = doc.y;
+
+    // Draw the background rectangle
     doc
-      .rect(margin, doc.y, usable, 20)
+      .rect(margin, summaryY, usable, 20)
       .fill("#F3F4F6");
 
+    // Draw the text vertically centered inside the rectangle
     doc
       .font("Helvetica-Bold")
       .fontSize(9)
@@ -373,7 +447,7 @@ export const generatePDF = async (rows, meta = {}) => {
       .text(
         `Summary — Present: ${counts.PRESENT}  |  Late: ${counts.LATE}  |  Early Leave: ${counts.EARLY_LEAVE}  |  Absent: ${counts.ABSENT}`,
         margin + 8,
-        doc.y - 18,
+        summaryY + 6, // +6 adds top padding to vertically center inside the 20pt tall rectangle
         { width: usable, align: "left" }
       );
 
