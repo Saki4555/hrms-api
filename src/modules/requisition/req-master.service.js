@@ -7,17 +7,21 @@ export const getAllReqMaster = async () => {
   try {
     conn = await getConnection();
     const result = await conn.execute(
-      `SELECT TID, TDATE, ENTRY_DATE, STORE_ID_TO, ENTRY_BY,
-              STORE_ID, STATUS, REMARKS, DREIVER_NO, VEHICLE_NO, CHALLAN_NO
-       FROM REQMASTER
-       ORDER BY TID DESC`
+      `SELECT rm.TID, rm.TDATE, rm.ENTRY_DATE, 
+              rm.STORE_ID_TO, st_to.STORE_NAME AS STORE_NAME_TO,
+              rm.ENTRY_BY, rm.STORE_ID, st_from.STORE_NAME AS STORE_NAME_FROM,
+              rm.STATUS, rm.REMARKS, rm.DREIVER_NO, rm.VEHICLE_NO, rm.CHALLAN_NO
+       FROM REQMASTER rm
+       LEFT JOIN STORES st_from ON rm.STORE_ID = st_from.STORE_ID
+       LEFT JOIN STORES st_to   ON rm.STORE_ID_TO = st_to.STORE_ID
+       ORDER BY rm.TID DESC`
     );
-   
     return result.rows;
   } finally {
     if (conn) await conn.close();
   }
 };
+
 
 // ─── GET SINGLE ────────────────────────────────────────────
 export const getReqMasterById = async (tid) => {
@@ -25,17 +29,23 @@ export const getReqMasterById = async (tid) => {
   try {
     conn = await getConnection();
     const result = await conn.execute(
-      `SELECT TID, TDATE, ENTRY_DATE, STORE_ID_TO, ENTRY_BY,
-              STORE_ID, STATUS, REMARKS, DREIVER_NO, VEHICLE_NO, CHALLAN_NO
-       FROM REQMASTER
-       WHERE TID = :tid`,
-      { tid },  { autoCommit: true }
+      `SELECT rm.TID, rm.TDATE, rm.ENTRY_DATE, 
+              rm.STORE_ID_TO, st_to.STORE_NAME AS STORE_NAME_TO,
+              rm.ENTRY_BY, rm.STORE_ID, st_from.STORE_NAME AS STORE_NAME_FROM,
+              rm.STATUS, rm.REMARKS, rm.DREIVER_NO, rm.VEHICLE_NO, rm.CHALLAN_NO
+       FROM REQMASTER rm
+       LEFT JOIN STORES st_from ON rm.STORE_ID = st_from.STORE_ID
+       LEFT JOIN STORES st_to   ON rm.STORE_ID_TO = st_to.STORE_ID
+       WHERE rm.TID = :tid`,
+      { tid },
+      { autoCommit: true }
     );
     return result.rows[0] || null;
   } finally {
     if (conn) await conn.close();
   }
 };
+
 
 // ─── INSERT ────────────────────────────────────────────────
 export const createReqMaster = async (data) => {

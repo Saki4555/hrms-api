@@ -1,46 +1,54 @@
 import { getConnection } from '../../config/db.js';
 
 // ─── GET ALL BY TID ────────────────────────────────────────
+// ─── GET ALL BY TID WITH STORE NAME & ITEM NAME ───────────
 export const getAllReqDetail = async (tid) => {
   let conn;
   try {
     conn = await getConnection();
     const sql = tid
-      ? `SELECT TID, ITEMID, APP_QTY, THAN, TOT_QTY, FRM_STORE,
-                REQID, STATUS, STORE_ID, RETURN, UOM, REMARKS, ACCOUNTED
-         FROM REQDETAIL
-         WHERE TID = :tid
-         ORDER BY ITEMID`
-      : `SELECT TID, ITEMID, APP_QTY, THAN, TOT_QTY, FRM_STORE,
-                REQID, STATUS, STORE_ID, RETURN, UOM, REMARKS, ACCOUNTED
-         FROM REQDETAIL
-         ORDER BY TID DESC, ITEMID`;
+      ? `SELECT R.TID, R.ITEMID, I.NAME AS ITEM_NAME, R.APP_QTY, R.THAN, R.TOT_QTY, R.FRM_STORE,
+                R.REQID, R.STATUS, R.STORE_ID, S.STORE_NAME, R.RETURN, R.UOM, R.REMARKS, R.ACCOUNTED
+         FROM REQDETAIL R
+         LEFT JOIN STORES S ON R.STORE_ID = S.STORE_ID
+         LEFT JOIN ITEM I ON R.ITEMID = I.ITEM_ID
+         WHERE R.TID = :tid
+         ORDER BY R.ITEMID`
+      : `SELECT R.TID, R.ITEMID, I.NAME AS ITEM_NAME, R.APP_QTY, R.THAN, R.TOT_QTY, R.FRM_STORE,
+                R.REQID, R.STATUS, R.STORE_ID, S.STORE_NAME, R.RETURN, R.UOM, R.REMARKS, R.ACCOUNTED
+         FROM REQDETAIL R
+         LEFT JOIN STORES S ON R.STORE_ID = S.STORE_ID
+         LEFT JOIN ITEM I ON R.ITEMID = I.ITEM_ID
+         ORDER BY R.TID DESC, R.ITEMID`;
 
     const binds = tid ? { tid } : {};
-    const result = await conn.execute(sql, binds,  { autoCommit: true });
+    const result = await conn.execute(sql, binds, { autoCommit: true });
     return result.rows;
   } finally {
     if (conn) await conn.close();
   }
 };
 
-// ─── GET SINGLE ────────────────────────────────────────────
+// ─── GET SINGLE BY TID WITH STORE NAME & ITEM NAME ───────
 export const getReqDetailById = async (tid) => {
   let conn;
   try {
     conn = await getConnection();
     const result = await conn.execute(
-      `SELECT TID, ITEMID, APP_QTY, THAN, TOT_QTY, FRM_STORE,
-              REQID, STATUS, STORE_ID, RETURN, UOM, REMARKS, ACCOUNTED
-       FROM REQDETAIL
-       WHERE TID = :tid`,
-      { tid } ,{ autoCommit: true }
+      `SELECT R.TID, R.ITEMID, I.NAME AS ITEM_NAME, R.APP_QTY, R.THAN, R.TOT_QTY, R.FRM_STORE,
+              R.REQID, R.STATUS, R.STORE_ID, S.STORE_NAME, R.RETURN, R.UOM, R.REMARKS, R.ACCOUNTED
+       FROM REQDETAIL R
+       LEFT JOIN STORES S ON R.STORE_ID = S.STORE_ID
+       LEFT JOIN ITEM I ON R.ITEMID = I.ITEM_ID
+       WHERE R.TID = :tid`,
+      { tid }, { autoCommit: true }
     );
     return result.rows[0] || null;
   } finally {
     if (conn) await conn.close();
   }
 };
+
 
 // ─── INSERT SINGLE ─────────────────────────────────────────
 export const createReqDetail = async (data) => {
