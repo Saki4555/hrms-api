@@ -13,8 +13,8 @@ export const createUser = async (req, res) => {
 
 export const getAllUsers = async (req, res) => {
   try {
-    const data = await userService.getAllUsers();
-    res.json({ success: true, count: data.length, data });
+    const data = await userService.getAllUsers(req.query);
+    res.json({ success: true, data });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
