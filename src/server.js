@@ -56,6 +56,7 @@ import uomRoutes from "./modules/inv_uom/inv-uom.route.js";
 
 import reqMasterRouter from './modules/requisition/req-master.route.js';
 import reqDetailRouter from './modules/requisition/req-detail.route.js';
+import requisitionRoutes from './modules/requisition-management/requisition.route.js';
 
 
 import { v2 as cloudinary } from "cloudinary";
@@ -263,6 +264,7 @@ app.use("/api/inv-uom", uomRoutes);
 
 app.use('/api/reqmaster', reqMasterRouter);
 app.use('/api/reqdetail', reqDetailRouter);
+app.use('/api/requisitions', requisitionRoutes);
 
 
 app.use("/api/attendance", attendanceRoutes);

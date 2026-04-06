@@ -6,31 +6,27 @@ export const createItemStock = async (data) => {
   try {
     const sql = `
       INSERT INTO ITEM_STOCK (
-         ITEM_ID, STOCK_QTY, MINIMUM_LEVEL, STATUS,
-        PRICE, LAST_PRICE, UNIT_ID, UOM, ENTRY_BY, UPDATE_BY,
-        BOOKED
+        STORE_ID, ITEM_ID, STOCK_QTY, MINIMUM_LEVEL, STATUS,
+        PRICE, LAST_PRICE, UNIT_ID, UOM, ENTRY_BY, UPDATE_BY, BOOKED
       ) VALUES (
-         :itemId, :stockQty, :minimumLevel, 1,
-        :price, :lastPrice, :unitId, :uom, :entryBy, :updateBy,
-        :booked
+        :storeId, :itemId, :stockQty, :minimumLevel, 1,
+        :price, :lastPrice, :unitId, :uom, :entryBy, :updateBy, :booked
       )
     `;
     const binds = {
-    
+      storeId:        data.storeId,        // ← এটা যোগ হলো
       itemId:         data.itemId,
       stockQty:       data.stockQty        ?? 0,
       minimumLevel:   data.minimumLevel    ?? 0,
-     
-      price:          data.price,
-      lastPrice:      data.lastPrice,
-      unitId:         data.unitId,
-      uom:            data.uom,
-      entryBy:        data.entryBy,
-      updateBy:       data.updateBy,
+      price:          data.price           ?? null,
+      lastPrice:      data.lastPrice       ?? null,
+      unitId:         data.unitId          ?? null,
+      uom:            data.uom             ?? null,
+      entryBy:        data.entryBy         ?? null,
+      updateBy:       data.updateBy        ?? null,
       booked:         data.booked          ?? 0,
-      
     };
-   const result = await conn.execute(sql, binds, { autoCommit: true });
+    const result = await conn.execute(sql, binds, { autoCommit: true });
     return { rowsAffected: result.rowsAffected };
   } finally {
     await conn.close();
@@ -77,11 +73,11 @@ export const updateItemStock = async (storeId, itemId, data) => {
   }
 };
 
-// ─── GET ALL ──────────────────────────────────────────────────────────────────
 export const getAllItemStocks = async ({ page = 1, limit = 20 } = {}) => {
   const conn = await getConnection();
   try {
     const offset = (page - 1) * limit;
+
     const sql = `
       SELECT *
       FROM (
@@ -102,7 +98,10 @@ export const getAllItemStocks = async ({ page = 1, limit = 20 } = {}) => {
           ist.LAST_UPDATE_DATE,
           ist.UPDATE_DATE     AS STOCK_UPDATE_DATE,
           ist.ENTRY_DATE      AS STOCK_ENTRY_DATE,
- 
+
+          -- ✅ STORES JOIN (ADD THIS)
+          st.STORE_NAME,
+
           -- ITEM columns
           itm.NAME            AS ITEM_NAME,
           itm.DESCRIPTION     AS ITEM_DESCRIPTION,
@@ -118,21 +117,30 @@ export const getAllItemStocks = async ({ page = 1, limit = 20 } = {}) => {
           itm.STATUS          AS ITEM_STATUS,
           itm.UNIT            AS ITEM_UNIT,
           itm.PRICE           AS ITEM_PRICE,
- 
+
           ROWNUM AS RN
         FROM ITEM_STOCK ist
-        LEFT JOIN ITEM itm ON ist.ITEM_ID = itm.ITEM_ID
+
+        -- ✅ ADD THIS JOIN
+        LEFT JOIN STORES st 
+          ON ist.STORE_ID = st.STORE_ID
+
+        LEFT JOIN ITEM itm 
+          ON ist.ITEM_ID = itm.ITEM_ID
+
         ORDER BY ist.STORE_ID, ist.ITEM_ID
       )
       WHERE RN > :offset AND RN <= :endRow
     `;
+
     const result = await conn.execute(sql, { offset, endRow: offset + limit });
-    return result.rows;
+console.log("Sample row:", JSON.stringify(result.rows[0]));
+return result.rows;
   } finally {
     await conn.close();
   }
 };
- 
+
 // ─── GET SINGLE  (ITEM_STOCK ⟶ ITEM) ─────────────────────────────────────────
 export const getItemStockById = async (storeId, itemId) => {
   const conn = await getConnection();
@@ -155,6 +163,9 @@ export const getItemStockById = async (storeId, itemId) => {
         ist.LAST_UPDATE_DATE,
         ist.UPDATE_DATE     AS STOCK_UPDATE_DATE,
         ist.ENTRY_DATE      AS STOCK_ENTRY_DATE,
+
+         -- ✅ STORE JOIN (ADD THIS)
+          st.STORE_NAME,
  
         -- ITEM columns
         itm.NAME            AS ITEM_NAME,
@@ -174,6 +185,9 @@ export const getItemStockById = async (storeId, itemId) => {
  
       FROM ITEM_STOCK ist
       LEFT JOIN ITEM itm ON ist.ITEM_ID = itm.ITEM_ID
+        -- ✅ ADD THIS JOIN
+        LEFT JOIN STORES st 
+          ON ist.STORE_ID = st.STORE_ID
       WHERE ist.STORE_ID = :storeId AND ist.ITEM_ID = :itemId
     `;
     const result = await conn.execute(sql, { storeId, itemId });
