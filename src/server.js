@@ -81,6 +81,7 @@ const corsOptions = {
   origin: [
     "http://localhost:5173",
     "http://192.168.1.137:5173",
+    "http://138.252.15.101:8088/login",
   ],
   credentials: true,
   optionsSuccessStatus: 200,
