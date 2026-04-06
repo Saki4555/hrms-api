@@ -34,23 +34,105 @@ export const createUser = async (data) => {
   }
 };
 
-export const getAllUsers = async () => {
+
+
+export const getAllUsers = async ({
+  page      = 1,
+  limit     = 20,
+  search    = "",
+  sortBy    = "CREATED_AT",
+  sortOrder = "DESC",
+  roleId    = "",
+  moduleId  = "",
+  permissionId = "", 
+} = {}) => {
   const conn = await getConnection();
   try {
-    const result = await conn.execute(
-      `SELECT
-         u.ID, u.USERNAME, u.EMPLOYEE_ID, u.LOCATION_ID,
-         u.STATUS, u.CREATED_AT, u.UPDATED_AT,
-         e.FIRST_NAME, e.LAST_NAME, e.EMP_NO,
-         l.LOCATION_NAME
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+
+    // Whitelist allowed sort columns to prevent SQL injection
+    const ALLOWED_SORT = ["USERNAME", "CREATED_AT"];
+    const ALLOWED_ORDER = ["ASC", "DESC"];
+    const safeSort  = ALLOWED_SORT.includes(sortBy?.toUpperCase())    ? sortBy.toUpperCase()    : "CREATED_AT";
+    const safeOrder = ALLOWED_ORDER.includes(sortOrder?.toUpperCase()) ? sortOrder.toUpperCase() : "DESC";
+
+    // ── Build dynamic WHERE clauses ──────────────────────────────────────────
+    const conditions = [];
+    const binds      = {};
+
+    if (search) {
+      conditions.push(`UPPER(u.USERNAME) LIKE UPPER(:SEARCH)`);
+      binds.SEARCH = `%${search}%`;
+    }
+
+    // Filter by role: user must have this role assigned
+    if (roleId) {
+      conditions.push(`EXISTS (
+        SELECT 1 FROM HCM.USER_ROLES ur2
+        WHERE ur2.USER_ID = u.ID AND ur2.ROLE_ID = :ROLE_ID
+      )`);
+      binds.ROLE_ID = parseInt(roleId);
+    }
+
+    if (permissionId) {
+  conditions.push(`EXISTS (
+    SELECT 1 FROM HCM.USER_PERMISSIONS up2
+    WHERE up2.USER_ID = u.ID AND up2.PERMISSION_ID = :PERMISSION_ID
+  )`);
+  binds.PERMISSION_ID = parseInt(permissionId);
+}
+
+    // Filter by module: user must have at least one permission in this module
+    if (moduleId) {
+      conditions.push(`EXISTS (
+        SELECT 1 FROM HCM.USER_PERMISSIONS up2
+        JOIN HCM.PERMISSIONS p2 ON up2.PERMISSION_ID = p2.ID
+        WHERE up2.USER_ID = u.ID AND p2.MODULE_ID = :MODULE_ID
+      )`);
+      binds.MODULE_ID = parseInt(moduleId);
+    }
+
+    const whereClause = conditions.length > 0
+      ? `WHERE ${conditions.join(" AND ")}`
+      : "";
+
+    // ── Count query ──────────────────────────────────────────────────────────
+    const countResult = await conn.execute(
+      `SELECT COUNT(*) AS TOTAL
        FROM HCM.USERS u
        LEFT JOIN HCM.HR_EMPLOYEE e ON u.EMPLOYEE_ID = e.PERSON_ID
        LEFT JOIN HCM.HR_LOCATION l ON u.LOCATION_ID = l.ID
-       ORDER BY u.ID DESC`,
-      [],
+       ${whereClause}`,
+      binds,
       { outFormat: oracledb.OUT_FORMAT_OBJECT }
     );
-    return result.rows;
+    const total      = countResult.rows[0].TOTAL;
+    const totalPages = Math.ceil(total / parseInt(limit)) || 1;
+
+    // ── Data query ───────────────────────────────────────────────────────────
+    const dataResult = await conn.execute(
+      `SELECT *
+       FROM (
+         SELECT
+           u.ID, u.USERNAME, u.EMPLOYEE_ID, u.LOCATION_ID,
+           u.STATUS, u.CREATED_AT, u.UPDATED_AT,
+           e.FIRST_NAME, e.LAST_NAME, e.EMP_NO,
+           l.LOCATION_NAME,
+           ROW_NUMBER() OVER (ORDER BY u.${safeSort} ${safeOrder}) AS RN
+         FROM HCM.USERS u
+         LEFT JOIN HCM.HR_EMPLOYEE e ON u.EMPLOYEE_ID = e.PERSON_ID
+         LEFT JOIN HCM.HR_LOCATION l ON u.LOCATION_ID = l.ID
+         ${whereClause}
+       )
+       WHERE RN > :OFFSET AND RN <= :OFFSET_END`,
+      { ...binds, OFFSET: offset, OFFSET_END: offset + parseInt(limit) },
+      { outFormat: oracledb.OUT_FORMAT_OBJECT }
+    );
+
+    return {
+      data:       dataResult.rows,
+      pagination: { total, totalPages, page: parseInt(page), limit: parseInt(limit) },
+    };
   } finally {
     await conn.close();
   }
