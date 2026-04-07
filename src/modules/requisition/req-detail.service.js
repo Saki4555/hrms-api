@@ -70,7 +70,7 @@ export const createReqDetail = async (data) => {
         tot_qty:    data.tot_qty ?? 0,
         frm_store:  data.frm_store ?? null,
         reqid:      data.reqid ?? null,
-        status:     data.status ?? 0,
+        status:     data.status ?? 1,
         store_id:   data.store_id ?? null,
         return_qty: data.return ?? 0,
         uom:        data.uom || null,
@@ -91,14 +91,14 @@ export const createReqDetailBulk = async (tid, items) => {
   try {
     conn = await getConnection();
     const binds = items.map((d) => ({
-      // tid,
+       tid,
       itemid:     d.itemid,
       app_qty:    d.app_qty ?? 0,
       than:       d.than ?? null,
       tot_qty:    d.tot_qty ?? 0,
       frm_store:  d.frm_store ?? null,
       reqid:      d.reqid ?? null,
-      status:     d.status ?? 0,
+      status:     d.status ?? 1,
       store_id:   d.store_id ?? null,
       return_qty: d.return ?? 0,
       uom:        d.uom || null,

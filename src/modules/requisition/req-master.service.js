@@ -67,7 +67,7 @@ export const createReqMaster = async (data) => {
         store_id_to:  data.store_id_to,
         entry_by:     data.entry_by,
         store_id:     data.store_id,
-        status:       data.status ?? 0,
+        status:       data.status ?? 1,
         remarks:      data.remarks || null,
         dreiver_no:   data.dreiver_no || null,
         vehicle_no:   data.vehicle_no || null,
