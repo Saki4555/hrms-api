@@ -250,6 +250,23 @@ export const deleteUser = async (id) => {
   }
 };
 
+
+export const activateUser = async (id) => {
+  const conn = await getConnection();
+  try {
+    const result = await conn.execute(
+      `UPDATE HCM.USERS
+          SET STATUS = 'ACTIVE', UPDATED_AT = SYSDATE
+        WHERE ID = :ID`,
+      { ID: parseInt(id) },
+      { autoCommit: true }
+    );
+    return result.rowsAffected;
+  } finally {
+    await conn.close();
+  }
+};
+
 // ─────────────────────────────────────────
 //  MODULES  ← new
 // ─────────────────────────────────────────

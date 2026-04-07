@@ -15,6 +15,7 @@ router.get("/:id", ctrl.getUserById);
 router.put("/:id", ctrl.updateUser);
 router.patch("/:id/change-password", ctrl.changePassword);
 router.delete("/:id", ctrl.deleteUser);
+router.patch("/:id/activate", ctrl.activateUser);
 
 // ── Roles ──────────────────────────────────────────────────────────────────
 router.get("/roles/all", ctrl.getAllRoles);
