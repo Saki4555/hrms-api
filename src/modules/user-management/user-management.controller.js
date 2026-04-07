@@ -62,6 +62,15 @@ export const deleteUser = async (req, res) => {
   }
 };
 
+export const activateUser = async (req, res) => {
+  try {
+    const affected = await userService.activateUser(req.params.id);
+    if (!affected) return res.status(404).json({ error: "User not found" });
+    res.json({ success: true, message: "User activated successfully" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
 // ─── ROLES ────────────────────────────────────────────────────────────────────
 
 export const getAllRoles = async (req, res) => {
