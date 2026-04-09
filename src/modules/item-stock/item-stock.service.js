@@ -1,3 +1,4 @@
+import oracledb from 'oracledb';
 import { getConnection } from '../../config/db.js';
 
 // ─── INSERT ───────────────────────────────────────────────────────────────────
@@ -206,6 +207,36 @@ export const deleteItemStock = async (storeId, itemId) => {
       { storeId, itemId }
     );
     return { rowsAffected: result.rowsAffected };
+  } finally {
+    await conn.close();
+  }
+};
+
+// ─── GET BY STORE ID ──────────────────────────────────────────────────────────
+export const getItemsByStore = async (storeId) => {
+  const conn = await getConnection();
+  try {
+    const sql = `
+      SELECT
+        ist.STORE_ID,
+        ist.ITEM_ID,
+        itm.NAME        AS ITEM_NAME,
+        ist.STOCK_QTY,
+        ist.UOM,
+        itm.UNIT        AS UNIT_NAME,
+        ist.PRICE       AS STOCK_PRICE
+      FROM ITEM_STOCK ist
+      LEFT JOIN ITEM itm ON ist.ITEM_ID = itm.ITEM_ID
+      WHERE ist.STORE_ID = :storeId
+        AND ist.STOCK_QTY > 0
+      ORDER BY itm.NAME
+    `;
+    const result = await conn.execute(
+      sql,
+      { storeId: Number(storeId) },
+      { outFormat: oracledb.OUT_FORMAT_OBJECT }
+    );
+    return result.rows;
   } finally {
     await conn.close();
   }

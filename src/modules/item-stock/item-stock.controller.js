@@ -21,16 +21,33 @@ export const update = async (req, res) => {
   }
 };
 
+// export const getAll = async (req, res) => {
+//   try {
+//     const { page = 1, limit = 20 } = req.query;
+//     const rows = await itemStockService.getAllItemStocks({ page: Number(page), limit: Number(limit) });
+//     res.json({ success: true, data: rows });
+//   } catch (err) {
+//     res.status(500).json({ success: false, message: err.message });
+//   }
+// };
+
+
 export const getAll = async (req, res) => {
   try {
-    const { page = 1, limit = 20 } = req.query;
+    const { storeId, page = 1, limit = 20 } = req.query;
+
+    // ✅ storeId থাকলে শুধু ওই store এর items
+    if (storeId) {
+      const rows = await itemStockService.getItemsByStore(Number(storeId));
+      return res.json({ success: true, data: rows });
+    }
+
     const rows = await itemStockService.getAllItemStocks({ page: Number(page), limit: Number(limit) });
     res.json({ success: true, data: rows });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
 };
-
 export const getSingle = async (req, res) => {
   try {
     const { storeId, itemId } = req.params;
@@ -53,3 +70,4 @@ export const remove = async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 };
+
