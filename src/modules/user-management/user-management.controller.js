@@ -221,3 +221,46 @@ export const deleteModule = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+
+
+
+// ─── ROLE PERMISSIONS ─────────────────────────────────────────────────────────
+
+export const getRolePermissions = async (req, res) => {
+  try {
+    const data = await userService.getRolePermissions(req.params.roleId);
+    res.json({ success: true, count: data.length, data });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+export const assignPermissionToRole = async (req, res) => {
+  try {
+    // grantedBy comes from the authenticated user making the request
+    await userService.assignPermissionToRole(
+      req.params.roleId,
+      req.body.permissionId,
+      req.user?.id   // set by protectRoute
+    );
+    res.status(201).json({ success: true, message: "Permission assigned to role successfully" });
+  } catch (err) {
+    // "already assigned" is a business rule, not a 500
+    const status = err.message.includes("already assigned") ? 409 : 500;
+    res.status(status).json({ error: err.message });
+  }
+};
+
+export const revokePermissionFromRole = async (req, res) => {
+  try {
+    const affected = await userService.revokePermissionFromRole(
+      req.params.roleId,
+      req.params.permissionId
+    );
+    if (!affected) return res.status(404).json({ error: "Permission assignment not found" });
+    res.json({ success: true, message: "Permission revoked from role successfully" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};

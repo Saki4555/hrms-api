@@ -545,3 +545,108 @@ export const revokePermissionFromUser = async (userId, permissionId) => {
     await conn.close();
   }
 };
+
+
+
+// ─────────────────────────────────────────
+//  ROLE_PERMISSIONS  ← new
+// ─────────────────────────────────────────
+
+export const getRolePermissions = async (roleId) => {
+  const conn = await getConnection();
+  try {
+    const result = await conn.execute(
+      `SELECT p.ID, p.PERMISSION_CODE, p.PERMISSION_NAME, p.DESCRIPTION,
+              m.MODULE_NAME, m.ID AS MODULE_ID, rp.GRANTED_AT
+       FROM HCM.ROLE_PERMISSIONS rp
+       JOIN HCM.PERMISSIONS p ON rp.PERMISSION_ID = p.ID
+       LEFT JOIN HCM.MODULES m ON p.MODULE_ID = m.ID
+       WHERE rp.ROLE_ID = :ROLE_ID
+       ORDER BY m.SEQUENCE_NO, p.ID`,
+      { ROLE_ID: parseInt(roleId) },
+      { outFormat: oracledb.OUT_FORMAT_OBJECT }
+    );
+    return result.rows;
+  } finally {
+    await conn.close();
+  }
+};
+
+export const assignPermissionToRole = async (roleId, permissionId, grantedBy = null) => {
+  const conn = await getConnection();
+  try {
+    const existing = await conn.execute(
+      `SELECT ID FROM HCM.ROLE_PERMISSIONS
+        WHERE ROLE_ID = :ROLE_ID AND PERMISSION_ID = :PERMISSION_ID`,
+      { ROLE_ID: parseInt(roleId), PERMISSION_ID: parseInt(permissionId) },
+      { outFormat: oracledb.OUT_FORMAT_OBJECT }
+    );
+    if (existing.rows.length > 0) throw new Error("Permission already assigned to this role");
+
+    await conn.execute(
+      `INSERT INTO HCM.ROLE_PERMISSIONS (ROLE_ID, PERMISSION_ID, GRANTED_BY, GRANTED_AT)
+       VALUES (:ROLE_ID, :PERMISSION_ID, :GRANTED_BY, SYSDATE)`,
+      {
+        ROLE_ID:       parseInt(roleId),
+        PERMISSION_ID: parseInt(permissionId),
+        GRANTED_BY:    grantedBy ? parseInt(grantedBy) : null,
+      },
+      { autoCommit: true }
+    );
+  } finally {
+    await conn.close();
+  }
+};
+
+export const revokePermissionFromRole = async (roleId, permissionId) => {
+  const conn = await getConnection();
+  try {
+    const result = await conn.execute(
+      `DELETE FROM HCM.ROLE_PERMISSIONS
+        WHERE ROLE_ID = :ROLE_ID AND PERMISSION_ID = :PERMISSION_ID`,
+      { ROLE_ID: parseInt(roleId), PERMISSION_ID: parseInt(permissionId) },
+      { autoCommit: true }
+    );
+    return result.rowsAffected;
+  } finally {
+    await conn.close();
+  }
+};
+
+// ─────────────────────────────────────────
+//  EFFECTIVE PERMISSIONS  ← used by middleware
+// ─────────────────────────────────────────
+// Returns the union of:
+//   • permissions granted directly to the user
+//   • permissions granted to any of the user's roles
+// Deduplication is done in SQL via UNION (not UNION ALL).
+
+export const getUserEffectivePermissions = async (userId) => {
+  const conn = await getConnection();
+  try {
+    const result = await conn.execute(
+      `SELECT DISTINCT p.ID, p.PERMISSION_CODE, p.PERMISSION_NAME
+       FROM HCM.PERMISSIONS p
+       WHERE p.ID IN (
+         -- direct user permissions
+         SELECT up.PERMISSION_ID
+         FROM HCM.USER_PERMISSIONS up
+         WHERE up.USER_ID = :USER_ID
+
+         UNION
+
+         -- permissions via roles
+         SELECT rp.PERMISSION_ID
+         FROM HCM.ROLE_PERMISSIONS rp
+         JOIN HCM.USER_ROLES ur ON rp.ROLE_ID = ur.ROLE_ID
+         WHERE ur.USER_ID = :USER_ID
+       )
+       ORDER BY p.ID`,
+      { USER_ID: parseInt(userId) },
+      { outFormat: oracledb.OUT_FORMAT_OBJECT }
+    );
+    return result.rows; // [{ ID, PERMISSION_CODE, PERMISSION_NAME }, ...]
+  } finally {
+    await conn.close();
+  }
+};
