@@ -1,13 +1,14 @@
 import jwt from "jsonwebtoken";
 import { getConnection } from "../config/db.js";
 import oracledb from "oracledb";
+import { getUserEffectivePermissions } from "../modules/user-management/user-management.service.js";
 
 // ─────────────────────────────────────────────
-// protectRoute — only authenticated users can pass
+// protectRoute  (updated: now loads permissions)
 // ─────────────────────────────────────────────
 export const protectRoute = async (req, res, next) => {
+  let connection;
   try {
-    // Extract token from cookie or Authorization header (Bearer <token>)
     const token =
       req.cookies?.jwt ||
       (req.headers.authorization?.startsWith("Bearer ")
@@ -18,7 +19,6 @@ export const protectRoute = async (req, res, next) => {
       return res.status(401).json({ error: "Access denied. No token provided" });
     }
 
-    // Verify JWT signature and expiry
     let decoded;
     try {
       decoded = jwt.verify(token, process.env.JWT_SECRET);
@@ -29,9 +29,6 @@ export const protectRoute = async (req, res, next) => {
       return res.status(401).json({ error: "Invalid token." });
     }
 
-    // Check the latest user status from DB
-    // This catches cases where user was deactivated after token was issued
-    let connection;
     try {
       connection = await getConnection();
 
@@ -52,12 +49,17 @@ export const protectRoute = async (req, res, next) => {
         return res.status(403).json({ error: "Account is inactive or suspended." });
       }
 
-      // Attach user info to req — available in all subsequent middlewares and controllers
+      // Load effective permissions (direct + via roles) from DB.
+      // This always reflects the current state — no stale JWT data.
+      const permRows = await getUserEffectivePermissions(user.ID);
+      const permissions = permRows.map((p) => p.PERMISSION_CODE);
+
       req.user = {
-        id: user.ID,
-        username: user.USERNAME,
+        id:          user.ID,
+        username:    user.USERNAME,
         employee_id: user.EMPLOYEE_ID,
-        roles: decoded.roles || [], // roles come from the JWT token payload
+        roles:       decoded.roles || [],   // still available for authorizeRoles()
+        permissions,                         // ← new: ["EMP_VIEW_ALL", "PAY_PROCESS_SALARY", ...]
       };
     } finally {
       if (connection) await connection.close().catch(console.error);
@@ -71,25 +73,59 @@ export const protectRoute = async (req, res, next) => {
 };
 
 // ─────────────────────────────────────────────
-// authorizeRoles(...roles) — restrict route to specific roles
-//
-// Usage:
-//   router.get("/admin",    protectRoute, authorizeRoles("ADMIN"), handler)
-//   router.get("/hr",       protectRoute, authorizeRoles("ADMIN", "HR_MANAGER"), handler)
-//   router.get("/profile",  protectRoute, handler)  // no role restriction
+// authorizeRoles  (unchanged — still available)
 // ─────────────────────────────────────────────
 export const authorizeRoles = (...allowedRoles) => {
   return (req, res, next) => {
     const userRoles = req.user?.roles || [];
-
-    // Pass if the user has at least one of the allowed roles (case-insensitive)
     const hasRole = userRoles.some((role) =>
       allowedRoles.map((r) => r.toUpperCase()).includes(role.toUpperCase())
     );
-
     if (!hasRole) {
       return res.status(403).json({
         error: `Access denied. Required roles: [${allowedRoles.join(", ")}]. Your roles: [${userRoles.join(", ")}]`,
+      });
+    }
+    next();
+  };
+};
+
+// ─────────────────────────────────────────────
+// authorizePermissions  ← new
+//
+// Usage (require ALL listed permissions):
+//   router.post("/payroll", protectRoute, authorizePermissions("PAY_PROCESS_SALARY"), handler)
+//
+// Usage (require ANY one of the listed permissions):
+//   router.get("/reports", protectRoute, authorizePermissions("REP_VIEW_ORG", "REP_VIEW_PAY"), handler)
+//
+// The second argument controls the mode (default: "ALL").
+// ─────────────────────────────────────────────
+export const authorizePermissions = (...requiredPerms) => {
+  // Optional last argument: { mode: "ANY" | "ALL" }
+  let mode = "ALL";
+  let perms = requiredPerms;
+
+  if (
+    requiredPerms.length > 0 &&
+    typeof requiredPerms[requiredPerms.length - 1] === "object"
+  ) {
+    const opts = requiredPerms[requiredPerms.length - 1];
+    mode = opts.mode?.toUpperCase() === "ANY" ? "ANY" : "ALL";
+    perms = requiredPerms.slice(0, -1);
+  }
+
+  return (req, res, next) => {
+    const userPerms = req.user?.permissions || [];
+
+    const granted =
+      mode === "ANY"
+        ? perms.some((p) => userPerms.includes(p))
+        : perms.every((p) => userPerms.includes(p));
+
+    if (!granted) {
+      return res.status(403).json({
+        error: `Access denied. Required permissions (${mode}): [${perms.join(", ")}]`,
       });
     }
 

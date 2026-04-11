@@ -1,6 +1,9 @@
 import express from "express";
 import * as ctrl from "./user-management.controller.js";
-import { protectRoute, authorizeRoles } from "../../middlewares/auth.middleware.js";
+import {
+  protectRoute,
+  authorizeRoles,
+} from "../../middlewares/auth.middleware.js";
 import { ADMIN_ONLY } from "../../config/roles.js";
 
 const router = express.Router();
@@ -39,5 +42,25 @@ router.post("/:userId/roles", ctrl.assignRole);
 router.delete("/:userId/roles/:roleId", ctrl.revokeRole);
 router.post("/:userId/permissions", ctrl.assignPermission);
 router.delete("/:userId/permissions/:permissionId", ctrl.revokePermission);
+
+// Role ↔ Permission management
+router.get(
+  "/roles/:roleId/permissions",
+  protectRoute,
+  authorizeRoles("ADMIN"),
+  ctrl.getRolePermissions,
+);
+router.post(
+  "/roles/:roleId/permissions",
+  protectRoute,
+  authorizeRoles("ADMIN"),
+  ctrl.assignPermissionToRole,
+);
+router.delete(
+  "/roles/:roleId/permissions/:permissionId",
+  protectRoute,
+  authorizeRoles("ADMIN"),
+  ctrl.revokePermissionFromRole,
+);
 
 export default router;

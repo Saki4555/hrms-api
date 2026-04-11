@@ -1,3 +1,5 @@
+
+// src\config\roles.js
 export const ROLES = {
   ADMIN:      "Admin",
   HR:         "HR",
@@ -14,3 +16,7 @@ export const ADMIN_HR         = [ADMIN, HR];
 export const ADMIN_HR_SUP     = [ADMIN, HR, SUPERVISOR];
 export const ADMIN_SUP        = [ADMIN, SUPERVISOR];
 export const HR_SUP           = [HR, SUPERVISOR];
+
+
+
+
