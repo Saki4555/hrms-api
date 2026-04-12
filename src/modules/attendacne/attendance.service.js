@@ -1,3 +1,76 @@
+// ─────────────────────────────────────────────────────────────────────────────
+//  ATTENDANCE SERVICE — TODO
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ── 3.1 SETUP ────────────────────────────────────────────────────────────────
+// TODO: createShift          — insert into HCM.HR_SHIFT (code, name, start_time, end_time, grace_in, grace_out)
+// TODO: updateShift          — update shift details
+// TODO: deleteShift          — delete or deactivate shift
+// TODO: getAllShifts          — list all shifts (for dropdown + list page)
+// TODO: getShiftById         — single shift detail
+
+// TODO: createRotationPlan   — define a named rotation cycle (e.g. Week A/B/C)
+// TODO: updateRotationPlan
+// TODO: deleteRotationPlan
+// TODO: getAllRotationPlans
+
+// TODO: createHolidayCalendar — insert public/company holidays by year
+// TODO: updateHoliday
+// TODO: deleteHoliday
+// TODO: getHolidaysByYear     — list holidays for a given year
+
+// ── 3.2 EMPLOYEE ASSIGNMENT ───────────────────────────────────────────────────
+// TODO: assignEmployeeToRotation   — link employee to a rotation plan
+// TODO: changeEmployeeRotation     — update existing rotation assignment
+// TODO: getEmployeeRotation        — get current rotation for an employee
+
+// TODO: createTeam           — group employees under a supervisor
+// TODO: updateTeam
+// TODO: deleteTeam
+// TODO: getTeamsByLeader     — get teams managed by a supervisor
+
+// ── 3.3 WORK SCHEDULE ────────────────────────────────────────────────────────
+// TODO: createWorkSchedule   — create weekly or monthly schedule for a team
+// TODO: updateWorkSchedule   — modify existing schedule
+// TODO: approveWorkSchedule  — supervisor/HR approval flow (status: DRAFT → APPROVED)
+// TODO: getWorkSchedule      — get schedule by team/employee/date range
+// TODO: getMyWorkSchedule    — self view — employee sees own schedule (ESS_ATT_VIEW)
+
+// ── 3.4 ATTENDANCE DATA ───────────────────────────────────────────────────────
+// TODO: receiveMobileAttendance  — insert AI face detection punches from mobile app
+//                                  (used by Supervisor via ATT_REALTIME_AI)
+//                                  inserts into ATT_LOG then triggers processAttendance
+
+// TODO: manualAttendanceEdit     — Admin/HR restricted direct edit of HR_ATTENDANCE record
+//                                  (ATT_CORRECTION_APPROVE) — logs who edited and when
+
+// TODO: getMyAttendance          — self view for ESS (ESS_ATT_VIEW)
+//                                  same as getAttendanceList but hard-filtered by req.user.employee_id
+
+// ── 3.5 ATTENDANCE REPORTS ───────────────────────────────────────────────────
+// TODO: getLateReport         — employees who were late in a date range, with minutes late
+// TODO: getAbsentReport       — employees with no attendance record for working days
+// TODO: getEarlyLeaveReport   — employees who punched out before shift end
+// TODO: getAttendanceExceptions — combined: late + absent + early leave in one query
+// TODO: getMonthlyAttendanceSummaryPerEmployee — per-employee monthly breakdown
+//                                               (present count, late count, absent count, working days)
+
+// ── LEAVE & LATE (Self-Service side of Attendance) ───────────────────────────
+// TODO: applyLeave           — employee submits leave request (ESS_LEAVE_APPLY / ATT_LEAVE_APPLY)
+// TODO: applyLate            — employee submits late request with reason
+// TODO: approveLeave         — supervisor/HR/admin approves or rejects (ATT_LEAVE_APPROVE)
+// TODO: approveLate          — approve late request
+// TODO: getMyLeaveRequests   — employee sees own leave history and status
+// TODO: getTeamLeaveRequests — supervisor sees pending requests from their team
+// TODO: getLeaveBalance      — remaining leave days per employee per leave type
+
+// ── ATTENDANCE CORRECTION (Self-Service side) ─────────────────────────────────
+// TODO: submitCorrectionRequest  — employee requests correction for wrong/missing punch (ESS_ATT_CORRECT)
+// TODO: approveCorrectionRequest — Admin/HR reviews and applies correction (ATT_CORRECTION_APPROVE)
+// TODO: getCorrectionRequests    — list pending correction requests (for HR/Admin dashboard)
+
+
+
 import { getConnection } from "../../config/db.js";
 import oracledb from "oracledb";
 
@@ -73,7 +146,7 @@ export const processAttendance = async (fromDate, toDate) => {
           NVL(MIN(A.POSITION_ID), 1)                               AS SHIFT_ID,
           L.AM_MAC_ID                                              AS DEVICE_ID
         FROM HCM.ATT_LOG L
-        JOIN HCM.HR_EMPLOYEE E ON L.AM_EMPNO = E.PERSON_ID
+        JOIN HCM.HR_EMPLOYEE E ON L.AM_EMPNO = E.EMP_NO
         LEFT JOIN HCM.HR_EMP_ASSIGNMENT A ON E.PERSON_ID = A.PERSON_ID
                                           AND A.STATUS    = 1
         WHERE TRUNC(TO_TIMESTAMP_TZ(L.AM_TIME_IN_OUT, ${ISO_TZ_FMT}))
@@ -354,16 +427,16 @@ export const getAttendanceDetail = async (employeeId, date) => {
           ELSE 'UNKNOWN'
         END AS PUNCH_LABEL
       FROM HCM.ATT_LOG      L
-      JOIN HCM.HR_EMPLOYEE  E   ON L.AM_EMPNO   = E.PERSON_ID
+      JOIN HCM.HR_EMPLOYEE  E   ON L.AM_EMPNO   = E.EMP_NO
       LEFT JOIN HCM.HR_LOCATION loc ON L.LOCATION_ID = loc.ID
-      WHERE E.PERSON_ID = :EMPLOYEE_ID
+      WHERE E.EMP_NO = :EMP_NO
         AND TRUNC(TO_TIMESTAMP_TZ(L.AM_TIME_IN_OUT, ${ISO_TZ_FMT}))
             = TO_DATE(:ATT_DATE, 'YYYY-MM-DD')
       ORDER BY TO_TIMESTAMP_TZ(L.AM_TIME_IN_OUT, ${ISO_TZ_FMT}) ASC
     `,
-      {
-        EMPLOYEE_ID: parseInt(employeeId),
-        ATT_DATE:    date,
+       {
+        EMP_NO:   String(employeeId),
+        ATT_DATE: date,
       },
       { outFormat: oracledb.OUT_FORMAT_OBJECT },
     );
