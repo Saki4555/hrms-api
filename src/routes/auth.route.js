@@ -1,7 +1,7 @@
 import express from "express";
 import { login, logout, register } from "../controllers/auth.controller.js";
 //  import {  authorizeRoles } from "../middleware/auth.middleware.js";
- import jwt from "jsonwebtoken";
+
 import { protectRoute } from "../middlewares/auth.middleware.js";
 
 const router = express.Router();
@@ -12,32 +12,19 @@ router.post("/login", login);
 router.post("/logout", logout);
 
 // ── Protected: যেকোনো login করা user ──────────
-router.get("/me", protectRoute, (req, res) => {
+router.get("/me", protectRoute, async (req, res) => {
   try {
-    const token =
-      req.cookies?.jwt ||
-      (req.headers.authorization?.startsWith("Bearer ")
-        ? req.headers.authorization.split(" ")[1]
-        : null);
-
-    if (!token) {
-      return res.status(401).json({ error: "missing token" });
-    }
-
-   
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-  
-console.log("decoded", decoded);
-    res.json({
+    // protectRoute already loaded permissions into req.user
+    // so just return req.user directly — no need to decode JWT again
+    return res.json({
       status: "success",
       data: {
         user: {
-          id: decoded.id,
-          username: decoded.username,
-          employee_id: decoded.employee_id,
-          roles: decoded.roles,
+          id:          req.user.id,
+          username:    req.user.username,
+          employee_id: req.user.employee_id,
+          roles:       req.user.roles,
+          permissions: req.user.permissions, // ← already loaded by protectRoute
         },
       },
     });
@@ -45,7 +32,6 @@ console.log("decoded", decoded);
     return res.status(401).json({ error: error.message });
   }
 });
-
 // // ── Admin only ────────────────────────────────
 // router.get(
 //   "/admin/dashboard",
@@ -59,7 +45,7 @@ console.log("decoded", decoded);
 // // // ── HR Manager অথবা Admin ────────────────────
 // router.get(
 //   "/hr/employees",
- 
+
 //   authorizeRoles("ADMIN", "HR_MANAGER"),
 //   (req, res) => {
 //     res.json({ status: "success", message: "HR employee list data" });
@@ -69,7 +55,7 @@ console.log("decoded", decoded);
 // // // ── Employee only ─────────────────────────────
 // router.get(
 //   "/employee/profile",
- 
+
 //   authorizeRoles("EMPLOYEE"),
 //   (req, res) => {
 //     res.json({ status: "success", message: "Employee profile data" });

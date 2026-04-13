@@ -24,7 +24,7 @@ const register = async (req, res) => {
     const userExists = await connection.execute(
       `SELECT ID FROM HCM.USERS WHERE UPPER(USERNAME) = UPPER(:username)`,
       { username },
-      { outFormat: oracledb.OUT_FORMAT_OBJECT }
+      { outFormat: oracledb.OUT_FORMAT_OBJECT },
     );
 
     if (userExists.rows.length > 0) {
@@ -35,7 +35,7 @@ const register = async (req, res) => {
     const roleResult = await connection.execute(
       `SELECT ID FROM HCM.ROLES WHERE UPPER(ROLE_NAME) = UPPER(:role_name)`,
       { role_name },
-      { outFormat: oracledb.OUT_FORMAT_OBJECT }
+      { outFormat: oracledb.OUT_FORMAT_OBJECT },
     );
 
     if (roleResult.rows.length === 0) {
@@ -61,7 +61,7 @@ const register = async (req, res) => {
         password_hash: hashedPassword,
         userId: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER },
       },
-      { autoCommit: false } // commit পরে একসাথে করব
+      { autoCommit: false }, // commit পরে একসাথে করব
     );
 
     const userId = result.outBinds.userId[0];
@@ -71,15 +71,20 @@ const register = async (req, res) => {
       `INSERT INTO HCM.USER_ROLES (USER_ID, ROLE_ID, ASSIGNED_AT)
        VALUES (:user_id, :role_id, SYSDATE)`,
       { user_id: userId, role_id: roleId },
-      { autoCommit: false }
+      { autoCommit: false },
     );
 
     // ৬. সব ঠিক থাকলে commit
     await connection.commit();
 
     // ৭. JWT Token বানাও
-   const token = generateToken(userId, username, [role_name.toUpperCase()], employee_id, res);
-
+    const token = generateToken(
+      userId,
+      username,
+      [role_name.toUpperCase()],
+      employee_id,
+      res,
+    );
 
     return res.status(201).json({
       status: "success",
@@ -118,7 +123,7 @@ const login = async (req, res) => {
        FROM HCM.USERS
        WHERE UPPER(USERNAME) = UPPER(:username)`,
       { username },
-      { outFormat: oracledb.OUT_FORMAT_OBJECT }
+      { outFormat: oracledb.OUT_FORMAT_OBJECT },
     );
 
     if (result.rows.length === 0) {
@@ -126,7 +131,7 @@ const login = async (req, res) => {
     }
 
     const user = result.rows[0];
-    
+
     console.log("user-->", user);
 
     // ২. Account status চেক
@@ -143,18 +148,44 @@ const login = async (req, res) => {
     // ৪. এই user-এর সব roles আনো
     const rolesResult = await connection.execute(
       `SELECT R.ID, R.ROLE_NAME
-       FROM HCM.ROLES R
-       JOIN HCM.USER_ROLES UR ON R.ID = UR.ROLE_ID
-       WHERE UR.USER_ID = :user_id`,
+   FROM HCM.ROLES R
+   JOIN HCM.USER_ROLES UR ON R.ID = UR.ROLE_ID
+   WHERE UR.USER_ID = :user_id`,
       { user_id: user.ID },
-      { outFormat: oracledb.OUT_FORMAT_OBJECT }
+      { outFormat: oracledb.OUT_FORMAT_OBJECT },
     );
 
     const roles = rolesResult.rows.map((r) => r.ROLE_NAME);
 
-    // ৫. Token-এ userId + roles রাখো
-    const token = generateToken(user.ID, user.USERNAME, roles, user.EMPLOYEE_ID, res);
+    // ৫. এই user-এর effective permissions আনো (direct + via roles)
+    const permissionsResult = await connection.execute(
+      `SELECT DISTINCT p.PERMISSION_CODE
+   FROM HCM.PERMISSIONS p
+   WHERE p.ID IN (
+     SELECT up.PERMISSION_ID
+     FROM HCM.USER_PERMISSIONS up
+     WHERE up.USER_ID = :user_id
+     UNION
+     SELECT rp.PERMISSION_ID
+     FROM HCM.ROLE_PERMISSIONS rp
+     JOIN HCM.USER_ROLES ur ON rp.ROLE_ID = ur.ROLE_ID
+     WHERE ur.USER_ID = :user_id
+   )
+   ORDER BY p.PERMISSION_CODE`,
+      { user_id: user.ID },
+      { outFormat: oracledb.OUT_FORMAT_OBJECT },
+    );
 
+    const permissions = permissionsResult.rows.map((r) => r.PERMISSION_CODE);
+
+    
+    const token = generateToken(
+      user.ID,
+      user.USERNAME,
+      roles,
+      user.EMPLOYEE_ID,
+      res,
+    );
 
     return res.status(200).json({
       status: "success",
@@ -164,6 +195,7 @@ const login = async (req, res) => {
           username: user.USERNAME,
           employee_id: user.EMPLOYEE_ID,
           roles,
+          permissions, // ← added
         },
         token,
       },
