@@ -25,7 +25,6 @@ export const formatEmployee = (row) => {
     PERSON_TYPE_ID:       row.PERSON_TYPE_ID,
     EFFECTIVE_START_DATE: row.EMP_EFFECTIVE_START_DATE,
     EFFECTIVEEND_DATE:    row.EMP_EFFECTIVEEND_DATE,
-    STATUS:               row.EMP_STATUS,
     CREATION_DATE:        row.CREATION_DATE,
     LAST_UPDATE_BY:       row.LAST_UPDATE_BY,
     LAST_UPDATE_DATE:     row.LAST_UPDATE_DATE,
@@ -76,8 +75,8 @@ export const formatEmployee = (row) => {
       OU_ID:                row.OU_ID,
       ORG_ID:               row.ORG_ID,
       ORG_NAME:             row.ORG_NAME,
-      POSITION_ID:          row.POSITION_ID,          // HR_ORG_POSITION.ID  → positionId filter এ use করবেন না
-      MASTER_POSITION_ID:   row.MASTER_POSITION_ID,   // ✅ HR_POSITION.POSITION_ID → এই ID দিয়ে filter করুন
+      POSITION_ID:          row.POSITION_ID,
+      MASTER_POSITION_ID:   row.MASTER_POSITION_ID,
       POSITION_TITLE:       row.POSITION_TITLE,
       POSITION_LEVEL:       row.POSITION_LEVEL,
       PAYROLL_ID:           row.PAYROLL_ID,
@@ -90,6 +89,20 @@ export const formatEmployee = (row) => {
     personType: {
       PERSON_TYPE_ID: row.PERSON_TYPE_ID,
       PERSON_TYPE:    row.PERSON_TYPE,
-    }
+    },
+
+    shift: row.EMP_SHIFT_ID ? {
+      SHIFT_RECORD_ID:      row.SHIFT_RECORD_ID,
+      SHIFT_ID:             row.EMP_SHIFT_ID,
+      SHIFT_CODE:           row.SHIFT_CODE,
+      SHIFT_NAME:           row.SHIFT_NAME,
+      START_TIME:           row.SHIFT_START_TIME,
+      END_TIME:             row.SHIFT_END_TIME,
+      GRACE_IN_MINUTES:     row.GRACE_IN_MINUTES,
+      GRACE_OUT_MINUTES:    row.GRACE_OUT_MINUTES,
+      OVERNIGHT_FLAG:       row.OVERNIGHT_FLAG,
+      EFFECTIVE_START_DATE: row.SHIFT_EFFECTIVE_START_DATE,
+      EFFECTIVE_END_DATE:   row.SHIFT_EFFECTIVE_END_DATE,
+    } : null,
   };
 };
