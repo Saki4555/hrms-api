@@ -9,9 +9,8 @@ export const createEmployee = async (data) => {
   const conn = await getConnection();
 
   try {
-    const { employee, address, assignment, shift } = data;
-    console.log(data);
-
+    const { employee, address, assignment } = data;
+        console.log(data)
     // 1️⃣ Employee Insert
     const empResult = await conn.execute(`
       INSERT INTO HCM.HR_EMPLOYEE (
@@ -67,7 +66,7 @@ export const createEmployee = async (data) => {
 
     for (const { typeId, addr } of addressTypes) {
       await conn.execute(`
-        INSERT INTO HCM.HR_EMP_ADDRESS (
+        INSERT INTO  HCM.HR_EMP_ADDRESS (
           PERSON_ID, EMP_NO, ADDRESS_TYPE_ID, ADDRESS1, ADDRESS1_B,
           COUNTRY, REGION, DISTRICT, UPAZILLA, UNIONS, AREA,
           EFFECTIVE_START_DATE, EFFECTIVEEND_DATE, STATUS, CREATION_DATE
@@ -95,79 +94,96 @@ export const createEmployee = async (data) => {
       });
     }
 
-    // 3️⃣ Assignment Insert — only if at least one assignment field exists
-    const hasAssignment = assignment?.COMPANY_ID || assignment?.OU_ID ||
-                          assignment?.ORG_ID      || assignment?.POSITION_ID;
+    // 3️⃣ Assignment Insert old
+    // await conn.execute(`
+    //   INSERT INTO HCM.HR_EMP_ASSIGNMENT (
+    //     PERSON_ID, COMPANY_ID, OU_ID, ORG_ID,
+    //     POSITION_ID, PAYROLL_ID, GRADE_ID,
+    //     EFFECTIVE_START_DATE, EFFECTIVE_END_DATE, STATUS
+    //   ) VALUES (
+    //     :PERSON_ID, :COMPANY_ID, :OU_ID, :ORG_ID,
+    //     :POSITION_ID, :PAYROLL_ID, :GRADE_ID,
+    //     TO_DATE(:EFFECTIVE_START_DATE,'YYYY-MM-DD'),
+    //     TO_DATE(:EFFECTIVE_END_DATE,'YYYY-MM-DD'),
+    //     1
+    //   )
+    // `, {
+    //   PERSON_ID:            personId,
+    //   COMPANY_ID:           assignment.COMPANY_ID,
+    //   OU_ID:                assignment.OU_ID,
+    //   ORG_ID:               assignment.ORG_ID,
+    //   POSITION_ID:          assignment.POSITION_ID,
+    //   PAYROLL_ID:           assignment.PAYROLL_ID       ?? null,
+    //   GRADE_ID:             assignment.GRADE_ID,
+    //   EFFECTIVE_START_DATE: assignment.EFFECTIVE_START_DATE,
+    //   EFFECTIVE_END_DATE:   assignment.EFFECTIVE_END_DATE,
+    // });
 
-    if (hasAssignment) {
-      await conn.execute(`
-        INSERT INTO HCM.HR_EMP_ASSIGNMENT (
-          PERSON_ID, COMPANY_ID, OU_ID, ORG_ID,
-          POSITION_ID, PAYROLL_ID, GRADE_ID,
-          EFFECTIVE_START_DATE, EFFECTIVE_END_DATE, STATUS
-        ) VALUES (
-          :PERSON_ID, :COMPANY_ID, :OU_ID, :ORG_ID,
-          :POSITION_ID, :PAYROLL_ID, :GRADE_ID,
-          TO_DATE(:EFFECTIVE_START_DATE,'YYYY-MM-DD'),
-          TO_DATE(:EFFECTIVE_END_DATE,'YYYY-MM-DD'),
-          1
-        )
-      `, {
-        PERSON_ID:            personId,
-        COMPANY_ID:           assignment.COMPANY_ID          ?? null,
-        OU_ID:                assignment.OU_ID               ?? null,
-        ORG_ID:               assignment.ORG_ID              ?? null,
-        POSITION_ID:          assignment.POSITION_ID         ?? null,
-        PAYROLL_ID:           assignment.PAYROLL_ID          ?? null,
-        GRADE_ID:             assignment.GRADE_ID            ?? null,
-        EFFECTIVE_START_DATE: assignment.EFFECTIVE_START_DATE,
-        EFFECTIVE_END_DATE:   assignment.EFFECTIVE_END_DATE,
-      });
+    // 4️⃣ Increment ACTUAL_COUNT in HR_ORG_POSITION old
+    // const countUpdateResult = await conn.execute(`
+    //   UPDATE HCM.HR_ORG_POSITION
+    //      SET ACTUAL_COUNT = NVL(ACTUAL_COUNT, 0) + 1
+    //    WHERE ID = :ID AND STATUS = 1
+    // `, { ID: assignment.POSITION_ID });
 
-      // 4️⃣ Increment ACTUAL_COUNT — only if POSITION_ID is provided
-      if (assignment.POSITION_ID) {
-        const countUpdateResult = await conn.execute(`
-          UPDATE HCM.HR_ORG_POSITION
-             SET ACTUAL_COUNT = NVL(ACTUAL_COUNT, 0) + 1
-           WHERE ID = :ID AND STATUS = 1
-        `, { ID: assignment.POSITION_ID });
+    // if (countUpdateResult.rowsAffected === 0) {
+    //   throw new Error(
+    //     `ACTUAL_COUNT increment failed: no active HCM.HR_ORG_POSITION found with ID ${assignment.POSITION_ID}. ` +
+    //     `Please verify the POSITION_ID is correct and the position is active (STATUS = 1).`
+    //   );
+    // }
 
-        if (countUpdateResult.rowsAffected === 0) {
-          throw new Error(
-            `ACTUAL_COUNT increment failed: no active HCM.HR_ORG_POSITION found with ID ${assignment.POSITION_ID}. ` +
-            `Please verify the POSITION_ID is correct and the position is active (STATUS = 1).`
-          );
-        }
-      }
+
+    // 3️⃣ Assignment Insert — only if at least COMPANY_ID or POSITION_ID exists
+const hasAssignment = assignment.COMPANY_ID || assignment.OU_ID || 
+                      assignment.ORG_ID    || assignment.POSITION_ID;
+
+if (hasAssignment) {
+  await conn.execute(`
+    INSERT INTO HCM.HR_EMP_ASSIGNMENT (
+      PERSON_ID, COMPANY_ID, OU_ID, ORG_ID,
+      POSITION_ID, PAYROLL_ID, GRADE_ID,
+      EFFECTIVE_START_DATE, EFFECTIVE_END_DATE, STATUS
+    ) VALUES (
+      :PERSON_ID, :COMPANY_ID, :OU_ID, :ORG_ID,
+      :POSITION_ID, :PAYROLL_ID, :GRADE_ID,
+      TO_DATE(:EFFECTIVE_START_DATE,'YYYY-MM-DD'),
+      TO_DATE(:EFFECTIVE_END_DATE,'YYYY-MM-DD'),
+      1
+    )
+  `, {
+    PERSON_ID:            personId,
+    COMPANY_ID:           assignment.COMPANY_ID          ?? null,
+    OU_ID:                assignment.OU_ID               ?? null,
+    ORG_ID:               assignment.ORG_ID              ?? null,
+    POSITION_ID:          assignment.POSITION_ID         ?? null,
+    PAYROLL_ID:           assignment.PAYROLL_ID          ?? null,
+    GRADE_ID:             assignment.GRADE_ID            ?? null,
+    EFFECTIVE_START_DATE: assignment.EFFECTIVE_START_DATE,
+    EFFECTIVE_END_DATE:   assignment.EFFECTIVE_END_DATE,
+  });
+
+  // 4️⃣ Increment ACTUAL_COUNT — only if POSITION_ID is provided
+  if (assignment.POSITION_ID) {
+    const countUpdateResult = await conn.execute(`
+      UPDATE HCM.HR_ORG_POSITION
+         SET ACTUAL_COUNT = NVL(ACTUAL_COUNT, 0) + 1
+       WHERE ID = :ID AND STATUS = 1
+    `, { ID: assignment.POSITION_ID });
+
+    if (countUpdateResult.rowsAffected === 0) {
+      throw new Error(
+        `ACTUAL_COUNT increment failed: no active HCM.HR_ORG_POSITION found with ID ${assignment.POSITION_ID}. ` +
+        `Please verify the POSITION_ID is correct and the position is active (STATUS = 1).`
+      );
     }
+  }
+}
 
-    // 5️⃣ Shift Insert — only if SHIFT_ID is provided
-    //    NOTE: HR_EMP_SHIFT.EMP_NO stores PERSON_ID (aligns with how other tables relate)
-    const hasShift = shift?.SHIFT_ID;
+await conn.commit();
+return { success: true, PERSON_ID: personId };
 
-    if (hasShift) {
-      await conn.execute(`
-        INSERT INTO HCM.HR_EMP_SHIFT (
-          EMP_NO, SHIFT_ID,
-          EFFECTIVE_START_DATE, EFFECTIVE_END_DATE,
-          STATUS, UPDATE_BY, LAST_UPDATED
-        ) VALUES (
-          :EMP_NO, :SHIFT_ID,
-          TO_DATE(:EFFECTIVE_START_DATE, 'YYYY-MM-DD'),
-          TO_DATE(:EFFECTIVE_END_DATE,   'YYYY-MM-DD'),
-          1, :UPDATE_BY, SYSDATE
-        )
-      `, {
-        EMP_NO:               personId,                          // stores PERSON_ID
-        SHIFT_ID:             shift.SHIFT_ID,
-        EFFECTIVE_START_DATE: shift.EFFECTIVE_START_DATE ?? employee.EFFECTIVE_START_DATE,
-        EFFECTIVE_END_DATE:   shift.EFFECTIVE_END_DATE   ?? employee.EFFECTIVEEND_DATE,
-        UPDATE_BY:            shift.UPDATE_BY            ?? null,
-      });
-    }
-
-    await conn.commit();
-    return { success: true, PERSON_ID: personId };
+   
 
   } catch (err) {
     await conn.rollback();
@@ -186,7 +202,7 @@ export const updateEmployee = async (personId, data) => {
   const conn = await getConnection();
 
   try {
-    const { employee, address, assignment, shift } = data;
+    const { employee, address, assignment } = data;
 
     // 1️⃣ Employee Update
     await conn.execute(`
@@ -288,7 +304,7 @@ export const updateEmployee = async (personId, data) => {
     `, { PERSON_ID: personId }, { outFormat: oracledb.OUT_FORMAT_OBJECT });
 
     const oldPositionId = oldAssignResult.rows[0]?.POSITION_ID ?? null;
-    const newPositionId = assignment?.POSITION_ID ?? null;
+    const newPositionId = assignment.POSITION_ID ?? null;
 
     if (newPositionId && oldPositionId !== newPositionId) {
       if (oldPositionId) {
@@ -327,63 +343,15 @@ export const updateEmployee = async (personId, data) => {
        WHERE PERSON_ID = :PERSON_ID
     `, {
       PERSON_ID:            personId,
-      COMPANY_ID:           assignment?.COMPANY_ID       ?? null,
-      OU_ID:                assignment?.OU_ID            ?? null,
-      ORG_ID:               assignment?.ORG_ID           ?? null,
-      POSITION_ID:          assignment?.POSITION_ID      ?? null,
-      PAYROLL_ID:           assignment?.PAYROLL_ID       ?? null,
-      GRADE_ID:             assignment?.GRADE_ID         ?? null,
-      EFFECTIVE_START_DATE: assignment?.EFFECTIVE_START_DATE,
-      EFFECTIVE_END_DATE:   assignment?.EFFECTIVE_END_DATE,
+      COMPANY_ID:           assignment.COMPANY_ID       ?? null,
+      OU_ID:                assignment.OU_ID            ?? null,
+      ORG_ID:               assignment.ORG_ID           ?? null,
+      POSITION_ID:          assignment.POSITION_ID      ?? null,
+      PAYROLL_ID:           assignment.PAYROLL_ID       ?? null,
+      GRADE_ID:             assignment.GRADE_ID         ?? null,
+      EFFECTIVE_START_DATE: assignment.EFFECTIVE_START_DATE,
+      EFFECTIVE_END_DATE:   assignment.EFFECTIVE_END_DATE,
     });
-
-    // 5️⃣ Shift Upsert — update if exists (STATUS=1), insert if not
-    //    HR_EMP_SHIFT.EMP_NO holds PERSON_ID
-    if (shift?.SHIFT_ID) {
-      const existingShift = await conn.execute(`
-        SELECT ID FROM HCM.HR_EMP_SHIFT
-         WHERE EMP_NO = :EMP_NO AND STATUS = 1
-      `, { EMP_NO: personId }, { outFormat: oracledb.OUT_FORMAT_OBJECT });
-
-      if (existingShift.rows.length > 0) {
-        // Record exists — UPDATE
-        await conn.execute(`
-          UPDATE HCM.HR_EMP_SHIFT
-             SET SHIFT_ID             = :SHIFT_ID,
-                 EFFECTIVE_START_DATE = TO_DATE(:EFFECTIVE_START_DATE, 'YYYY-MM-DD'),
-                 EFFECTIVE_END_DATE   = TO_DATE(:EFFECTIVE_END_DATE,   'YYYY-MM-DD'),
-                 UPDATE_BY            = :UPDATE_BY,
-                 LAST_UPDATED         = SYSDATE
-           WHERE EMP_NO = :EMP_NO AND STATUS = 1
-        `, {
-          EMP_NO:               personId,
-          SHIFT_ID:             shift.SHIFT_ID,
-          EFFECTIVE_START_DATE: shift.EFFECTIVE_START_DATE ?? employee.EFFECTIVE_START_DATE,
-          EFFECTIVE_END_DATE:   shift.EFFECTIVE_END_DATE   ?? employee.EFFECTIVEEND_DATE,
-          UPDATE_BY:            shift.UPDATE_BY            ?? null,
-        });
-      } else {
-        // No active shift record yet — INSERT
-        await conn.execute(`
-          INSERT INTO HCM.HR_EMP_SHIFT (
-            EMP_NO, SHIFT_ID,
-            EFFECTIVE_START_DATE, EFFECTIVE_END_DATE,
-            STATUS, UPDATE_BY, LAST_UPDATED
-          ) VALUES (
-            :EMP_NO, :SHIFT_ID,
-            TO_DATE(:EFFECTIVE_START_DATE, 'YYYY-MM-DD'),
-            TO_DATE(:EFFECTIVE_END_DATE,   'YYYY-MM-DD'),
-            1, :UPDATE_BY, SYSDATE
-          )
-        `, {
-          EMP_NO:               personId,
-          SHIFT_ID:             shift.SHIFT_ID,
-          EFFECTIVE_START_DATE: shift.EFFECTIVE_START_DATE ?? employee.EFFECTIVE_START_DATE,
-          EFFECTIVE_END_DATE:   shift.EFFECTIVE_END_DATE   ?? employee.EFFECTIVEEND_DATE,
-          UPDATE_BY:            shift.UPDATE_BY            ?? null,
-        });
-      }
-    }
 
     await conn.commit();
     return { success: true, PERSON_ID: personId };
@@ -431,14 +399,6 @@ export const softDeleteEmployee = async (personId) => {
        WHERE PERSON_ID = :PERSON_ID
     `, { PERSON_ID: personId });
 
-    // Also soft-delete shift record
-    // HR_EMP_SHIFT.EMP_NO holds PERSON_ID
-    await conn.execute(`
-      UPDATE HCM.HR_EMP_SHIFT
-         SET STATUS = 0, LAST_UPDATED = SYSDATE
-       WHERE EMP_NO = :EMP_NO
-    `, { EMP_NO: personId });
-
     if (orgPositionId) {
       await conn.execute(`
         UPDATE HCM.HR_ORG_POSITION
@@ -462,6 +422,17 @@ export const softDeleteEmployee = async (personId) => {
 
 /* ─────────────────────────────────────────
    GET EMPLOYEE LIST
+   Supports: pagination + search + sort
+
+   Params:
+     page      - page number (default: 1)
+     limit     - rows per page (default: 10)
+     search    - searches EMP_NO, FIRST_NAME, LAST_NAME, NID (optional)
+     sortBy    - column name           (default: LAST_ACTIVITY = newest of created/updated)
+     sortOrder - ASC or DESC (default: DESC)
+───────────────────────────────────────── */
+/* ─────────────────────────────────────────
+   GET EMPLOYEE LIST
    Supports: pagination + search + filter + sort
 
    Query Params:
@@ -473,22 +444,20 @@ export const softDeleteEmployee = async (personId) => {
      personType  - e.PERSON_TYPE_ID      (exact ID)
      gender      - e.GENDER              (M | F)
      companyId   - s.COMPANY_ID          (exact ID)
-     positionId  - HR_POSITION.POSITION_ID
-     countryId   - COUNTRY_LIST.COUNTRY_ID (present address)
-     shiftId     - HR_SHIFT.SHIFT_ID     (exact ID)
+     positionId  - HR_POSITION.POSITION_ID  (master position in hr_position table)
+     countryId   - COUNTRY_LIST.COUNTRY_ID  (present address country ID)
 ───────────────────────────────────────── */
 export const getEmployeeList = async ({
   page       = 1,
   limit      = 10,
   search     = "",
-  sortBy     = "LAST_ACTIVITY",
+  sortBy     = "LAST_ACTIVITY",   // LAST_ACTIVITY = GREATEST(CREATION_DATE, LAST_UPDATE_DATE)
   sortOrder  = "DESC",
   personType = "",
   gender     = "",
   companyId  = "",
-  positionId = "",
-  countryId  = "",
-  shiftId    = "",         // NEW: filter by HR_SHIFT.SHIFT_ID
+  positionId = "",          // HR_POSITION.POSITION_ID (master position in hr_position)
+  countryId        = "",
 } = {}) => {
   const conn = await getConnection();
 
@@ -498,7 +467,7 @@ export const getEmployeeList = async ({
   const rownumMin = (pageNum - 1) * limitNum + 1;
   const rownumMax = pageNum * limitNum;
 
-  // ── Sanitize sort ────────────────────────────────────────────────
+  // ── Sanitize sort (whitelist prevents SQL injection) ─────────────
   const ALLOWED_SORT_COLUMNS = [
     "EMP_NO", "FIRST_NAME", "LAST_NAME", "JOIN_DATE",
     "DATE_OF_BIRTH", "CREATION_DATE", "LAST_UPDATE_DATE", "NID", "LAST_ACTIVITY",
@@ -507,14 +476,17 @@ export const getEmployeeList = async ({
   const safeSortBy    = ALLOWED_SORT_COLUMNS.includes(rawSortBy) ? rawSortBy : "LAST_ACTIVITY";
   const safeSortOrder = sortOrder.toUpperCase() === "ASC" ? "ASC" : "DESC";
 
+  // LAST_ACTIVITY = GREATEST(CREATION_DATE, LAST_UPDATE_DATE)
+  // This ensures updated employees always float to the top
   const orderByClause = safeSortBy === "LAST_ACTIVITY"
     ? `GREATEST(NVL(e.CREATION_DATE, DATE '1900-01-01'), NVL(e.LAST_UPDATE_DATE, DATE '1900-01-01')) ${safeSortOrder} NULLS LAST`
     : `e.${safeSortBy} ${safeSortOrder} NULLS LAST`;
 
   // ── Build dynamic WHERE + bind params ────────────────────────────
- const conditions = ["(e.STATUS IS NULL OR e.STATUS != 0)"];  // always exclude soft-deleted employees
+  const conditions = [];
   const bindParams = {};
 
+  // 🔍 Search: FIRST_NAME, LAST_NAME, EMP_NO, NID
   if (search && search.trim()) {
     conditions.push(`(
          UPPER(e.EMP_NO)     LIKE UPPER(:SEARCH)
@@ -525,73 +497,59 @@ export const getEmployeeList = async ({
     bindParams.SEARCH = `%${search.trim()}%`;
   }
 
+  // 🔽 Filter: Person Type ID
   if (personType !== "" && personType != null) {
     conditions.push(`e.PERSON_TYPE_ID = :PERSON_TYPE_ID`);
     bindParams.PERSON_TYPE_ID = parseInt(personType, 10);
   }
 
+  // 🔽 Filter: Gender (M / F)
   if (gender && gender.trim()) {
     conditions.push(`UPPER(e.GENDER) = UPPER(:GENDER)`);
     bindParams.GENDER = gender.trim();
   }
 
+  // 🔽 Filter: Company ID
   if (companyId !== "" && companyId != null) {
     conditions.push(`s.COMPANY_ID = :COMPANY_ID`);
     bindParams.COMPANY_ID = parseInt(companyId, 10);
   }
 
+  // 🔽 Filter: Position ID — HR_POSITION.POSITION_ID (master position table)
+  //    p = HR_POSITION alias (joined via op → p)
   if (positionId !== "" && positionId != null) {
     conditions.push(`op.POSITION_ID = :POSITION_ID`);
     bindParams.POSITION_ID = parseInt(positionId, 10);
   }
 
+  // 🔽 Filter: Country ID (COUNTRY_LIST.COUNTRY_ID — present address)
   if (countryId !== "" && countryId != null) {
     conditions.push(`pa.COUNTRY IN (SELECT COUNTRY_NAME FROM HCM.COUNTRY_LIST WHERE COUNTRY_ID = :COUNTRY_ID)`);
     bindParams.COUNTRY_ID = parseInt(countryId, 10);
   }
 
-  // NEW: filter by shift
-  if (shiftId !== "" && shiftId != null) {
-    conditions.push(`esh.SHIFT_ID = :SHIFT_ID`);
-    bindParams.SHIFT_ID = parseInt(shiftId, 10);
-  }
-
-  const whereClause = `WHERE ${conditions.join("\n      AND ")}`;
-
-  // ── Shared JOIN block (used in both COUNT and data queries) ───────
-  const joinBlock = `
-    FROM HCM.HR_EMPLOYEE e
-    LEFT JOIN HCM.hr_person_type pt      ON e.PERSON_TYPE_ID  = pt.PERSON_TYPE_ID
-    LEFT JOIN HCM.hr_emp_address pa      ON e.PERSON_ID = pa.PERSON_ID  AND pa.ADDRESS_TYPE_ID  = 1
-    LEFT JOIN HCM.hr_emp_address pma     ON e.PERSON_ID = pma.PERSON_ID AND pma.ADDRESS_TYPE_ID = 2
-    LEFT JOIN HCM.hr_emp_assignment s    ON e.PERSON_ID = s.PERSON_ID
-    LEFT JOIN HCM.hr_company c           ON s.COMPANY_ID = c.COMPANY_ID
-    LEFT JOIN HCM.hr_org o               ON s.ORG_ID     = o.ID
-    LEFT JOIN HCM.hr_grade g             ON s.GRADE_ID   = g.ID
-    LEFT JOIN HCM.hr_org_position op     ON s.POSITION_ID = op.ID
-    LEFT JOIN HCM.hr_position p          ON op.POSITION_ID = p.POSITION_ID
-    LEFT JOIN HCM.COUNTRY_LIST  cl_pa    ON pa.COUNTRY  = cl_pa.COUNTRY_NAME
-    LEFT JOIN HCM.REGION_LIST   rl_pa    ON pa.REGION   = rl_pa.REGION_NAME   AND rl_pa.COUNTRY_ID  = cl_pa.COUNTRY_ID
-    LEFT JOIN HCM.DISTRICT_LIST dl_pa    ON pa.DISTRICT = dl_pa.DISTRICT_NAME  AND dl_pa.REGION_ID   = rl_pa.REGION_ID
-    LEFT JOIN HCM.UPAZILLA_LIST ul_pa    ON pa.UPAZILLA = ul_pa.UPAZILLA_NAME  AND ul_pa.DISTRICT_ID = dl_pa.DISTRICT_ID
-    LEFT JOIN HCM.COUNTRY_LIST  cl_pma   ON pma.COUNTRY  = cl_pma.COUNTRY_NAME
-    LEFT JOIN HCM.REGION_LIST   rl_pma   ON pma.REGION   = rl_pma.REGION_NAME  AND rl_pma.COUNTRY_ID  = cl_pma.COUNTRY_ID
-    LEFT JOIN HCM.DISTRICT_LIST dl_pma   ON pma.DISTRICT = dl_pma.DISTRICT_NAME AND dl_pma.REGION_ID   = rl_pma.REGION_ID
-    LEFT JOIN HCM.UPAZILLA_LIST ul_pma   ON pma.UPAZILLA = ul_pma.UPAZILLA_NAME AND ul_pma.DISTRICT_ID = dl_pma.DISTRICT_ID
-    LEFT JOIN HCM.HR_EMP_SHIFT  esh      ON e.PERSON_ID = esh.EMP_NO AND esh.STATUS = 1
-    LEFT JOIN HCM.HR_SHIFT      sh       ON esh.SHIFT_ID = sh.SHIFT_ID
-  `;
+  const whereClause = conditions.length > 0
+    ? `WHERE ${conditions.join("\n      AND ")}`
+    : "";
 
   try {
-    // 1️⃣ Total count
+    // 1️⃣ Total count (all filters applied)
     const countResult = await conn.execute(
-      `SELECT COUNT(*) AS TOTAL ${joinBlock} ${whereClause}`,
+      `SELECT COUNT(*) AS TOTAL
+         FROM HCM.HR_EMPLOYEE e
+         LEFT JOIN HCM.hr_emp_address    pa ON e.PERSON_ID = pa.PERSON_ID AND pa.ADDRESS_TYPE_ID = 1
+         LEFT JOIN HCM.hr_emp_assignment s  ON e.PERSON_ID = s.PERSON_ID
+         LEFT JOIN hcm.hr_org_position op ON s.POSITION_ID = op.ID
+         LEFT JOIN HCM.hr_position         p  ON op.POSITION_ID = p.POSITION_ID
+         ${whereClause}`,
       bindParams,
       { outFormat: oracledb.OUT_FORMAT_OBJECT }
     );
     const total = countResult.rows[0].TOTAL;
 
-    // 2️⃣ Paginated data
+    // 2️⃣ Paginated + filtered + sorted data
+    //    Oracle ROWNUM triple-subquery:
+    //    innermost → filter + sort, middle → cap at rownumMax, outer → slice from rownumMin
     const result = await conn.execute(`
       SELECT * FROM (
         SELECT ROWNUM AS RN, sq.* FROM (
@@ -608,7 +566,6 @@ export const getEmployeeList = async ({
             e.STATUS               AS EMP_STATUS,
             e.CREATION_DATE, e.LAST_UPDATE_DATE, e.LAST_UPDATE_BY,
             pt.PERSON_TYPE,
-
             pa.ADDRESS1    AS PRESENT_ADDRESS1,
             pa.ADDRESS1_B  AS PRESENT_ADDRESS1_B,
             pa.COUNTRY     AS PRESENT_COUNTRY,
@@ -623,7 +580,6 @@ export const getEmployeeList = async ({
             rl_pa.REGION_ID    AS PRESENT_REGION_ID,
             dl_pa.DISTRICT_ID  AS PRESENT_DISTRICT_ID,
             ul_pa.UPAZILLA_ID  AS PRESENT_UPAZILLA_ID,
-
             pma.ADDRESS1    AS PERMANENT_ADDRESS1,
             pma.ADDRESS1_B  AS PERMANENT_ADDRESS1_B,
             pma.COUNTRY     AS PERMANENT_COUNTRY,
@@ -638,7 +594,6 @@ export const getEmployeeList = async ({
             rl_pma.REGION_ID   AS PERMANENT_REGION_ID,
             dl_pma.DISTRICT_ID AS PERMANENT_DISTRICT_ID,
             ul_pma.UPAZILLA_ID AS PERMANENT_UPAZILLA_ID,
-
             s.ASSIGNMENT_ID, s.COMPANY_ID, s.OU_ID, s.ORG_ID,
             s.POSITION_ID,   s.PAYROLL_ID, s.GRADE_ID,
             s.EFFECTIVE_START_DATE AS ASSIGN_EFFECTIVE_START_DATE,
@@ -649,22 +604,29 @@ export const getEmployeeList = async ({
             g.GRADE          AS GRADE_NAME,
             op.POSITION_ID   AS MASTER_POSITION_ID,
             p.TITLE          AS POSITION_TITLE,
-            p.LEVELS         AS POSITION_LEVEL,
+            p.LEVELS         AS POSITION_LEVEL
 
-            esh.ID                   AS SHIFT_RECORD_ID,
-            esh.SHIFT_ID             AS EMP_SHIFT_ID,
-            esh.EFFECTIVE_START_DATE AS SHIFT_EFFECTIVE_START_DATE,
-            esh.EFFECTIVE_END_DATE   AS SHIFT_EFFECTIVE_END_DATE,
-            sh.CODE                  AS SHIFT_CODE,
-            sh.NAME                  AS SHIFT_NAME,
-            sh.START_TIME            AS SHIFT_START_TIME,
-            sh.END_TIME              AS SHIFT_END_TIME,
-            sh.GRACE_IN_MINUTES,
-            sh.GRACE_OUT_MINUTES,
-            sh.OVERNIGHT_FLAG
+          FROM HCM.HR_EMPLOYEE e
+          LEFT JOIN HCM.hr_person_type pt      ON e.PERSON_TYPE_ID  = pt.PERSON_TYPE_ID
+          LEFT JOIN HCM.hr_emp_address pa      ON e.PERSON_ID = pa.PERSON_ID  AND pa.ADDRESS_TYPE_ID  = 1
+          LEFT JOIN HCM.hr_emp_address pma     ON e.PERSON_ID = pma.PERSON_ID AND pma.ADDRESS_TYPE_ID = 2
+          LEFT JOIN HCM.hr_emp_assignment s    ON e.PERSON_ID = s.PERSON_ID
+          LEFT JOIN HCM.hr_company c           ON s.COMPANY_ID = c.COMPANY_ID
+          LEFT JOIN HCM.hr_org o               ON s.ORG_ID     = o.ID
+          LEFT JOIN HCM.hr_grade g             ON s.GRADE_ID   = g.ID
+          LEFT JOIN hcm.hr_org_position op ON s.POSITION_ID = op.ID
+          LEFT JOIN HCM.hr_position p          ON op.POSITION_ID = p.POSITION_ID
+          LEFT JOIN HCM.COUNTRY_LIST  cl_pa  ON pa.COUNTRY  = cl_pa.COUNTRY_NAME
+          LEFT JOIN HCM.REGION_LIST   rl_pa  ON pa.REGION   = rl_pa.REGION_NAME   AND rl_pa.COUNTRY_ID  = cl_pa.COUNTRY_ID
+          LEFT JOIN HCM.DISTRICT_LIST dl_pa  ON pa.DISTRICT = dl_pa.DISTRICT_NAME  AND dl_pa.REGION_ID   = rl_pa.REGION_ID
+          LEFT JOIN HCM.UPAZILLA_LIST ul_pa  ON pa.UPAZILLA = ul_pa.UPAZILLA_NAME  AND ul_pa.DISTRICT_ID = dl_pa.DISTRICT_ID
+          LEFT JOIN HCM.COUNTRY_LIST  cl_pma ON pma.COUNTRY  = cl_pma.COUNTRY_NAME
+          LEFT JOIN HCM.REGION_LIST   rl_pma ON pma.REGION   = rl_pma.REGION_NAME  AND rl_pma.COUNTRY_ID  = cl_pma.COUNTRY_ID
+          LEFT JOIN HCM.DISTRICT_LIST dl_pma ON pma.DISTRICT = dl_pma.DISTRICT_NAME AND dl_pma.REGION_ID   = rl_pma.REGION_ID
+          LEFT JOIN HCM.UPAZILLA_LIST ul_pma ON pma.UPAZILLA = ul_pma.UPAZILLA_NAME AND ul_pma.DISTRICT_ID = dl_pma.DISTRICT_ID
 
-          ${joinBlock}
           ${whereClause}
+
           ORDER BY ${orderByClause}
 
         ) sq WHERE ROWNUM <= ${rownumMax}
@@ -705,6 +667,7 @@ export const getEmployeeById = async (personId) => {
       e.EFFECTIVEEND_DATE    AS EMP_EFFECTIVEEND_DATE,
       e.STATUS               AS EMP_STATUS,
       e.CREATION_DATE, e.LAST_UPDATE_DATE, e.LAST_UPDATE_BY,
+
       pt.PERSON_TYPE,
 
       pa.ADDRESS1    AS PRESENT_ADDRESS1,
@@ -717,6 +680,7 @@ export const getEmployeeById = async (personId) => {
       pa.AREA        AS PRESENT_AREA,
       pa.EFFECTIVE_START_DATE AS PRESENT_EFFECTIVE_START_DATE,
       pa.EFFECTIVEEND_DATE    AS PRESENT_EFFECTIVEEND_DATE,
+
       cl_pa.COUNTRY_ID   AS PRESENT_COUNTRY_ID,
       rl_pa.REGION_ID    AS PRESENT_REGION_ID,
       dl_pa.DISTRICT_ID  AS PRESENT_DISTRICT_ID,
@@ -732,6 +696,7 @@ export const getEmployeeById = async (personId) => {
       pma.AREA        AS PERMANENT_AREA,
       pma.EFFECTIVE_START_DATE AS PERMANENT_EFFECTIVE_START_DATE,
       pma.EFFECTIVEEND_DATE    AS PERMANENT_EFFECTIVEEND_DATE,
+
       cl_pma.COUNTRY_ID  AS PERMANENT_COUNTRY_ID,
       rl_pma.REGION_ID   AS PERMANENT_REGION_ID,
       dl_pma.DISTRICT_ID AS PERMANENT_DISTRICT_ID,
@@ -741,25 +706,14 @@ export const getEmployeeById = async (personId) => {
       s.POSITION_ID,   s.PAYROLL_ID, s.GRADE_ID,
       s.EFFECTIVE_START_DATE AS ASSIGN_EFFECTIVE_START_DATE,
       s.EFFECTIVE_END_DATE   AS ASSIGN_EFFECTIVE_END_DATE,
+
       c.COMPANY_NAME,
       c.ADDRESS        AS COMPANY_ADDRESS,
       o.NAME           AS ORG_NAME,
       g.GRADE          AS GRADE_NAME,
       op.POSITION_ID   AS MASTER_POSITION_ID,
       p.TITLE          AS POSITION_TITLE,
-      p.LEVELS         AS POSITION_LEVEL,
-
-      esh.ID                   AS SHIFT_RECORD_ID,
-      esh.SHIFT_ID             AS EMP_SHIFT_ID,
-      esh.EFFECTIVE_START_DATE AS SHIFT_EFFECTIVE_START_DATE,
-      esh.EFFECTIVE_END_DATE   AS SHIFT_EFFECTIVE_END_DATE,
-      sh.CODE                  AS SHIFT_CODE,
-      sh.NAME                  AS SHIFT_NAME,
-      sh.START_TIME            AS SHIFT_START_TIME,
-      sh.END_TIME              AS SHIFT_END_TIME,
-      sh.GRACE_IN_MINUTES,
-      sh.GRACE_OUT_MINUTES,
-      sh.OVERNIGHT_FLAG
+      p.LEVELS         AS POSITION_LEVEL
 
     FROM HCM.HR_EMPLOYEE e
     LEFT JOIN HCM.hr_person_type pt      ON e.PERSON_TYPE_ID  = pt.PERSON_TYPE_ID
@@ -769,20 +723,20 @@ export const getEmployeeById = async (personId) => {
     LEFT JOIN HCM.hr_company c           ON s.COMPANY_ID = c.COMPANY_ID
     LEFT JOIN HCM.hr_org o               ON s.ORG_ID     = o.ID
     LEFT JOIN HCM.hr_grade g             ON s.GRADE_ID   = g.ID
-    LEFT JOIN HCM.hr_org_position op     ON s.POSITION_ID = op.ID
+    LEFT JOIN hcm.hr_org_position op ON s.POSITION_ID = op.ID
     LEFT JOIN HCM.hr_position p          ON op.POSITION_ID = p.POSITION_ID
-    LEFT JOIN HCM.COUNTRY_LIST  cl_pa    ON pa.COUNTRY  = cl_pa.COUNTRY_NAME
-    LEFT JOIN HCM.REGION_LIST   rl_pa    ON pa.REGION   = rl_pa.REGION_NAME   AND rl_pa.COUNTRY_ID  = cl_pa.COUNTRY_ID
-    LEFT JOIN HCM.DISTRICT_LIST dl_pa    ON pa.DISTRICT = dl_pa.DISTRICT_NAME  AND dl_pa.REGION_ID   = rl_pa.REGION_ID
-    LEFT JOIN HCM.UPAZILLA_LIST ul_pa    ON pa.UPAZILLA = ul_pa.UPAZILLA_NAME  AND ul_pa.DISTRICT_ID = dl_pa.DISTRICT_ID
-    LEFT JOIN HCM.COUNTRY_LIST  cl_pma   ON pma.COUNTRY  = cl_pma.COUNTRY_NAME
-    LEFT JOIN HCM.REGION_LIST   rl_pma   ON pma.REGION   = rl_pma.REGION_NAME  AND rl_pma.COUNTRY_ID  = cl_pma.COUNTRY_ID
-    LEFT JOIN HCM.DISTRICT_LIST dl_pma   ON pma.DISTRICT = dl_pma.DISTRICT_NAME AND dl_pma.REGION_ID   = rl_pma.REGION_ID
-    LEFT JOIN HCM.UPAZILLA_LIST ul_pma   ON pma.UPAZILLA = ul_pma.UPAZILLA_NAME AND ul_pma.DISTRICT_ID = dl_pma.DISTRICT_ID
-    LEFT JOIN HCM.HR_EMP_SHIFT  esh      ON e.PERSON_ID = esh.EMP_NO AND esh.STATUS = 1
-    LEFT JOIN HCM.HR_SHIFT      sh       ON esh.SHIFT_ID = sh.SHIFT_ID
 
-    WHERE e.PERSON_ID = :id
+    LEFT JOIN HCM.COUNTRY_LIST  cl_pa  ON pa.COUNTRY  = cl_pa.COUNTRY_NAME
+    LEFT JOIN HCM.REGION_LIST   rl_pa  ON pa.REGION   = rl_pa.REGION_NAME   AND rl_pa.COUNTRY_ID  = cl_pa.COUNTRY_ID
+    LEFT JOIN HCM.DISTRICT_LIST dl_pa  ON pa.DISTRICT = dl_pa.DISTRICT_NAME  AND dl_pa.REGION_ID   = rl_pa.REGION_ID
+    LEFT JOIN HCM.UPAZILLA_LIST ul_pa  ON pa.UPAZILLA = ul_pa.UPAZILLA_NAME  AND ul_pa.DISTRICT_ID = dl_pa.DISTRICT_ID
+
+    LEFT JOIN HCM.COUNTRY_LIST  cl_pma ON pma.COUNTRY  = cl_pma.COUNTRY_NAME
+    LEFT JOIN HCM.REGION_LIST   rl_pma ON pma.REGION   = rl_pma.REGION_NAME  AND rl_pma.COUNTRY_ID  = cl_pma.COUNTRY_ID
+    LEFT JOIN HCM.DISTRICT_LIST dl_pma ON pma.DISTRICT = dl_pma.DISTRICT_NAME AND dl_pma.REGION_ID   = rl_pma.REGION_ID
+    LEFT JOIN HCM.UPAZILLA_LIST ul_pma ON pma.UPAZILLA = ul_pma.UPAZILLA_NAME AND ul_pma.DISTRICT_ID = dl_pma.DISTRICT_ID
+
+   WHERE e.PERSON_ID = :id
     ORDER BY
       GREATEST(
         NVL(e.CREATION_DATE,    DATE '1900-01-01'),
