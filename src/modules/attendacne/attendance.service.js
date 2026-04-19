@@ -83,6 +83,9 @@ const STATUS = {
   LATE:        "LATE",
   EARLY_LEAVE: "EARLY_LEAVE",
   ABSENT:      "ABSENT",
+  // Used when the employee punched in but has no shift assigned.
+  // We know they came in but cannot determine late / early leave.
+  UNSCHEDULED: "UNSCHEDULED",
 };
 
 const ISO_TZ_FMT = `'YYYY-MM-DD"T"HH24:MI:SSTZH:TZM'`;
@@ -105,34 +108,115 @@ const extractTime = (dt) => {
   return `${hh}:${mm}`;
 };
 
-const calculateStatus = (inTime, outTime, shift) => {
-  if (!inTime) return STATUS.ABSENT;
-  if (!shift)  return STATUS.PRESENT;
+/**
+ * Returns minutes between two Date-like values, floored to zero.
+ */
+const diffMinutes = (start, end) => {
+  if (!start || !end) return 0;
+  return Math.max(0, Math.floor((new Date(end) - new Date(start)) / 60_000));
+};
 
+/**
+ * Calculates:
+ *   status        — ABSENT | UNSCHEDULED | LATE | EARLY_LEAVE | PRESENT
+ *   workMinutes   — total minutes between first in and last out
+ *   overtimeMinutes — minutes beyond the scheduled shift end (0 if no shift)
+ *
+ * No-shift policy:
+ *   - No IN punch              → ABSENT,      workMinutes = 0, overtimeMinutes = 0
+ *   - IN punch, no shift row   → UNSCHEDULED, workMinutes computed, overtimeMinutes = 0
+ *   - IN punch + shift row     → normal late / early-leave / present logic
+ */
+const calculateStatusAndHours = (inTime, outTime, shift) => {
+  // ── ABSENT ──────────────────────────────────────────────────────────────────
+  if (!inTime) {
+    return { status: STATUS.ABSENT, workMinutes: 0, overtimeMinutes: 0 };
+  }
+
+  // workMinutes uses real Date objects (millisecond diff) so overnight is
+  // always calculated correctly regardless of shift type.
+  const workMinutes = diffMinutes(inTime, outTime);
+
+  // ── NO SHIFT ASSIGNED ───────────────────────────────────────────────────────
+  if (!shift || !shift.START_TIME || !shift.END_TIME) {
+    return { status: STATUS.UNSCHEDULED, workMinutes, overtimeMinutes: 0 };
+  }
+
+  // ── SHIFT-AWARE LOGIC ───────────────────────────────────────────────────────
   const actualInMinutes  = toMinutes(extractTime(inTime));
   const actualOutMinutes = outTime ? toMinutes(extractTime(outTime)) : null;
 
   const shiftStartMinutes = toMinutes(shift.START_TIME);
   const shiftEndMinutes   = toMinutes(shift.END_TIME);
-  const graceIn  = shift.GRACE_IN_MINUTES  ?? 0;
-  const graceOut = shift.GRACE_OUT_MINUTES ?? 0;
+  const graceIn           = shift.GRACE_IN_MINUTES  ?? 0;
+  const graceOut          = shift.GRACE_OUT_MINUTES ?? 0;
 
-  const isLate       = actualInMinutes > shiftStartMinutes + graceIn;
-  const isEarlyLeave = actualOutMinutes !== null && actualOutMinutes < shiftEndMinutes - graceOut;
+  // Detect overnight shift: either flagged explicitly or end time < start time
+  // e.g. START=22:00 (1320 min), END=06:00 (360 min) → 360 < 1320 → overnight
+  const isOvernightShift =
+    shift.OVERNIGHT_FLAG === 1 || shiftEndMinutes < shiftStartMinutes;
 
-  if (isLate)       return STATUS.LATE;
-  if (isEarlyLeave) return STATUS.EARLY_LEAVE;
-  return STATUS.PRESENT;
+  // ── LATE CHECK (same for both shift types) ───────────────────────────────
+  const isLate = actualInMinutes > shiftStartMinutes + graceIn;
+
+  // ── EARLY LEAVE + OVERTIME (differs for overnight) ───────────────────────
+  let isEarlyLeave    = false;
+  let overtimeMinutes = 0;
+
+  if (actualOutMinutes !== null) {
+    if (isOvernightShift) {
+      // Out time in the EVENING portion (>= shiftStart, e.g. 23:00 on a 22:00–06:00 shift)
+      // means the employee left before crossing midnight → always early leave.
+      // e.g. out=23:00 (1380) >= shiftStart=22:00 (1320) → early leave
+      if (actualOutMinutes >= shiftStartMinutes) {
+        isEarlyLeave = true;
+      } else {
+        // Out time is in the MORNING portion (< shiftStart, e.g. 05:00 or 07:00)
+        // Compare directly against shiftEnd (e.g. 06:00 = 360 min)
+        // e.g. out=05:00 (300) < shiftEnd=06:00 (360) → early leave
+        // e.g. out=07:00 (420) > shiftEnd=06:00 (360) → overtime
+        isEarlyLeave    = actualOutMinutes < shiftEndMinutes - graceOut;
+        overtimeMinutes = Math.max(0, actualOutMinutes - shiftEndMinutes);
+      }
+    } else {
+      // ── NORMAL (non-overnight) shift ──────────────────────────────────────
+      // e.g. START=08:00 (480), END=17:00 (1020)
+      isEarlyLeave    = actualOutMinutes < shiftEndMinutes - graceOut;
+      overtimeMinutes = Math.max(0, actualOutMinutes - shiftEndMinutes);
+    }
+  }
+
+  // Late takes priority over early leave when both are true (edge case)
+  let status = STATUS.PRESENT;
+  if (isLate)            status = STATUS.LATE;
+  else if (isEarlyLeave) status = STATUS.EARLY_LEAVE;
+
+  return { status, workMinutes, overtimeMinutes };
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  PROCESS ATTENDANCE
 // ─────────────────────────────────────────────────────────────────────────────
+//
+// Schema assumption: HR_ATTENDANCE has two extra columns added in your migration:
+//   WORK_MINUTES    NUMBER          — total minutes between IN and OUT
+//   OVERTIME_MINUTES NUMBER         — minutes beyond scheduled shift end
+//
+// If you prefer storing hours as decimals (e.g. 8.50) just divide by 60 in the
+// UPDATE below — the JS calculation stays the same.
 
 export const processAttendance = async (fromDate, toDate) => {
   const conn = await getConnection();
   try {
     console.log(`[Attendance] Processing ATT_LOG from ${fromDate} to ${toDate}...`);
+
+    // ── STEP 1: MERGE raw punches → HR_ATTENDANCE ────────────────────────────
+    //
+    // Key change vs old code:
+    //   • SHIFT_ID now comes from HR_EMP_SHIFT (effective-dated employee–shift
+    //     assignment) instead of HR_EMP_ASSIGNMENT.POSITION_ID.
+    //   • If no active shift row exists for that date the SHIFT_ID is NULL —
+    //     the status loop below handles it as UNSCHEDULED.
 
     await conn.execute(
       `
@@ -140,15 +224,27 @@ export const processAttendance = async (fromDate, toDate) => {
       USING (
         SELECT
           E.PERSON_ID,
-          TRUNC(TO_TIMESTAMP_TZ(L.AM_TIME_IN_OUT, ${ISO_TZ_FMT})) AS ATT_DATE,
-          MIN(TO_TIMESTAMP_TZ(L.AM_TIME_IN_OUT, ${ISO_TZ_FMT}))   AS FIRST_IN,
-          MAX(TO_TIMESTAMP_TZ(L.AM_TIME_IN_OUT, ${ISO_TZ_FMT}))   AS LAST_OUT,
-          NVL(MIN(A.POSITION_ID), 1)                               AS SHIFT_ID,
-          L.AM_MAC_ID                                              AS DEVICE_ID
+          TRUNC(TO_TIMESTAMP_TZ(L.AM_TIME_IN_OUT, ${ISO_TZ_FMT}))  AS ATT_DATE,
+          MIN(TO_TIMESTAMP_TZ(L.AM_TIME_IN_OUT, ${ISO_TZ_FMT}))    AS FIRST_IN,
+          MAX(TO_TIMESTAMP_TZ(L.AM_TIME_IN_OUT, ${ISO_TZ_FMT}))    AS LAST_OUT,
+          /*
+           * Pick the shift that was active on the attendance date.
+           * HR_EMP_SHIFT.STATUS = 1 means the assignment record itself is active.
+           * EFFECTIVE_END_DATE can be NULL (open-ended), so we use NVL with a
+           * far-future sentinel rather than SYSDATE to stay deterministic for
+           * historical reprocessing.
+           */
+          MIN(ES.SHIFT_ID)                                          AS SHIFT_ID,
+          L.AM_MAC_ID                                               AS DEVICE_ID
         FROM HCM.ATT_LOG L
-        JOIN HCM.HR_EMPLOYEE E ON L.AM_EMPNO = E.EMP_NO
-        LEFT JOIN HCM.HR_EMP_ASSIGNMENT A ON E.PERSON_ID = A.PERSON_ID
-                                          AND A.STATUS    = 1
+        JOIN HCM.HR_EMPLOYEE E
+          ON TO_CHAR(L.AM_EMPNO) = E.EMP_NO        -- AM_EMPNO is NUMBER, EMP_NO is VARCHAR2
+        LEFT JOIN HCM.HR_EMP_SHIFT ES
+          ON  E.PERSON_ID           = ES.EMP_NO     -- HR_EMP_SHIFT.EMP_NO stores PERSON_ID values
+          AND ES.STATUS             = 1
+          AND TRUNC(TO_TIMESTAMP_TZ(L.AM_TIME_IN_OUT, ${ISO_TZ_FMT}))
+              BETWEEN NVL(ES.EFFECTIVE_START_DATE, TO_DATE('1900-01-01', 'YYYY-MM-DD'))
+                  AND NVL(ES.EFFECTIVE_END_DATE, TO_DATE('9999-12-31', 'YYYY-MM-DD'))
         WHERE TRUNC(TO_TIMESTAMP_TZ(L.AM_TIME_IN_OUT, ${ISO_TZ_FMT}))
               BETWEEN TO_DATE(:FROM_DATE, 'YYYY-MM-DD')
                   AND TO_DATE(:TO_DATE,   'YYYY-MM-DD')
@@ -158,31 +254,38 @@ export const processAttendance = async (fromDate, toDate) => {
           L.AM_MAC_ID
       ) source
       ON (
-        target.EMPLOYEE_ID     = source.PERSON_ID
+            target.EMPLOYEE_ID     = source.PERSON_ID
         AND target.ATTENDANCE_DATE = source.ATT_DATE
       )
       WHEN MATCHED THEN
         UPDATE SET
-          target.IN_TIME      = source.FIRST_IN,
-          target.OUT_TIME     = source.LAST_OUT,
-          target.SHIFT_ID     = source.SHIFT_ID,
-          target.DEVICE_ID    = source.DEVICE_ID,
-          target.UPDATED_DATE = SYSTIMESTAMP,
-          target.UPDATED_BY   = 'SCHEDULER'
+          target.IN_TIME       = source.FIRST_IN,
+          target.OUT_TIME      = source.LAST_OUT,
+          target.SHIFT_ID      = source.SHIFT_ID,   -- may be NULL (unscheduled)
+          target.DEVICE_ID     = source.DEVICE_ID,
+          target.UPDATED_DATE  = SYSTIMESTAMP,
+          target.UPDATED_BY    = 'SCHEDULER'
       WHEN NOT MATCHED THEN
         INSERT (
           EMPLOYEE_ID, ATTENDANCE_DATE, IN_TIME, OUT_TIME,
           SHIFT_ID, DEVICE_ID, STATUS, PAYROLL_FLAG,
+          WORK_MINUTES, OVERTIME_MINUTES,
           CREATED_BY, CREATED_DATE
         )
         VALUES (
           source.PERSON_ID, source.ATT_DATE, source.FIRST_IN, source.LAST_OUT,
           source.SHIFT_ID, source.DEVICE_ID, 'PENDING', 'Y',
+          0, 0,
           'SCHEDULER', SYSTIMESTAMP
         )
-    `,
+      `,
       { FROM_DATE: fromDate, TO_DATE: toDate },
     );
+
+    // ── STEP 2: Compute status, work hours, overtime for PENDING rows ─────────
+    //
+    // We join HR_SHIFT here (not HR_EMP_SHIFT — we already stored SHIFT_ID on
+    // the attendance row in step 1) so the query stays simple.
 
     const pendingResult = await conn.execute(
       `
@@ -200,25 +303,38 @@ export const processAttendance = async (fromDate, toDate) => {
         AND att.ATTENDANCE_DATE
             BETWEEN TO_DATE(:FROM_DATE, 'YYYY-MM-DD')
                 AND TO_DATE(:TO_DATE,   'YYYY-MM-DD')
-    `,
+      `,
       { FROM_DATE: fromDate, TO_DATE: toDate },
       { outFormat: oracledb.OUT_FORMAT_OBJECT },
     );
 
     for (const row of pendingResult.rows) {
-      const status = calculateStatus(row.IN_TIME, row.OUT_TIME, row);
+      const { status, workMinutes, overtimeMinutes } = calculateStatusAndHours(
+        row.IN_TIME,
+        row.OUT_TIME,
+        row, // contains START_TIME, END_TIME, GRACE_IN_MINUTES, GRACE_OUT_MINUTES (null when no shift)
+      );
+
       await conn.execute(
         `
         UPDATE HCM.HR_ATTENDANCE
-           SET STATUS       = :STATUS,
-               UPDATED_DATE = SYSTIMESTAMP,
-               UPDATED_BY   = 'SCHEDULER'
-         WHERE ATTENDANCE_ID = :ATTENDANCE_ID
-      `,
-        { STATUS: status, ATTENDANCE_ID: row.ATTENDANCE_ID },
+           SET STATUS           = :STATUS,
+               WORK_MINUTES     = :WORK_MINUTES,
+               OVERTIME_MINUTES = :OVERTIME_MINUTES,
+               UPDATED_DATE     = SYSTIMESTAMP,
+               UPDATED_BY       = 'SCHEDULER'
+         WHERE ATTENDANCE_ID    = :ATTENDANCE_ID
+        `,
+        {
+          STATUS:           status,
+          WORK_MINUTES:     workMinutes,
+          OVERTIME_MINUTES: overtimeMinutes,
+          ATTENDANCE_ID:    row.ATTENDANCE_ID,
+        },
       );
     }
 
+    // ── STEP 3: Mark processed ATT_LOG rows ───────────────────────────────────
     await conn.execute(
       `
       UPDATE HCM.ATT_LOG
@@ -227,7 +343,7 @@ export const processAttendance = async (fromDate, toDate) => {
          AND TRUNC(TO_TIMESTAMP_TZ(AM_TIME_IN_OUT, ${ISO_TZ_FMT}))
              BETWEEN TO_DATE(:FROM_DATE, 'YYYY-MM-DD')
                  AND TO_DATE(:TO_DATE,   'YYYY-MM-DD')
-    `,
+      `,
       { FROM_DATE: fromDate, TO_DATE: toDate },
     );
 
@@ -256,7 +372,6 @@ export const processAttendance = async (fromDate, toDate) => {
 const ALLOWED_SORT_COLUMNS = {
   ATTENDANCE_DATE: "att.ATTENDANCE_DATE",
   FIRST_NAME:      "e.FIRST_NAME",
-  
 };
 
 export const getAttendanceList = async ({
@@ -326,13 +441,13 @@ export const getAttendanceList = async ({
     const countResult = await conn.execute(
       `
       SELECT COUNT(*) AS TOTAL
-        FROM HCM.HR_ATTENDANCE     att
-        JOIN HCM.HR_EMPLOYEE       e   ON att.EMPLOYEE_ID = e.PERSON_ID
-        LEFT JOIN HCM.HR_EMP_ASSIGNMENT a ON e.PERSON_ID  = a.PERSON_ID AND a.STATUS = 1
-        LEFT JOIN HCM.HR_COMPANY   c   ON a.COMPANY_ID   = c.COMPANY_ID
-        LEFT JOIN HCM.HR_SHIFT     s   ON att.SHIFT_ID   = s.SHIFT_ID
+        FROM HCM.HR_ATTENDANCE         att
+        JOIN HCM.HR_EMPLOYEE           e   ON att.EMPLOYEE_ID = e.PERSON_ID
+        LEFT JOIN HCM.HR_EMP_ASSIGNMENT a  ON e.PERSON_ID    = a.PERSON_ID AND a.STATUS = 1
+        LEFT JOIN HCM.HR_COMPANY       c   ON a.COMPANY_ID   = c.COMPANY_ID
+        LEFT JOIN HCM.HR_SHIFT         s   ON att.SHIFT_ID   = s.SHIFT_ID
         ${whereClause}
-    `,
+      `,
       bindParams,
       { outFormat: oracledb.OUT_FORMAT_OBJECT },
     );
@@ -355,6 +470,11 @@ export const getAttendanceList = async ({
             att.DEVICE_ID,
             att.PUNCH_TYPE,
             att.PAYROLL_FLAG,
+            att.WORK_MINUTES,
+            att.OVERTIME_MINUTES,
+            -- Convenience: decimal hours rounded to 2 dp for display
+            ROUND(att.WORK_MINUTES     / 60, 2)  AS WORK_HOURS,
+            ROUND(att.OVERTIME_MINUTES / 60, 2)  AS OVERTIME_HOURS,
             att.CREATED_DATE,
             att.UPDATED_DATE,
             e.EMP_NO,
@@ -363,25 +483,25 @@ export const getAttendanceList = async ({
             e.LAST_NAME,
             e.GENDER,
             e.JOIN_DATE,
-            s.CODE           AS SHIFT_CODE,
-            s.NAME           AS SHIFT_NAME,
-            s.START_TIME     AS SHIFT_START,
-            s.END_TIME       AS SHIFT_END,
+            s.CODE            AS SHIFT_CODE,
+            s.NAME            AS SHIFT_NAME,
+            s.START_TIME      AS SHIFT_START,
+            s.END_TIME        AS SHIFT_END,
             s.GRACE_IN_MINUTES,
             s.GRACE_OUT_MINUTES,
             c.COMPANY_NAME
 
-          FROM HCM.HR_ATTENDANCE     att
-          JOIN HCM.HR_EMPLOYEE       e   ON att.EMPLOYEE_ID = e.PERSON_ID
-          LEFT JOIN HCM.HR_EMP_ASSIGNMENT a ON e.PERSON_ID  = a.PERSON_ID AND a.STATUS = 1
-          LEFT JOIN HCM.HR_COMPANY   c   ON a.COMPANY_ID   = c.COMPANY_ID
-          LEFT JOIN HCM.HR_SHIFT     s   ON att.SHIFT_ID   = s.SHIFT_ID
+          FROM HCM.HR_ATTENDANCE         att
+          JOIN HCM.HR_EMPLOYEE           e   ON att.EMPLOYEE_ID = e.PERSON_ID
+          LEFT JOIN HCM.HR_EMP_ASSIGNMENT a  ON e.PERSON_ID    = a.PERSON_ID AND a.STATUS = 1
+          LEFT JOIN HCM.HR_COMPANY       c   ON a.COMPANY_ID   = c.COMPANY_ID
+          LEFT JOIN HCM.HR_SHIFT         s   ON att.SHIFT_ID   = s.SHIFT_ID
           ${whereClause}
           ORDER BY ${orderCol} ${orderDir}
 
         ) sq WHERE ROWNUM <= ${rownumMax}
       ) WHERE RN >= ${rownumMin}
-    `,
+      `,
       bindParams,
       { outFormat: oracledb.OUT_FORMAT_OBJECT },
     );
@@ -427,14 +547,14 @@ export const getAttendanceDetail = async (employeeId, date) => {
           ELSE 'UNKNOWN'
         END AS PUNCH_LABEL
       FROM HCM.ATT_LOG      L
-      JOIN HCM.HR_EMPLOYEE  E   ON L.AM_EMPNO   = E.EMP_NO
+      JOIN HCM.HR_EMPLOYEE  E   ON TO_CHAR(L.AM_EMPNO) = E.EMP_NO
       LEFT JOIN HCM.HR_LOCATION loc ON L.LOCATION_ID = loc.ID
       WHERE E.EMP_NO = :EMP_NO
         AND TRUNC(TO_TIMESTAMP_TZ(L.AM_TIME_IN_OUT, ${ISO_TZ_FMT}))
             = TO_DATE(:ATT_DATE, 'YYYY-MM-DD')
       ORDER BY TO_TIMESTAMP_TZ(L.AM_TIME_IN_OUT, ${ISO_TZ_FMT}) ASC
-    `,
-       {
+      `,
+      {
         EMP_NO:   String(employeeId),
         ATT_DATE: date,
       },
@@ -513,22 +633,26 @@ export const getAttendanceForExport = async (filters = {}) => {
         att.OUT_TIME,
         att.STATUS,
         att.PAYROLL_FLAG,
+        att.WORK_MINUTES,
+        att.OVERTIME_MINUTES,
+        ROUND(att.WORK_MINUTES     / 60, 2)  AS WORK_HOURS,
+        ROUND(att.OVERTIME_MINUTES / 60, 2)  AS OVERTIME_HOURS,
         e.EMP_NO,
         e.TITLE,
         e.FIRST_NAME,
         e.LAST_NAME,
-        s.NAME       AS SHIFT_NAME,
-        s.START_TIME AS SHIFT_START,
-        s.END_TIME   AS SHIFT_END,
+        s.NAME        AS SHIFT_NAME,
+        s.START_TIME  AS SHIFT_START,
+        s.END_TIME    AS SHIFT_END,
         c.COMPANY_NAME
-      FROM HCM.HR_ATTENDANCE     att
-      JOIN HCM.HR_EMPLOYEE       e   ON att.EMPLOYEE_ID = e.PERSON_ID
-      LEFT JOIN HCM.HR_EMP_ASSIGNMENT a ON e.PERSON_ID  = a.PERSON_ID AND a.STATUS = 1
-      LEFT JOIN HCM.HR_COMPANY   c   ON a.COMPANY_ID   = c.COMPANY_ID
-      LEFT JOIN HCM.HR_SHIFT     s   ON att.SHIFT_ID   = s.SHIFT_ID
+      FROM HCM.HR_ATTENDANCE         att
+      JOIN HCM.HR_EMPLOYEE           e   ON att.EMPLOYEE_ID = e.PERSON_ID
+      LEFT JOIN HCM.HR_EMP_ASSIGNMENT a  ON e.PERSON_ID    = a.PERSON_ID AND a.STATUS = 1
+      LEFT JOIN HCM.HR_COMPANY       c   ON a.COMPANY_ID   = c.COMPANY_ID
+      LEFT JOIN HCM.HR_SHIFT         s   ON att.SHIFT_ID   = s.SHIFT_ID
       ${whereClause}
       ORDER BY att.ATTENDANCE_DATE DESC, e.FIRST_NAME ASC
-    `,
+      `,
       bindParams,
       { outFormat: oracledb.OUT_FORMAT_OBJECT },
     );
@@ -566,19 +690,80 @@ export const getAttendanceSummary = async ({ date, fromDate, toDate }) => {
     const result = await conn.execute(
       `
       SELECT
-        COUNT(*)                                                      AS TOTAL,
-        SUM(CASE WHEN att.STATUS = 'PRESENT'     THEN 1 ELSE 0 END)  AS PRESENT,
-        SUM(CASE WHEN att.STATUS = 'LATE'        THEN 1 ELSE 0 END)  AS LATE,
-        SUM(CASE WHEN att.STATUS = 'EARLY_LEAVE' THEN 1 ELSE 0 END)  AS EARLY_LEAVE,
-        SUM(CASE WHEN att.STATUS = 'ABSENT'      THEN 1 ELSE 0 END)  AS ABSENT
+        COUNT(*)                                                         AS TOTAL,
+        SUM(CASE WHEN att.STATUS = 'PRESENT'      THEN 1 ELSE 0 END)   AS PRESENT,
+        SUM(CASE WHEN att.STATUS = 'LATE'         THEN 1 ELSE 0 END)   AS LATE,
+        SUM(CASE WHEN att.STATUS = 'EARLY_LEAVE'  THEN 1 ELSE 0 END)   AS EARLY_LEAVE,
+        SUM(CASE WHEN att.STATUS = 'ABSENT'       THEN 1 ELSE 0 END)   AS ABSENT,
+        SUM(CASE WHEN att.STATUS = 'UNSCHEDULED'  THEN 1 ELSE 0 END)   AS UNSCHEDULED,
+        ROUND(SUM(NVL(att.WORK_MINUTES,     0)) / 60, 2)               AS TOTAL_WORK_HOURS,
+        ROUND(SUM(NVL(att.OVERTIME_MINUTES, 0)) / 60, 2)               AS TOTAL_OVERTIME_HOURS
       FROM HCM.HR_ATTENDANCE att
       ${whereClause}
-    `,
+      `,
       bindParams,
       { outFormat: oracledb.OUT_FORMAT_OBJECT },
     );
 
     return result.rows[0];
+  } finally {
+    await conn.close();
+  }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  REPROCESS ATTENDANCE FOR EMPLOYEE
+//  Call this after assigning / changing a shift so past attendance rows get
+//  recalculated with the correct shift, status, work hours and overtime.
+//
+//  POST /api/attendance/reprocess
+//  Body : { employeeId, fromDate, toDate }
+//  Roles: Admin, HR only
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const reprocessAttendanceForEmployee = async (employeeId, fromDate, toDate) => {
+  const conn = await getConnection();
+  try {
+
+    // ── STEP 1: Reset rows to PENDING and stamp the correct SHIFT_ID ──────────
+    //
+    // HR_EMP_SHIFT.EMP_NO stores PERSON_ID values (NUMBER), so we match
+    // directly on EMPLOYEE_ID (which is also PERSON_ID on HR_ATTENDANCE).
+    // The correlated subquery picks the shift effective on each attendance date.
+
+    await conn.execute(
+      `
+      UPDATE HCM.HR_ATTENDANCE att
+         SET att.STATUS     = 'PENDING',
+             att.SHIFT_ID   = (
+               SELECT ES.SHIFT_ID
+                 FROM HCM.HR_EMP_SHIFT ES
+                WHERE ES.EMP_NO  = att.EMPLOYEE_ID   -- EMP_NO stores PERSON_ID
+                  AND ES.STATUS  = 1
+                  AND att.ATTENDANCE_DATE
+                      BETWEEN NVL(ES.EFFECTIVE_START_DATE, TO_DATE('1900-01-01', 'YYYY-MM-DD'))
+                          AND NVL(ES.EFFECTIVE_END_DATE, TO_DATE('9999-12-31', 'YYYY-MM-DD'))
+                  AND ROWNUM = 1
+             ),
+             att.UPDATED_BY   = 'REPROCESS',
+             att.UPDATED_DATE = SYSTIMESTAMP
+       WHERE att.EMPLOYEE_ID  = :EMPLOYEE_ID
+         AND att.ATTENDANCE_DATE
+             BETWEEN TO_DATE(:FROM_DATE, 'YYYY-MM-DD')
+                 AND TO_DATE(:TO_DATE,   'YYYY-MM-DD')
+      `,
+      { EMPLOYEE_ID: employeeId, FROM_DATE: fromDate, TO_DATE: toDate },
+    );
+
+    await conn.commit();
+
+    // ── STEP 2: Run normal processor — picks up PENDING rows ──────────────────
+    // Status, work hours and overtime are all recalculated fresh.
+    return await processAttendance(fromDate, toDate);
+
+  } catch (err) {
+    await conn.rollback();
+    throw err;
   } finally {
     await conn.close();
   }
