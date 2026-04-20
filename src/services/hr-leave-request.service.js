@@ -1,3 +1,79 @@
+// ─────────────────────────────────────────────────────────────────────────────
+//  LEAVE REQUEST SERVICE — TODO
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ── MISSING CORE FEATURES ─────────────────────────────────────────────────────
+
+// TODO: getLeavesByEmployeeId
+//       — employee views their own leave history (ESS_LEAVE_APPLY)
+//       — filter by status (PENDING, APPROVED, REJECTED)
+//       — used in mobile app and ESS portal
+
+// TODO: getLeavesByTeam
+//       — supervisor sees all leave requests from their team members only
+//       — JOIN HR_EMPLOYEE_SUPERVISOR to filter by SUPERVISOR_ID
+//       — used in MSS portal and Notifications screen (MSS_APPROVE_TEAM)
+
+// TODO: approveLeave (dedicated approve action)
+//       — currently updateLeaveService handles everything including approval
+//       — better to have a dedicated approveLeave(leaveId, approverId) function
+//       — sets STATUS = 'APPROVED', APPROVER_ID, APPROVED_ON = SYSDATE
+//       — notify employee after approval (reverse of notifySupervior)
+
+// TODO: rejectLeave (dedicated reject action)
+//       — sets STATUS = 'REJECTED', APPROVER_ID, APPROVED_ON = SYSDATE
+//       — requires REJECTION_REASON — add column or store in REASON
+//       — notify employee after rejection
+
+// TODO: cancelLeave
+//       — employee can cancel their own PENDING leave request
+//       — only allowed if STATUS = 'PENDING' (cannot cancel already approved)
+//       — sets STATUS = 'CANCELLED'
+
+// ── LEAVE BALANCE ─────────────────────────────────────────────────────────────
+
+// TODO: getLeaveBalance
+//       — returns remaining leave days per employee per leave type
+//       — formula: allocated days - approved days used in current year
+//       — critical for ESS: employee sees balance before applying
+//       — needed for payroll: leave encashment calculation
+
+// TODO: checkLeaveBalanceBeforeApply
+//       — validation inside createLeaveService before inserting
+//       — if requested days > remaining balance, reject with meaningful error
+//       — currently createLeaveService inserts without any balance check
+
+// ── FILTERING & PAGINATION ────────────────────────────────────────────────────
+
+// TODO: getAllLeavesService needs pagination + filters
+//       — currently returns ALL rows with no limit (will be slow with 1000 employees)
+//       — add: page, limit, fromDate, toDate, employeeId, status, leaveTypeId filters
+//       — same pattern as getAttendanceList
+
+// TODO: getPendingLeaves
+//       — quick filter for dashboard pending approvals count
+//       — used in Dashboard KPI: "X leave requests pending approval"
+
+// ── NOTIFICATIONS ─────────────────────────────────────────────────────────────
+
+// TODO: notifyEmployee (reverse of notifySupervior)
+//       — when supervisor approves/rejects, notify the employee
+//       — currently only supervisor gets notified on new request
+//       — employee never gets notified on decision
+
+// ── REPORTS ───────────────────────────────────────────────────────────────────
+
+// TODO: getLeaveReport
+//       — monthly/yearly leave summary per employee
+//       — columns: employee, leave type, total days taken, balance remaining
+//       — needed for Reports module (REP_GENERATE)
+
+// TODO: getLeaveAbsenteeismTrend
+//       — how many leaves per month across the organization
+//       — used in HR Analytics Dashboard (REP_ANALYTICS)
+
+
+
 import { getConnection } from "../config/db.js";
 import oracledb from "oracledb";
 
