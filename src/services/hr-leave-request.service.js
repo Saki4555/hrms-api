@@ -4,31 +4,7 @@
 
 // ── MISSING CORE FEATURES ─────────────────────────────────────────────────────
 
-// TODO: getLeavesByEmployeeId
-//       — employee views their own leave history (ESS_LEAVE_APPLY)
-//       — filter by status (PENDING, APPROVED, REJECTED)
-//       — used in mobile app and ESS portal
 
-// TODO: getLeavesByTeam
-//       — supervisor sees all leave requests from their team members only
-//       — JOIN HR_EMPLOYEE_SUPERVISOR to filter by SUPERVISOR_ID
-//       — used in MSS portal and Notifications screen (MSS_APPROVE_TEAM)
-
-// TODO: approveLeave (dedicated approve action)
-//       — currently updateLeaveService handles everything including approval
-//       — better to have a dedicated approveLeave(leaveId, approverId) function
-//       — sets STATUS = 'APPROVED', APPROVER_ID, APPROVED_ON = SYSDATE
-//       — notify employee after approval (reverse of notifySupervior)
-
-// TODO: rejectLeave (dedicated reject action)
-//       — sets STATUS = 'REJECTED', APPROVER_ID, APPROVED_ON = SYSDATE
-//       — requires REJECTION_REASON — add column or store in REASON
-//       — notify employee after rejection
-
-// TODO: cancelLeave
-//       — employee can cancel their own PENDING leave request
-//       — only allowed if STATUS = 'PENDING' (cannot cancel already approved)
-//       — sets STATUS = 'CANCELLED'
 
 // ── LEAVE BALANCE ─────────────────────────────────────────────────────────────
 
@@ -54,12 +30,6 @@
 //       — quick filter for dashboard pending approvals count
 //       — used in Dashboard KPI: "X leave requests pending approval"
 
-// ── NOTIFICATIONS ─────────────────────────────────────────────────────────────
-
-// TODO: notifyEmployee (reverse of notifySupervior)
-//       — when supervisor approves/rejects, notify the employee
-//       — currently only supervisor gets notified on new request
-//       — employee never gets notified on decision
 
 // ── REPORTS ───────────────────────────────────────────────────────────────────
 
@@ -177,38 +147,134 @@ export const createLeaveService = async (data) => {
 //     await conn.close();
 //   }
 // };
-export const getAllLeavesService = async () => {
+
+// Whitelist: frontend column key → Oracle expression (prevents SQL injection)
+const ALLOWED_SORT_COLUMNS = {
+  LEAVE_ID:   "lr.LEAVE_ID",
+  START_DATE: "lr.START_DATE",
+  APPLIED_ON: "lr.APPLIED_ON",
+  FIRST_NAME: "e.FIRST_NAME",
+};
+
+export const getAllLeavesService = async ({
+  page        = 1,
+  limit       = 20,
+  fromDate    = "",
+  toDate      = "",
+  employeeId  = "",
+  status      = "",
+  leaveTypeId = "",
+  sortBy      = "LEAVE_ID",
+  sortOrder   = "DESC",
+} = {}) => {
   const conn = await getConnection();
-  try {
-    const result = await conn.execute(
-      `SELECT
-          lr.LEAVE_ID,
-          lr.EMPLOYEE_ID,
-          e.EMP_NO,
-          e.FIRST_NAME,
-          e.LAST_NAME,
-          e.FIRST_NAME || ' ' || e.LAST_NAME   AS EMPLOYEE_NAME,
-          lr.LEAVE_TYPE_ID,
-          lt.CODE                               AS LEAVE_TYPE_CODE,
-          lt.NAME                               AS LEAVE_TYPE_NAME,
-          lr.START_DATE,
-          lr.END_DATE,
-          lr.DAYS,
-          lr.STATUS,
-          lr.REASON,
-          lr.APPLIED_ON,
-          lr.APPROVER_ID,
-          u.USERNAME                            AS APPROVER_USERNAME,
-          lr.APPROVED_ON,
-          lr.UPDATED_BY,
-          lr.UPDATED_DATE
-       FROM HCM.HR_LEAVE_REQUEST  lr
-       JOIN HCM.HR_LEAVE_TYPE     lt  ON lr.LEAVE_TYPE_ID = lt.LEAVE_TYPE_ID
-       LEFT JOIN HCM.HR_EMPLOYEE  e   ON lr.EMPLOYEE_ID   = e.PERSON_ID
-       LEFT JOIN HCM.USERS        u   ON lr.APPROVER_ID   = u.ID
-       ORDER BY lr.LEAVE_ID DESC`
+
+  const pageNum   = Math.max(1, parseInt(page,  10) || 1);
+  const limitNum  = Math.max(1, parseInt(limit, 10) || 20);
+  const rownumMin = (pageNum - 1) * limitNum + 1;
+  const rownumMax = pageNum * limitNum;
+
+  // Sort — whitelist to prevent SQL injection
+  const orderCol = ALLOWED_SORT_COLUMNS[sortBy] ?? "lr.LEAVE_ID";
+  const orderDir = sortOrder === "ASC" ? "ASC" : "DESC";
+
+  const conditions = [];
+  const bindParams = {};
+
+  if (fromDate && toDate) {
+    conditions.push(
+      `lr.START_DATE BETWEEN TO_DATE(:FROM_DATE, 'YYYY-MM-DD') AND TO_DATE(:TO_DATE, 'YYYY-MM-DD')`
     );
-    return result.rows;
+    bindParams.FROM_DATE = fromDate;
+    bindParams.TO_DATE   = toDate;
+  }
+
+  if (employeeId && employeeId !== "") {
+    conditions.push(`lr.EMPLOYEE_ID = :EMPLOYEE_ID`);
+    bindParams.EMPLOYEE_ID = parseInt(employeeId, 10);
+  }
+
+  if (status && status.trim()) {
+    conditions.push(`lr.STATUS = :STATUS`);
+    bindParams.STATUS = status.trim().toUpperCase();
+  }
+
+  if (leaveTypeId && leaveTypeId !== "") {
+    conditions.push(`lr.LEAVE_TYPE_ID = :LEAVE_TYPE_ID`);
+    bindParams.LEAVE_TYPE_ID = parseInt(leaveTypeId, 10);
+  }
+
+  const whereClause =
+    conditions.length > 0 ? `WHERE ${conditions.join("\n      AND ")}` : "";
+
+  try {
+    // ── COUNT ────────────────────────────────────────────────────────────────
+    const countResult = await conn.execute(
+      `
+      SELECT COUNT(*) AS TOTAL
+        FROM HCM.HR_LEAVE_REQUEST  lr
+        JOIN HCM.HR_LEAVE_TYPE     lt  ON lr.LEAVE_TYPE_ID = lt.LEAVE_TYPE_ID
+        LEFT JOIN HCM.HR_EMPLOYEE  e   ON lr.EMPLOYEE_ID   = e.PERSON_ID
+        LEFT JOIN HCM.USERS        u   ON lr.APPROVER_ID   = u.ID
+        ${whereClause}
+      `,
+      bindParams,
+      { outFormat: oracledb.OUT_FORMAT_OBJECT }
+    );
+
+    const total = countResult.rows[0].TOTAL;
+
+    // ── PAGINATED DATA ───────────────────────────────────────────────────────
+    const result = await conn.execute(
+      `
+      SELECT * FROM (
+        SELECT ROWNUM AS RN, sq.* FROM (
+
+          SELECT
+            lr.LEAVE_ID,
+            lr.EMPLOYEE_ID,
+            e.EMP_NO,
+            e.FIRST_NAME,
+            e.LAST_NAME,
+            e.FIRST_NAME || ' ' || e.LAST_NAME   AS EMPLOYEE_NAME,
+            lr.LEAVE_TYPE_ID,
+            lt.CODE                               AS LEAVE_TYPE_CODE,
+            lt.NAME                               AS LEAVE_TYPE_NAME,
+            lr.START_DATE,
+            lr.END_DATE,
+            lr.DAYS,
+            lr.STATUS,
+            lr.REASON,
+            lr.APPLIED_ON,
+            lr.APPROVER_ID,
+            u.USERNAME                            AS APPROVER_USERNAME,
+            lr.APPROVED_ON,
+            lr.UPDATED_BY,
+            lr.UPDATED_DATE
+
+          FROM HCM.HR_LEAVE_REQUEST  lr
+          JOIN HCM.HR_LEAVE_TYPE     lt  ON lr.LEAVE_TYPE_ID = lt.LEAVE_TYPE_ID
+          LEFT JOIN HCM.HR_EMPLOYEE  e   ON lr.EMPLOYEE_ID   = e.PERSON_ID
+          LEFT JOIN HCM.USERS        u   ON lr.APPROVER_ID   = u.ID
+          ${whereClause}
+          ORDER BY ${orderCol} ${orderDir}
+
+        ) sq WHERE ROWNUM <= ${rownumMax}
+      ) WHERE RN >= ${rownumMin}
+      `,
+      bindParams,
+      { outFormat: oracledb.OUT_FORMAT_OBJECT }
+    );
+
+    return {
+      data: result.rows,
+      pagination: {
+        total,
+        page:       pageNum,
+        limit:      limitNum,
+        totalPages: Math.ceil(total / limitNum),
+      },
+    };
   } finally {
     await conn.close();
   }
@@ -407,6 +473,114 @@ export const deleteLeaveService = async (id) => {
     await conn.close();
   }
 };
+
+
+
+
+
+
+
+// ── 1. getLeavesByEmployeeId ──────────────────────────────────────────────────
+//
+//  Employee views their own leave history (ESS portal / mobile app).
+//  Optional `status` filter accepts: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED'
+//  If status is omitted / null, all records are returned.
+//
+export const getLeavesByEmployeeId = async (employeeId, status = null) => {
+  const conn = await getConnection();
+  try {
+    const hasStatusFilter = Boolean(status);
+
+    const result = await conn.execute(
+      `SELECT
+          lr.LEAVE_ID,
+          lr.EMPLOYEE_ID,
+          e.EMP_NO,
+          e.FIRST_NAME || ' ' || e.LAST_NAME   AS EMPLOYEE_NAME,
+          lr.LEAVE_TYPE_ID,
+          lt.CODE                               AS LEAVE_TYPE_CODE,
+          lt.NAME                               AS LEAVE_TYPE_NAME,
+          lr.START_DATE,
+          lr.END_DATE,
+          lr.DAYS,
+          lr.STATUS,
+          lr.REASON,
+          lr.APPLIED_ON,
+          lr.APPROVER_ID,
+          u.USERNAME                            AS APPROVER_USERNAME,
+          lr.APPROVED_ON
+       FROM HCM.HR_LEAVE_REQUEST  lr
+       JOIN HCM.HR_LEAVE_TYPE     lt  ON lr.LEAVE_TYPE_ID = lt.LEAVE_TYPE_ID
+       LEFT JOIN HCM.HR_EMPLOYEE  e   ON lr.EMPLOYEE_ID   = e.PERSON_ID
+       LEFT JOIN HCM.USERS        u   ON lr.APPROVER_ID   = u.ID
+       WHERE lr.EMPLOYEE_ID = :employee_id
+         ${hasStatusFilter ? "AND lr.STATUS = :status" : ""}
+       ORDER BY lr.LEAVE_ID DESC`,
+      hasStatusFilter
+        ? { employee_id: parseInt(employeeId), status: status.toUpperCase() }
+        : { employee_id: parseInt(employeeId) }
+    );
+
+    return result.rows;
+  } finally {
+    await conn.close();
+  }
+};
+
+
+// ── 2. getLeavesByTeam ────────────────────────────────────────────────────────
+//
+//  Supervisor sees all leave requests from their direct team only.
+//  Joins HR_EMPLOYEE_SUPERVISOR to enforce the team boundary.
+//  Optional `status` filter same as above.
+//  Used in MSS portal and the Notifications screen.
+//
+export const getLeavesByTeam = async (supervisorId, status = null) => {
+  const conn = await getConnection();
+  try {
+    const hasStatusFilter = Boolean(status);
+
+    const result = await conn.execute(
+      `SELECT
+          lr.LEAVE_ID,
+          lr.EMPLOYEE_ID,
+          e.EMP_NO,
+          e.FIRST_NAME || ' ' || e.LAST_NAME   AS EMPLOYEE_NAME,
+          lr.LEAVE_TYPE_ID,
+          lt.CODE                               AS LEAVE_TYPE_CODE,
+          lt.NAME                               AS LEAVE_TYPE_NAME,
+          lr.START_DATE,
+          lr.END_DATE,
+          lr.DAYS,
+          lr.STATUS,
+          lr.REASON,
+          lr.APPLIED_ON,
+          lr.APPROVER_ID,
+          u.USERNAME                            AS APPROVER_USERNAME,
+          lr.APPROVED_ON
+       FROM HCM.HR_LEAVE_REQUEST      lr
+       JOIN HCM.HR_LEAVE_TYPE         lt   ON lr.LEAVE_TYPE_ID  = lt.LEAVE_TYPE_ID
+       JOIN HCM.HR_EMPLOYEE_SUPERVISOR es   ON lr.EMPLOYEE_ID   = es.PERSON_ID
+                                          AND es.SUPERVISOR_ID  = :supervisor_id
+                                          AND es.STATUS         = 1
+       LEFT JOIN HCM.HR_EMPLOYEE      e    ON lr.EMPLOYEE_ID    = e.PERSON_ID
+       LEFT JOIN HCM.USERS            u    ON lr.APPROVER_ID    = u.ID
+       ${hasStatusFilter ? "WHERE lr.STATUS = :status" : ""}
+       ORDER BY lr.APPLIED_ON DESC`,
+      hasStatusFilter
+        ? { supervisor_id: parseInt(supervisorId), status: status.toUpperCase() }
+        : { supervisor_id: parseInt(supervisorId) }
+    );
+
+    return result.rows;
+  } finally {
+    await conn.close();
+  }
+};
+
+
+
+
 
 
 

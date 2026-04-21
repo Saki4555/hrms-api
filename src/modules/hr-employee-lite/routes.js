@@ -1,3 +1,5 @@
+// src\modules\hr-employee-lite\routes.js
+
 import express from "express";
 import { getEmployeesLite } from "./controller.js";
 
