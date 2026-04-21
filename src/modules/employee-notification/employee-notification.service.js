@@ -159,6 +159,9 @@ export const approveLeave = async (leaveId, approverId, notificationId) => {
 
     const leave = leaveResult.rows[0];
     if (!leave) throw new Error("Leave request not found");
+    if (leave.STATUS !== 'PENDING') {
+  throw new Error(`Leave #${leaveId} is already '${leave.STATUS}'.`);
+}
 
     await conn.execute(
       `UPDATE HCM.HR_LEAVE_REQUEST
@@ -220,6 +223,9 @@ export const rejectLeave = async (leaveId, approverId, notificationId, reason) =
 
     const leave = leaveResult.rows[0];
     if (!leave) throw new Error("Leave request not found");
+    if (leave.STATUS !== 'PENDING') {
+  throw new Error(`Leave #${leaveId} is already '${leave.STATUS}'.`);
+}
 
     await conn.execute(
       `UPDATE HCM.HR_LEAVE_REQUEST

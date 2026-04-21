@@ -37,7 +37,7 @@ import leaveTypeRoutes from "./modules/leave-type/leave-type.routes.js";
 import leaveRoutes from "./routes/hr-leave-request.routes.js";
 
 import userManagementRoutes from "./modules/user-management/user-management.routes.js";
-
+import supervisorLiteRoutes from "./modules/supervisor-lite/supervisor-lite.routes.js";
 
 import attendanceRoutes from "./modules/attendacne/attendance.routes.js";
 import { startAttendanceScheduler } from "./modules/attendacne/attendance.scheduler.js";
@@ -270,6 +270,10 @@ app.use("/api/requisitions", requisitionRoutes);
 
 
 app.use("/api/attendance", attendanceRoutes);
+
+
+
+app.use("/api/supervisor-lite", supervisorLiteRoutes);
 
 
 startAttendanceScheduler();

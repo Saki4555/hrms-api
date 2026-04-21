@@ -1,3 +1,4 @@
+// src\modules\hr-employee-lite\service.js
 import { getConnection } from "../../config/db.js";
 
 export const searchEmployeesLite = async (searchTerm = "") => {
