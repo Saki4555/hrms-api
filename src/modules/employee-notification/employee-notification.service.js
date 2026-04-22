@@ -18,6 +18,7 @@ export const createNotification = async (conn, data) => {
 };
 
 /* GET NOTIFICATIONS FOR SUPERVISOR */
+/* GET NOTIFICATIONS FOR SUPERVISOR */
 export const getNotificationsForSupervisor = async (supervisorId) => {
   const conn = await getConnection();
   try {
@@ -26,6 +27,7 @@ export const getNotificationsForSupervisor = async (supervisorId) => {
          n.ID,
          n.EMPLYEE_ID         AS EMPLOYEE_ID,
          n.SUPERVISOR_ID,
+         n.LEAVE_ID,
          n.NOTIFICATION_DETAILS,
          n.STATUS,
          n.CREATED_DATE,
@@ -34,18 +36,17 @@ export const getNotificationsForSupervisor = async (supervisorId) => {
          e.LAST_NAME,
          e.EMP_NO,
          e.TITLE,
-         lr.LEAVE_ID,
+         lr.LEAVE_ID          AS LEAVE_ID,
          lr.START_DATE,
          lr.END_DATE,
          lr.DAYS,
          lr.REASON,
-         lr.STATUS           AS LEAVE_STATUS,
-         lt.NAME             AS LEAVE_TYPE_NAME
+         lr.STATUS            AS LEAVE_STATUS,
+         lt.NAME              AS LEAVE_TYPE_NAME
        FROM HCM.HR_EMPLOYEE_NOTIFICATION n
-       LEFT JOIN HCM.HR_EMPLOYEE         e  ON n.EMPLYEE_ID     = e.PERSON_ID
-       LEFT JOIN HCM.HR_LEAVE_REQUEST    lr ON e.PERSON_ID      = lr.EMPLOYEE_ID
-                                            AND lr.STATUS        = 'PENDING'
-       LEFT JOIN HCM.HR_LEAVE_TYPE       lt ON lr.LEAVE_TYPE_ID = lt.LEAVE_TYPE_ID
+       LEFT JOIN HCM.HR_EMPLOYEE         e  ON n.EMPLYEE_ID        = e.PERSON_ID
+       LEFT JOIN HCM.HR_LEAVE_REQUEST    lr ON n.LEAVE_ID          = lr.LEAVE_ID  -- ← exact match
+       LEFT JOIN HCM.HR_LEAVE_TYPE       lt ON lr.LEAVE_TYPE_ID    = lt.LEAVE_TYPE_ID
        WHERE n.SUPERVISOR_ID = :SUPERVISOR_ID
        ORDER BY n.CREATED_DATE DESC`,
       { SUPERVISOR_ID: parseInt(supervisorId) },
@@ -78,6 +79,7 @@ export const getNotificationsForEmployee = async (employeeId) => {
        FROM HCM.HR_EMPLOYEE_NOTIFICATION n
        LEFT JOIN HCM.HR_EMPLOYEE s ON n.SUPERVISOR_ID = s.PERSON_ID
        WHERE n.EMPLYEE_ID = :EMPLOYEE_ID
+       AND n.SUPERVISOR_ID IS NULL
        ORDER BY n.CREATED_DATE DESC`,
       { EMPLOYEE_ID: parseInt(employeeId) },
       { outFormat: oracledb.OUT_FORMAT_OBJECT }
@@ -141,12 +143,13 @@ export const markAllAsRead = async (supervisorId) => {
   }
 };
 
+
 /* APPROVE LEAVE — updates leave + marks notification read + notifies employee */
 export const approveLeave = async (leaveId, approverId, notificationId) => {
   const conn = await getConnection();
   try {
     const leaveResult = await conn.execute(
-      `SELECT lr.EMPLOYEE_ID, e.FIRST_NAME, e.LAST_NAME,
+      `SELECT lr.EMPLOYEE_ID, lr.STATUS, e.FIRST_NAME, e.LAST_NAME,
               lt.NAME AS LEAVE_TYPE_NAME,
               lr.START_DATE, lr.END_DATE, lr.DAYS
          FROM HCM.HR_LEAVE_REQUEST lr
@@ -159,9 +162,9 @@ export const approveLeave = async (leaveId, approverId, notificationId) => {
 
     const leave = leaveResult.rows[0];
     if (!leave) throw new Error("Leave request not found");
-    if (leave.STATUS !== 'PENDING') {
-  throw new Error(`Leave #${leaveId} is already '${leave.STATUS}'.`);
-}
+    if (leave.STATUS !== "PENDING") {
+      throw new Error(`Leave #${leaveId} is already '${leave.STATUS}'.`);
+    }
 
     await conn.execute(
       `UPDATE HCM.HR_LEAVE_REQUEST
@@ -182,23 +185,25 @@ export const approveLeave = async (leaveId, approverId, notificationId) => {
       );
     }
 
-    await conn.execute(
-      `INSERT INTO HCM.HR_EMPLOYEE_NOTIFICATION
-         (EMPLYEE_ID, SUPERVISOR_ID, NOTIFICATION_DETAILS, STATUS, CREATE_BY, CREATED_DATE)
-       VALUES
-         (:EMPLOYEE_ID, :SUPERVISOR_ID, :NOTIFICATION_DETAILS, 0, :CREATE_BY, SYSDATE)`,
-      {
-        EMPLOYEE_ID:          leave.EMPLOYEE_ID,
-        SUPERVISOR_ID:        parseInt(approverId),
-        NOTIFICATION_DETAILS: `Your ${leave.LEAVE_TYPE_NAME} leave request from ${new Date(leave.START_DATE).toDateString()} to ${new Date(leave.END_DATE).toDateString()} (${leave.DAYS} days) has been approved.`,
-        CREATE_BY:            parseInt(approverId),
-      }
-    );
+   // In approveLeave — fix the employee notification INSERT
+await conn.execute(
+  `INSERT INTO HCM.HR_EMPLOYEE_NOTIFICATION
+     (EMPLYEE_ID, SUPERVISOR_ID, NOTIFICATION_DETAILS, STATUS, CREATE_BY, CREATED_DATE)
+   VALUES
+     (:EMPLOYEE_ID, :SUPERVISOR_ID, :NOTIFICATION_DETAILS, 0, :CREATE_BY, SYSDATE)`,
+  {
+    EMPLOYEE_ID:          leave.EMPLOYEE_ID,
+    SUPERVISOR_ID:        null,               // ← was parseInt(approverId), wrong!
+    NOTIFICATION_DETAILS: `Your ${leave.LEAVE_TYPE_NAME} leave request from ${new Date(leave.START_DATE).toDateString()} to ${new Date(leave.END_DATE).toDateString()} (${leave.DAYS} days) has been approved.`,
+    CREATE_BY:            parseInt(approverId),
+  }
+);
 
     await conn.commit();
     return { success: true };
   } catch (err) {
     await conn.rollback();
+    console.error("approveLeave error:", err);
     throw err;
   } finally {
     await conn.close();
@@ -210,7 +215,7 @@ export const rejectLeave = async (leaveId, approverId, notificationId, reason) =
   const conn = await getConnection();
   try {
     const leaveResult = await conn.execute(
-      `SELECT lr.EMPLOYEE_ID, e.FIRST_NAME, e.LAST_NAME,
+      `SELECT lr.EMPLOYEE_ID, lr.STATUS, e.FIRST_NAME, e.LAST_NAME,
               lt.NAME AS LEAVE_TYPE_NAME,
               lr.START_DATE, lr.END_DATE, lr.DAYS
          FROM HCM.HR_LEAVE_REQUEST lr
@@ -223,9 +228,9 @@ export const rejectLeave = async (leaveId, approverId, notificationId, reason) =
 
     const leave = leaveResult.rows[0];
     if (!leave) throw new Error("Leave request not found");
-    if (leave.STATUS !== 'PENDING') {
-  throw new Error(`Leave #${leaveId} is already '${leave.STATUS}'.`);
-}
+    if (leave.STATUS !== "PENDING") {
+      throw new Error(`Leave #${leaveId} is already '${leave.STATUS}'.`);
+    }
 
     await conn.execute(
       `UPDATE HCM.HR_LEAVE_REQUEST
@@ -250,23 +255,25 @@ export const rejectLeave = async (leaveId, approverId, notificationId, reason) =
       ? `Your ${leave.LEAVE_TYPE_NAME} leave request has been rejected. Reason: ${reason}`
       : `Your ${leave.LEAVE_TYPE_NAME} leave request from ${new Date(leave.START_DATE).toDateString()} to ${new Date(leave.END_DATE).toDateString()} has been rejected.`;
 
-    await conn.execute(
-      `INSERT INTO HCM.HR_EMPLOYEE_NOTIFICATION
-         (EMPLYEE_ID, SUPERVISOR_ID, NOTIFICATION_DETAILS, STATUS, CREATE_BY, CREATED_DATE)
-       VALUES
-         (:EMPLOYEE_ID, :SUPERVISOR_ID, :NOTIFICATION_DETAILS, 0, :CREATE_BY, SYSDATE)`,
-      {
-        EMPLOYEE_ID:          leave.EMPLOYEE_ID,
-        SUPERVISOR_ID:        parseInt(approverId),
-        NOTIFICATION_DETAILS: rejectMsg,
-        CREATE_BY:            parseInt(approverId),
-      }
-    );
+    // In rejectLeave — same fix
+await conn.execute(
+  `INSERT INTO HCM.HR_EMPLOYEE_NOTIFICATION
+     (EMPLYEE_ID, SUPERVISOR_ID, NOTIFICATION_DETAILS, STATUS, CREATE_BY, CREATED_DATE)
+   VALUES
+     (:EMPLOYEE_ID, :SUPERVISOR_ID, :NOTIFICATION_DETAILS, 0, :CREATE_BY, SYSDATE)`,
+  {
+    EMPLOYEE_ID:          leave.EMPLOYEE_ID,
+    SUPERVISOR_ID:        null,               // ← same fix
+    NOTIFICATION_DETAILS: rejectMsg,
+    CREATE_BY:            parseInt(approverId),
+  }
+);
 
     await conn.commit();
     return { success: true };
   } catch (err) {
     await conn.rollback();
+    console.error("rejectLeave error:", err);
     throw err;
   } finally {
     await conn.close();
