@@ -9,10 +9,12 @@ export const assignSupervisor = async (req, res) => {
   }
 };
 
+// GET /api/employee-supervisor?page=1&limit=20&search=john&employeeId=&supervisorId=&sortBy=ASSIGNED_ON&sortOrder=DESC
 export const getAll = async (req, res) => {
   try {
-    const data = await service.getAllSupervisorAssignments();
-    res.json({ success: true, count: data.length, data });
+    const result = await service.getAllSupervisorAssignments(req.query);
+    res.json({ success: true, ...result });
+    // response shape: { success, data: [], pagination: { total, page, limit, totalPages } }
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

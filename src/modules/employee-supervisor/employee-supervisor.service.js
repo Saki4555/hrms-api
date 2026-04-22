@@ -17,14 +17,15 @@ import oracledb from "oracledb";
 const wouldCreateCircularChain = async (conn, employeeId, supervisorId) => {
   const result = await conn.execute(
     `SELECT COUNT(*) AS CNT
-       FROM HCM.HR_EMPLOYEE_SUPERVISOR
-      WHERE STATUS = 1
-      START WITH PERSON_ID = :SUPERVISOR_ID
-      CONNECT BY NOCYCLE PRIOR SUPERVISOR_ID = PERSON_ID
-        AND STATUS = 1
-      HAVING COUNT(CASE WHEN PRIOR PERSON_ID = :EMPLOYEE_ID
-                             OR PERSON_ID    = :EMPLOYEE_ID
-                        THEN 1 END) > 0`,
+       FROM (
+         SELECT SUPERVISOR_ID
+           FROM HCM.HR_EMPLOYEE_SUPERVISOR
+          WHERE STATUS = 1
+          START WITH PERSON_ID = :SUPERVISOR_ID
+          CONNECT BY NOCYCLE PRIOR SUPERVISOR_ID = PERSON_ID
+            AND STATUS = 1
+       )
+      WHERE SUPERVISOR_ID = :EMPLOYEE_ID`,
     {
       SUPERVISOR_ID: parseInt(supervisorId),
       EMPLOYEE_ID:   parseInt(employeeId),
@@ -109,37 +110,105 @@ export const assignSupervisor = async (data) => {
 //  GET ALL SUPERVISOR ASSIGNMENTS
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const getAllSupervisorAssignments = async () => {
+
+
+// Replace getAllSupervisorAssignments in employee-supervisor.service.js
+
+const ALLOWED_SORT_COLUMNS = {
+  ASSIGNED_ON:    "es.CREATED_DATE",
+  EMP_FIRST_NAME: "e.FIRST_NAME",
+  SUP_FIRST_NAME: "s.FIRST_NAME",
+};
+
+export const getAllSupervisorAssignments = async ({
+  page         = 1,
+  limit        = 20,
+  employeeId   = "",
+  supervisorId = "",
+  sortBy       = "ASSIGNED_ON",
+  sortOrder    = "DESC",
+} = {}) => {
   const conn = await getConnection();
+
+  const pageNum   = Math.max(1, parseInt(page,  10) || 1);
+  const limitNum  = Math.max(1, parseInt(limit, 10) || 20);
+  const rownumMin = (pageNum - 1) * limitNum + 1;
+  const rownumMax = pageNum * limitNum;
+
+  const orderCol = ALLOWED_SORT_COLUMNS[sortBy] ?? "es.CREATED_DATE";
+  const orderDir = sortOrder === "ASC" ? "ASC" : "DESC";
+
+  const conditions = ["es.STATUS = 1"];
+  const bindParams = {};
+
+  if (employeeId && employeeId !== "") {
+    conditions.push(`es.PERSON_ID = :EMPLOYEE_ID`);
+    bindParams.EMPLOYEE_ID = parseInt(employeeId, 10);
+  }
+
+  if (supervisorId && supervisorId !== "") {
+    conditions.push(`es.SUPERVISOR_ID = :SUPERVISOR_ID`);
+    bindParams.SUPERVISOR_ID = parseInt(supervisorId, 10);
+  }
+
+  const whereClause = `WHERE ${conditions.join("\n      AND ")}`;
+
   try {
-    const result = await conn.execute(
-      `SELECT
-         es.ID,
-         es.PERSON_ID,
-         es.SUPERVISOR_ID,
-         es.STATUS,
-         es.CREATED_DATE,
-         e.FIRST_NAME       AS EMP_FIRST_NAME,
-         e.LAST_NAME        AS EMP_LAST_NAME,
-         e.EMP_NO,
-         e.TITLE            AS EMP_TITLE,
-         s.FIRST_NAME       AS SUP_FIRST_NAME,
-         s.LAST_NAME        AS SUP_LAST_NAME,
-         s.EMP_NO           AS SUP_EMP_NO,
-         s.TITLE            AS SUP_TITLE
-       FROM HCM.HR_EMPLOYEE_SUPERVISOR es
-       LEFT JOIN HCM.HR_EMPLOYEE e ON es.PERSON_ID     = e.PERSON_ID
-       LEFT JOIN HCM.HR_EMPLOYEE s ON es.SUPERVISOR_ID = s.PERSON_ID
-       ORDER BY es.ID DESC`,
-      [],
+    const countResult = await conn.execute(
+      `SELECT COUNT(*) AS TOTAL
+         FROM HCM.HR_EMPLOYEE_SUPERVISOR es
+         LEFT JOIN HCM.HR_EMPLOYEE e ON es.PERSON_ID     = e.PERSON_ID
+         LEFT JOIN HCM.HR_EMPLOYEE s ON es.SUPERVISOR_ID = s.PERSON_ID
+         ${whereClause}`,
+      bindParams,
       { outFormat: oracledb.OUT_FORMAT_OBJECT }
     );
-    return result.rows;
+
+    const total = countResult.rows[0].TOTAL;
+
+    const result = await conn.execute(
+      `SELECT * FROM (
+         SELECT ROWNUM AS RN, sq.* FROM (
+
+           SELECT
+             es.ID,
+             es.PERSON_ID,
+             es.SUPERVISOR_ID,
+             es.CREATED_DATE        AS ASSIGNED_ON,
+             e.FIRST_NAME           AS EMP_FIRST_NAME,
+             e.LAST_NAME            AS EMP_LAST_NAME,
+             e.EMP_NO,
+             e.TITLE                AS EMP_TITLE,
+             s.FIRST_NAME           AS SUP_FIRST_NAME,
+             s.LAST_NAME            AS SUP_LAST_NAME,
+             s.EMP_NO               AS SUP_EMP_NO,
+             s.TITLE                AS SUP_TITLE
+
+           FROM HCM.HR_EMPLOYEE_SUPERVISOR es
+           LEFT JOIN HCM.HR_EMPLOYEE e ON es.PERSON_ID     = e.PERSON_ID
+           LEFT JOIN HCM.HR_EMPLOYEE s ON es.SUPERVISOR_ID = s.PERSON_ID
+           ${whereClause}
+           ORDER BY ${orderCol} ${orderDir}
+
+         ) sq WHERE ROWNUM <= ${rownumMax}
+       ) WHERE RN >= ${rownumMin}`,
+      bindParams,
+      { outFormat: oracledb.OUT_FORMAT_OBJECT }
+    );
+
+    return {
+      data: result.rows,
+      pagination: {
+        total,
+        page:       pageNum,
+        limit:      limitNum,
+        totalPages: Math.ceil(total / limitNum),
+      },
+    };
   } finally {
     await conn.close();
   }
 };
-
 // ─────────────────────────────────────────────────────────────────────────────
 //  GET SUPERVISOR BY EMPLOYEE (PERSON_ID)
 // ─────────────────────────────────────────────────────────────────────────────
