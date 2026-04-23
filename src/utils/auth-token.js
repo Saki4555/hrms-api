@@ -1,3 +1,4 @@
+// src\utils\auth-token.js
 import jwt from "jsonwebtoken";
 
 // roles = string array, e.g. ["ADMIN", "HR_MANAGER"]

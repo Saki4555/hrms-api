@@ -1,3 +1,4 @@
+// E:\Web_Dev\JOB\revinns-limited\hrms-api\src\routes\auth.route.js
 import express from "express";
 import { login, logout, register } from "../controllers/auth.controller.js";
 //  import {  authorizeRoles } from "../middleware/auth.middleware.js";
