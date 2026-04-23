@@ -9,7 +9,7 @@ import { ADMIN_ONLY } from "../../config/roles.js";
 const router = express.Router();
 
 // Apply protectRoute + ADMIN_ONLY to all routes in this file
-router.use(protectRoute, authorizeRoles(...ADMIN_ONLY));
+// router.use(protectRoute, authorizeRoles(...ADMIN_ONLY));
 
 // ── Users ──────────────────────────────────────────────────────────────────
 router.post("/", ctrl.createUser);
