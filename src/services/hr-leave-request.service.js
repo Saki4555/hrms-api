@@ -4,8 +4,6 @@
 
 // ── MISSING CORE FEATURES ─────────────────────────────────────────────────────
 
-
-
 // ── LEAVE BALANCE ─────────────────────────────────────────────────────────────
 
 // TODO: getLeaveBalance
@@ -30,7 +28,6 @@
 //       — quick filter for dashboard pending approvals count
 //       — used in Dashboard KPI: "X leave requests pending approval"
 
-
 // ── REPORTS ───────────────────────────────────────────────────────────────────
 
 // TODO: getLeaveReport
@@ -42,20 +39,17 @@
 //       — how many leaves per month across the organization
 //       — used in HR Analytics Dashboard (REP_ANALYTICS)
 
-
 import { getConnection } from "../config/db.js";
 import oracledb from "oracledb";
 
 oracledb.outFormat = oracledb.OUT_FORMAT_OBJECT;
-
-
 
 const notifySupervior = async (conn, employeeId, leaveData) => {
   const supResult = await conn.execute(
     `SELECT SUPERVISOR_ID FROM HCM.HR_EMPLOYEE_SUPERVISOR
       WHERE PERSON_ID = :PERSON_ID AND STATUS = 1`,
     { PERSON_ID: parseInt(employeeId) },
-    { outFormat: oracledb.OUT_FORMAT_OBJECT }
+    { outFormat: oracledb.OUT_FORMAT_OBJECT },
   );
 
   const supervisorId = supResult.rows[0]?.SUPERVISOR_ID ?? null;
@@ -64,10 +58,12 @@ const notifySupervior = async (conn, employeeId, leaveData) => {
   const empResult = await conn.execute(
     `SELECT FIRST_NAME, LAST_NAME FROM HCM.HR_EMPLOYEE WHERE PERSON_ID = :ID`,
     { ID: parseInt(employeeId) },
-    { outFormat: oracledb.OUT_FORMAT_OBJECT }
+    { outFormat: oracledb.OUT_FORMAT_OBJECT },
   );
   const emp = empResult.rows[0];
-  const empName = emp ? `${emp.FIRST_NAME} ${emp.LAST_NAME}` : `Employee #${employeeId}`;
+  const empName = emp
+    ? `${emp.FIRST_NAME} ${emp.LAST_NAME}`
+    : `Employee #${employeeId}`;
 
   await conn.execute(
     `INSERT INTO HCM.HR_EMPLOYEE_NOTIFICATION
@@ -75,12 +71,12 @@ const notifySupervior = async (conn, employeeId, leaveData) => {
      VALUES
        (:EMPLOYEE_ID, :SUPERVISOR_ID, :LEAVE_ID, :NOTIFICATION_DETAILS, 0, :CREATE_BY, SYSDATE)`,
     {
-      EMPLOYEE_ID:          parseInt(employeeId),
-      SUPERVISOR_ID:        supervisorId,
-      LEAVE_ID:             parseInt(leaveData.leave_id), // ← new
+      EMPLOYEE_ID: parseInt(employeeId),
+      SUPERVISOR_ID: supervisorId,
+      LEAVE_ID: parseInt(leaveData.leave_id), // ← new
       NOTIFICATION_DETAILS: `${empName} has requested leave from ${leaveData.start_date} to ${leaveData.end_date} (${leaveData.days ?? "?"} days). Reason: ${leaveData.reason ?? "Not specified"}.`,
-      CREATE_BY:            parseInt(employeeId),
-    }
+      CREATE_BY: parseInt(employeeId),
+    },
   );
 };
 
@@ -99,18 +95,18 @@ export const createLeaveService = async (data) => {
          :status, :approver_id, :approved_on, :created_by)
        RETURNING LEAVE_ID INTO :leave_id`,
       {
-        employee_id:   data.employee_id,
+        employee_id: data.employee_id,
         leave_type_id: data.leave_type_id,
-        start_date:    new Date(data.start_date),
-        end_date:      new Date(data.end_date),
-        days:          data.days,
-        reason:        data.reason,
-        status:        data.status ?? "PENDING",
-        approver_id:   data.approver_id ?? null,
-        approved_on:   isAdminHR ? new Date() : null,
-        created_by:    data.created_by,
-        leave_id:      { dir: oracledb.BIND_OUT, type: oracledb.NUMBER },
-      }
+        start_date: new Date(data.start_date),
+        end_date: new Date(data.end_date),
+        days: data.days,
+        reason: data.reason,
+        status: data.status ?? "PENDING",
+        approver_id: data.approver_id ?? null,
+        approved_on: isAdminHR ? new Date() : null,
+        created_by: data.created_by,
+        leave_id: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER },
+      },
     );
 
     const newLeaveId = result.outBinds.leave_id[0];
@@ -168,27 +164,27 @@ export const createLeaveService = async (data) => {
 
 // Whitelist: frontend column key → Oracle expression (prevents SQL injection)
 const ALLOWED_SORT_COLUMNS = {
-  LEAVE_ID:   "lr.LEAVE_ID",
+  LEAVE_ID: "lr.LEAVE_ID",
   START_DATE: "lr.START_DATE",
   APPLIED_ON: "lr.APPLIED_ON",
   FIRST_NAME: "e.FIRST_NAME",
 };
 
 export const getAllLeavesService = async ({
-  page        = 1,
-  limit       = 20,
-  fromDate    = "",
-  toDate      = "",
-  employeeId  = "",
-  status      = "",
+  page = 1,
+  limit = 20,
+  fromDate = "",
+  toDate = "",
+  employeeId = "",
+  status = "",
   leaveTypeId = "",
-  sortBy      = "LEAVE_ID",
-  sortOrder   = "DESC",
+  sortBy = "LEAVE_ID",
+  sortOrder = "DESC",
 } = {}) => {
   const conn = await getConnection();
 
-  const pageNum   = Math.max(1, parseInt(page,  10) || 1);
-  const limitNum  = Math.max(1, parseInt(limit, 10) || 20);
+  const pageNum = Math.max(1, parseInt(page, 10) || 1);
+  const limitNum = Math.max(1, parseInt(limit, 10) || 20);
   const rownumMin = (pageNum - 1) * limitNum + 1;
   const rownumMax = pageNum * limitNum;
 
@@ -199,9 +195,11 @@ export const getAllLeavesService = async ({
   const bindParams = {};
 
   if (fromDate && toDate) {
-    conditions.push(`lr.START_DATE BETWEEN TO_DATE(:FROM_DATE, 'YYYY-MM-DD') AND TO_DATE(:TO_DATE, 'YYYY-MM-DD')`);
+    conditions.push(
+      `lr.START_DATE BETWEEN TO_DATE(:FROM_DATE, 'YYYY-MM-DD') AND TO_DATE(:TO_DATE, 'YYYY-MM-DD')`,
+    );
     bindParams.FROM_DATE = fromDate;
-    bindParams.TO_DATE   = toDate;
+    bindParams.TO_DATE = toDate;
   }
   if (employeeId && employeeId !== "") {
     conditions.push(`lr.EMPLOYEE_ID = :EMPLOYEE_ID`);
@@ -216,18 +214,18 @@ export const getAllLeavesService = async ({
     bindParams.LEAVE_TYPE_ID = parseInt(leaveTypeId, 10);
   }
 
-  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join("\n      AND ")}` : "";
+  const whereClause =
+    conditions.length > 0 ? `WHERE ${conditions.join("\n      AND ")}` : "";
 
   try {
     const countResult = await conn.execute(
       `SELECT COUNT(*) AS TOTAL
          FROM HCM.HR_LEAVE_REQUEST  lr
-         JOIN HCM.HR_LEAVE_TYPE     lt       ON lr.LEAVE_TYPE_ID = lt.LEAVE_TYPE_ID
-         LEFT JOIN HCM.HR_EMPLOYEE  e        ON lr.EMPLOYEE_ID   = e.PERSON_ID
-         LEFT JOIN HCM.HR_EMPLOYEE  approver ON lr.APPROVER_ID   = approver.PERSON_ID
+         JOIN HCM.HR_LEAVE_TYPE     lt  ON lr.LEAVE_TYPE_ID = lt.LEAVE_TYPE_ID
+         LEFT JOIN HCM.HR_EMPLOYEE  e   ON lr.EMPLOYEE_ID   = e.PERSON_ID
          ${whereClause}`,
       bindParams,
-      { outFormat: oracledb.OUT_FORMAT_OBJECT }
+      { outFormat: oracledb.OUT_FORMAT_OBJECT },
     );
 
     const total = countResult.rows[0].TOTAL;
@@ -241,10 +239,10 @@ export const getAllLeavesService = async ({
             e.EMP_NO,
             e.FIRST_NAME,
             e.LAST_NAME,
-            TRIM(NVL(e.FIRST_NAME, '') || ' ' || NVL(e.LAST_NAME, ''))               AS EMPLOYEE_NAME,
+            TRIM(NVL(e.FIRST_NAME, '') || ' ' || NVL(e.LAST_NAME, ''))    AS EMPLOYEE_NAME,
             lr.LEAVE_TYPE_ID,
-            lt.CODE                                                                    AS LEAVE_TYPE_CODE,
-            lt.NAME                                                                    AS LEAVE_TYPE_NAME,
+            lt.CODE                                                         AS LEAVE_TYPE_CODE,
+            lt.NAME                                                         AS LEAVE_TYPE_NAME,
             lr.START_DATE,
             lr.END_DATE,
             lr.DAYS,
@@ -252,8 +250,11 @@ export const getAllLeavesService = async ({
             lr.REASON,
             lr.APPLIED_ON,
             lr.APPROVER_ID,
-            TRIM(NVL(approver.FIRST_NAME, '') || ' ' || NVL(approver.LAST_NAME, '')) AS APPROVER_NAME,
-            approver.EMP_NO                                                            AS APPROVER_EMP_NO,
+            COALESCE(
+              NULLIF(TRIM(NVL(approver.FIRST_NAME, '') || ' ' || NVL(approver.LAST_NAME, '')), ''),
+              au.USERNAME
+            )                                                               AS APPROVER_NAME,
+           CASE WHEN approver.PERSON_ID IS NOT NULL THEN approver.EMP_NO ELSE NULL END AS APPROVER_EMP_NO,
             lr.APPROVED_ON,
             lr.UPDATED_BY,
             lr.UPDATED_DATE
@@ -261,20 +262,21 @@ export const getAllLeavesService = async ({
           JOIN HCM.HR_LEAVE_TYPE     lt       ON lr.LEAVE_TYPE_ID = lt.LEAVE_TYPE_ID
           LEFT JOIN HCM.HR_EMPLOYEE  e        ON lr.EMPLOYEE_ID   = e.PERSON_ID
           LEFT JOIN HCM.HR_EMPLOYEE  approver ON lr.APPROVER_ID   = approver.PERSON_ID
+          LEFT JOIN HCM.USERS au ON lr.APPROVER_ID = au.ID
           ${whereClause}
           ORDER BY ${orderCol} ${orderDir}
         ) sq WHERE ROWNUM <= ${rownumMax}
       ) WHERE RN >= ${rownumMin}`,
       bindParams,
-      { outFormat: oracledb.OUT_FORMAT_OBJECT }
+      { outFormat: oracledb.OUT_FORMAT_OBJECT },
     );
 
     return {
       data: result.rows,
       pagination: {
         total,
-        page:       pageNum,
-        limit:      limitNum,
+        page: pageNum,
+        limit: limitNum,
         totalPages: Math.ceil(total / limitNum),
       },
     };
@@ -293,10 +295,10 @@ export const getLeaveByIdService = async (id) => {
           e.EMP_NO,
           e.FIRST_NAME,
           e.LAST_NAME,
-          TRIM(NVL(e.FIRST_NAME, '') || ' ' || NVL(e.LAST_NAME, ''))               AS EMPLOYEE_NAME,
+          TRIM(NVL(e.FIRST_NAME, '') || ' ' || NVL(e.LAST_NAME, ''))    AS EMPLOYEE_NAME,
           lr.LEAVE_TYPE_ID,
-          lt.CODE                                                                    AS LEAVE_TYPE_CODE,
-          lt.NAME                                                                    AS LEAVE_TYPE_NAME,
+          lt.CODE                                                         AS LEAVE_TYPE_CODE,
+          lt.NAME                                                         AS LEAVE_TYPE_NAME,
           lr.START_DATE,
           lr.END_DATE,
           lr.DAYS,
@@ -304,8 +306,11 @@ export const getLeaveByIdService = async (id) => {
           lr.REASON,
           lr.APPLIED_ON,
           lr.APPROVER_ID,
-          TRIM(NVL(approver.FIRST_NAME, '') || ' ' || NVL(approver.LAST_NAME, '')) AS APPROVER_NAME,
-          approver.EMP_NO                                                            AS APPROVER_EMP_NO,
+          COALESCE(
+            NULLIF(TRIM(NVL(approver.FIRST_NAME, '') || ' ' || NVL(approver.LAST_NAME, '')), ''),
+            au.USERNAME
+          )                                                               AS APPROVER_NAME,
+          CASE WHEN approver.PERSON_ID IS NOT NULL THEN approver.EMP_NO ELSE NULL END AS APPROVER_EMP_NO,
           lr.APPROVED_ON,
           lr.UPDATED_BY,
           lr.UPDATED_DATE
@@ -313,8 +318,9 @@ export const getLeaveByIdService = async (id) => {
        JOIN HCM.HR_LEAVE_TYPE     lt       ON lr.LEAVE_TYPE_ID = lt.LEAVE_TYPE_ID
        LEFT JOIN HCM.HR_EMPLOYEE  e        ON lr.EMPLOYEE_ID   = e.PERSON_ID
        LEFT JOIN HCM.HR_EMPLOYEE  approver ON lr.APPROVER_ID   = approver.PERSON_ID
+       LEFT JOIN HCM.USERS au ON lr.APPROVER_ID = au.ID
        WHERE lr.LEAVE_ID = :id`,
-      { id }
+      { id },
     );
     return result.rows[0] ?? null;
   } finally {
@@ -443,19 +449,19 @@ export const updateLeaveService = async (id, data) => {
            UPDATED_DATE  = SYSTIMESTAMP
        WHERE LEAVE_ID = :id`,
       {
-        id:            Number(id),
-        employee_id:   data.employee_id,
+        id: Number(id),
+        employee_id: data.employee_id,
         leave_type_id: data.leave_type_id,
-        start_date:    new Date(data.start_date),
-        end_date:      new Date(data.end_date),
-        days:          data.days ?? null,
-        reason:        data.reason ?? null,
-        status:        data.status,
-        approver_id:   isApproved ? (data.approver_id ?? null) : null,
-        approved_on:   isApproved ? new Date() : null,
-        updated_by:    data.updated_by ?? null,  // ← USERNAME আসবে এখানে
+        start_date: new Date(data.start_date),
+        end_date: new Date(data.end_date),
+        days: data.days ?? null,
+        reason: data.reason ?? null,
+        status: data.status,
+        approver_id: isApproved ? (data.approver_id ?? null) : null,
+        approved_on: isApproved ? new Date() : null,
+        updated_by: data.updated_by ?? null, // ← USERNAME আসবে এখানে
       },
-      { autoCommit: true }
+      { autoCommit: true },
     );
     return result;
   } finally {
@@ -477,7 +483,7 @@ export const deleteLeaveService = async (id, employeeId) => {
          LEFT JOIN HCM.HR_EMPLOYEE   e  ON lr.EMPLOYEE_ID   = e.PERSON_ID
         WHERE lr.LEAVE_ID = :id`,
       { id },
-      { outFormat: oracledb.OUT_FORMAT_OBJECT }
+      { outFormat: oracledb.OUT_FORMAT_OBJECT },
     );
 
     const leave = leaveResult.rows[0];
@@ -485,30 +491,32 @@ export const deleteLeaveService = async (id, employeeId) => {
 
     // 2. Only allow deletion if still PENDING
     if (leave.STATUS !== "PENDING") {
-      throw new Error(`Cannot delete a leave that is already '${leave.STATUS}'.`);
+      throw new Error(
+        `Cannot delete a leave that is already '${leave.STATUS}'.`,
+      );
     }
 
     // 3. Delete the leave
     await conn.execute(
       `DELETE FROM HCM.HR_LEAVE_REQUEST WHERE LEAVE_ID = :id`,
-      { id }
+      { id },
     );
 
     // 4. Mark existing supervisor notification as read (clean up the bell)
-await conn.execute(
-  `UPDATE HCM.HR_EMPLOYEE_NOTIFICATION
+    await conn.execute(
+      `UPDATE HCM.HR_EMPLOYEE_NOTIFICATION
       SET STATUS = 1, UPDATED_DATE = SYSDATE
     WHERE LEAVE_ID = :LEAVE_ID
       AND STATUS = 0`,
-  { LEAVE_ID: parseInt(id) }  // ← precise, targets only this leave's notification
-);
+      { LEAVE_ID: parseInt(id) }, // ← precise, targets only this leave's notification
+    );
 
     // 5. Notify supervisor that the leave was cancelled
     const supResult = await conn.execute(
       `SELECT SUPERVISOR_ID FROM HCM.HR_EMPLOYEE_SUPERVISOR
         WHERE PERSON_ID = :PERSON_ID AND STATUS = 1`,
       { PERSON_ID: parseInt(leave.EMPLOYEE_ID) },
-      { outFormat: oracledb.OUT_FORMAT_OBJECT }
+      { outFormat: oracledb.OUT_FORMAT_OBJECT },
     );
 
     const supervisorId = supResult.rows[0]?.SUPERVISOR_ID ?? null;
@@ -521,11 +529,11 @@ await conn.execute(
          VALUES
            (:EMPLOYEE_ID, :SUPERVISOR_ID, :NOTIFICATION_DETAILS, 0, :CREATE_BY, SYSDATE)`,
         {
-          EMPLOYEE_ID:          parseInt(leave.EMPLOYEE_ID),
-          SUPERVISOR_ID:        supervisorId,
+          EMPLOYEE_ID: parseInt(leave.EMPLOYEE_ID),
+          SUPERVISOR_ID: supervisorId,
           NOTIFICATION_DETAILS: `${empName} has cancelled their ${leave.LEAVE_TYPE_NAME} leave request from ${new Date(leave.START_DATE).toDateString()} to ${new Date(leave.END_DATE).toDateString()}.`,
-          CREATE_BY:            parseInt(leave.EMPLOYEE_ID),
-        }
+          CREATE_BY: parseInt(leave.EMPLOYEE_ID),
+        },
       );
     }
 
@@ -539,12 +547,6 @@ await conn.execute(
     await conn.close();
   }
 };
-
-
-
-
-
-
 
 // ── 1. getLeavesByEmployeeId ──────────────────────────────────────────────────
 //
@@ -562,10 +564,10 @@ export const getLeavesByEmployeeId = async (employeeId, status = null) => {
           lr.LEAVE_ID,
           lr.EMPLOYEE_ID,
           e.EMP_NO,
-          TRIM(NVL(e.FIRST_NAME, '') || ' ' || NVL(e.LAST_NAME, ''))               AS EMPLOYEE_NAME,
+          TRIM(NVL(e.FIRST_NAME, '') || ' ' || NVL(e.LAST_NAME, ''))    AS EMPLOYEE_NAME,
           lr.LEAVE_TYPE_ID,
-          lt.CODE                                                                    AS LEAVE_TYPE_CODE,
-          lt.NAME                                                                    AS LEAVE_TYPE_NAME,
+          lt.CODE                                                         AS LEAVE_TYPE_CODE,
+          lt.NAME                                                         AS LEAVE_TYPE_NAME,
           lr.START_DATE,
           lr.END_DATE,
           lr.DAYS,
@@ -573,26 +575,29 @@ export const getLeavesByEmployeeId = async (employeeId, status = null) => {
           lr.REASON,
           lr.APPLIED_ON,
           lr.APPROVER_ID,
-          TRIM(NVL(approver.FIRST_NAME, '') || ' ' || NVL(approver.LAST_NAME, '')) AS APPROVER_NAME,
-          approver.EMP_NO                                                            AS APPROVER_EMP_NO,
+          COALESCE(
+            NULLIF(TRIM(NVL(approver.FIRST_NAME, '') || ' ' || NVL(approver.LAST_NAME, '')), ''),
+            au.USERNAME
+          )                                                               AS APPROVER_NAME,
+          CASE WHEN approver.PERSON_ID IS NOT NULL THEN approver.EMP_NO ELSE NULL END AS APPROVER_EMP_NO,
           lr.APPROVED_ON
        FROM HCM.HR_LEAVE_REQUEST  lr
        JOIN HCM.HR_LEAVE_TYPE     lt       ON lr.LEAVE_TYPE_ID = lt.LEAVE_TYPE_ID
        LEFT JOIN HCM.HR_EMPLOYEE  e        ON lr.EMPLOYEE_ID   = e.PERSON_ID
        LEFT JOIN HCM.HR_EMPLOYEE  approver ON lr.APPROVER_ID   = approver.PERSON_ID
+       LEFT JOIN HCM.USERS au ON lr.APPROVER_ID = au.ID
        WHERE lr.EMPLOYEE_ID = :employee_id
          ${hasStatusFilter ? "AND lr.STATUS = :status" : ""}
        ORDER BY lr.LEAVE_ID DESC`,
       hasStatusFilter
         ? { employee_id: parseInt(employeeId), status: status.toUpperCase() }
-        : { employee_id: parseInt(employeeId) }
+        : { employee_id: parseInt(employeeId) },
     );
     return result.rows;
   } finally {
     await conn.close();
   }
 };
-
 
 // ── 2. getLeavesByTeam ────────────────────────────────────────────────────────
 //
@@ -611,10 +616,10 @@ export const getLeavesByTeam = async (supervisorId, status = null) => {
           lr.LEAVE_ID,
           lr.EMPLOYEE_ID,
           e.EMP_NO,
-          TRIM(NVL(e.FIRST_NAME, '') || ' ' || NVL(e.LAST_NAME, ''))               AS EMPLOYEE_NAME,
+          TRIM(NVL(e.FIRST_NAME, '') || ' ' || NVL(e.LAST_NAME, ''))    AS EMPLOYEE_NAME,
           lr.LEAVE_TYPE_ID,
-          lt.CODE                                                                    AS LEAVE_TYPE_CODE,
-          lt.NAME                                                                    AS LEAVE_TYPE_NAME,
+          lt.CODE                                                         AS LEAVE_TYPE_CODE,
+          lt.NAME                                                         AS LEAVE_TYPE_NAME,
           lr.START_DATE,
           lr.END_DATE,
           lr.DAYS,
@@ -622,8 +627,11 @@ export const getLeavesByTeam = async (supervisorId, status = null) => {
           lr.REASON,
           lr.APPLIED_ON,
           lr.APPROVER_ID,
-          TRIM(NVL(approver.FIRST_NAME, '') || ' ' || NVL(approver.LAST_NAME, '')) AS APPROVER_NAME,
-          approver.EMP_NO                                                            AS APPROVER_EMP_NO,
+          COALESCE(
+            NULLIF(TRIM(NVL(approver.FIRST_NAME, '') || ' ' || NVL(approver.LAST_NAME, '')), ''),
+            au.USERNAME
+          )                                                               AS APPROVER_NAME,
+          CASE WHEN approver.PERSON_ID IS NOT NULL THEN approver.EMP_NO ELSE NULL END AS APPROVER_EMP_NO,
           lr.APPROVED_ON
        FROM HCM.HR_LEAVE_REQUEST      lr
        JOIN HCM.HR_LEAVE_TYPE         lt       ON lr.LEAVE_TYPE_ID  = lt.LEAVE_TYPE_ID
@@ -632,25 +640,18 @@ export const getLeavesByTeam = async (supervisorId, status = null) => {
                                               AND es.STATUS         = 1
        LEFT JOIN HCM.HR_EMPLOYEE      e        ON lr.EMPLOYEE_ID    = e.PERSON_ID
        LEFT JOIN HCM.HR_EMPLOYEE      approver ON lr.APPROVER_ID    = approver.PERSON_ID
+       LEFT JOIN HCM.USERS au ON lr.APPROVER_ID = au.ID
        ${hasStatusFilter ? "WHERE lr.STATUS = :status" : ""}
        ORDER BY lr.APPLIED_ON DESC`,
       hasStatusFilter
-        ? { supervisor_id: parseInt(supervisorId), status: status.toUpperCase() }
-        : { supervisor_id: parseInt(supervisorId) }
+        ? {
+            supervisor_id: parseInt(supervisorId),
+            status: status.toUpperCase(),
+          }
+        : { supervisor_id: parseInt(supervisorId) },
     );
     return result.rows;
   } finally {
     await conn.close();
   }
 };
-
-
-
-
-
-
-
-
-
-
-
