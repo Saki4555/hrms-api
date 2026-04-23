@@ -46,20 +46,17 @@ router.delete("/:userId/permissions/:permissionId", ctrl.revokePermission);
 // Role ↔ Permission management
 router.get(
   "/roles/:roleId/permissions",
-  protectRoute,
-  authorizeRoles("ADMIN"),
+  
   ctrl.getRolePermissions,
 );
 router.post(
   "/roles/:roleId/permissions",
-  protectRoute,
-  authorizeRoles("ADMIN"),
+  
   ctrl.assignPermissionToRole,
 );
 router.delete(
   "/roles/:roleId/permissions/:permissionId",
-  protectRoute,
-  authorizeRoles("ADMIN"),
+  
   ctrl.revokePermissionFromRole,
 );
 
