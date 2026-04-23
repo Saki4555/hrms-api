@@ -58,6 +58,7 @@ import reqMasterRouter from './modules/requisition/req-master.route.js';
 import reqDetailRouter from './modules/requisition/req-detail.route.js';
 // import requisitionRoutes from './modules/requisition-management/requisition.route.js';
 import requisitionRoutes from "./modules/requisition-master/requisition-master.routes.js";
+import authV2Route from "./modules/auth-v2/auth-v2.routes.js";
 
 
 import { v2 as cloudinary } from "cloudinary";
@@ -274,6 +275,9 @@ app.use("/api/attendance", attendanceRoutes);
 
 
 app.use("/api/supervisor-lite", supervisorLiteRoutes);
+
+
+app.use("/api/v2/auth", authV2Route);
 
 
 startAttendanceScheduler();

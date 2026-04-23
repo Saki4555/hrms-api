@@ -1,25 +1,30 @@
-// E:\Web_Dev\JOB\revinns-limited\hrms-api\src\middlewares\auth.middleware.js
+// src/modules/auth-v2/auth-v2.middleware.js
+// ─────────────────────────────────────────────
+// Token-only middleware.
+// Reads ONLY from: Authorization: Bearer <token>
+// Does NOT touch cookies at all.
+// ─────────────────────────────────────────────
 import jwt from "jsonwebtoken";
-import { getConnection } from "../config/db.js";
+import { getConnection } from "../../config/db.js";
 import oracledb from "oracledb";
-import { getUserEffectivePermissions } from "../modules/user-management/user-management.service.js";
+import { getUserEffectivePermissions } from "../user-management/user-management.service.js";
 
 // ─────────────────────────────────────────────
-// protectRoute  (updated: now loads permissions)
+// protectRouteV2
 // ─────────────────────────────────────────────
-export const protectRoute = async (req, res, next) => {
+export const protectRouteV2 = async (req, res, next) => {
   let connection;
   try {
-    const token =
-      req.cookies?.jwt ||
-      (req.headers.authorization?.startsWith("Bearer ")
-        ? req.headers.authorization.split(" ")[1]
-        : null);
-
-    if (!token) {
-      return res.status(401).json({ error: "Access denied. No token provided" });
+    // 1. Extract Bearer token — no cookie fallback
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({
+        error: "Access denied. Provide a Bearer token in Authorization header.",
+      });
     }
+    const token = authHeader.split(" ")[1];
 
+    // 2. Verify token
     let decoded;
     try {
       decoded = jwt.verify(token, process.env.JWT_SECRET);
@@ -30,6 +35,7 @@ export const protectRoute = async (req, res, next) => {
       return res.status(401).json({ error: "Invalid token." });
     }
 
+    // 3. DB check — user still exists and is active
     try {
       connection = await getConnection();
 
@@ -50,8 +56,7 @@ export const protectRoute = async (req, res, next) => {
         return res.status(403).json({ error: "Account is inactive or suspended." });
       }
 
-      // Load effective permissions (direct + via roles) from DB.
-      // This always reflects the current state — no stale JWT data.
+      // 4. Fresh permissions from DB (never stale)
       const permRows = await getUserEffectivePermissions(user.ID);
       const permissions = permRows.map((p) => p.PERMISSION_CODE);
 
@@ -59,8 +64,8 @@ export const protectRoute = async (req, res, next) => {
         id:          user.ID,
         username:    user.USERNAME,
         employee_id: user.EMPLOYEE_ID,
-        roles:       decoded.roles || [],   // still available for authorizeRoles()
-        permissions,                         // ← new: ["EMP_VIEW_ALL", "PAY_PROCESS_SALARY", ...]
+        roles:       decoded.roles || [],
+        permissions,
       };
     } finally {
       if (connection) await connection.close().catch(console.error);
@@ -68,15 +73,15 @@ export const protectRoute = async (req, res, next) => {
 
     next();
   } catch (error) {
-    console.error("❌ protectRoute error:", error);
+    console.error("❌ protectRouteV2 error:", error);
     return res.status(500).json({ error: "Authentication failed." });
   }
 };
 
 // ─────────────────────────────────────────────
-// authorizeRoles  (unchanged — still available)
+// authorizeRolesV2  (same logic, just renamed for clarity)
 // ─────────────────────────────────────────────
-export const authorizeRoles = (...allowedRoles) => {
+export const authorizeRolesV2 = (...allowedRoles) => {
   return (req, res, next) => {
     const userRoles = req.user?.roles || [];
     const hasRole = userRoles.some((role) =>
@@ -92,18 +97,16 @@ export const authorizeRoles = (...allowedRoles) => {
 };
 
 // ─────────────────────────────────────────────
-// authorizePermissions  ← new
+// authorizePermissionsV2
 //
-// Usage (require ALL listed permissions):
-//   router.post("/payroll", protectRoute, authorizePermissions("PAY_PROCESS_SALARY"), handler)
+// Default mode: ALL permissions required
+// Pass { mode: "ANY" } as last arg to require only one match
 //
-// Usage (require ANY one of the listed permissions):
-//   router.get("/reports", protectRoute, authorizePermissions("REP_VIEW_ORG", "REP_VIEW_PAY"), handler)
-//
-// The second argument controls the mode (default: "ALL").
+// Usage:
+//   router.post("/pay", protectRouteV2, authorizePermissionsV2("PAY_PROCESS_SALARY"), handler)
+//   router.get("/rep", protectRouteV2, authorizePermissionsV2("REP_VIEW_ORG", "REP_VIEW_PAY", { mode: "ANY" }), handler)
 // ─────────────────────────────────────────────
-export const authorizePermissions = (...requiredPerms) => {
-  // Optional last argument: { mode: "ANY" | "ALL" }
+export const authorizePermissionsV2 = (...requiredPerms) => {
   let mode = "ALL";
   let perms = requiredPerms;
 
@@ -129,7 +132,6 @@ export const authorizePermissions = (...requiredPerms) => {
         error: `Access denied. Required permissions (${mode}): [${perms.join(", ")}]`,
       });
     }
-
     next();
   };
 };
