@@ -304,6 +304,13 @@ export const seedRbacData = async () => {
         mName: "Reports", code: "REP_PAYROLL", name: "Payroll Reports",
         desc: "Generate payroll reports including salary summary, deduction summary, bonus, and tax reports. Admin and HR only."
       },
+
+ // ── 13. Inventory (1) ─────────────────────────────────────────────────
+      {
+        mName: "Inventory", code: "INVENTORY_VIEW", name: "View Inventory",
+        desc: "Access inventory list, items, item stocks and dispatch pages. Assigned manually per user."
+      },
+
     ];
 
     console.log("\n🔑 Inserting Permissions...");
@@ -340,6 +347,9 @@ export const seedRbacData = async () => {
     console.log(`\n✅ RBAC Seed Complete: ${modulesData.length} Modules, ${permissionsData.length} Permissions.`);
     console.log("\n  Dashboard:3 | Core HR:5 | Attendance:8 | Payroll:7 | Performance:3");
     console.log("  Self-Service:8 | PF:4 | Gratuity:4 | Loan:3 | Documents:4 | Comm:3 | Reports:3");
+    console.log("  ─────────────────────────────────────────────────────────────────────");
+
+     console.log("  Inventory:1");
     console.log("  ─────────────────────────────────────────────────────────────────────");
     console.log("  Total: 55 ✓");
 

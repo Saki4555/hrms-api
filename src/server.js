@@ -53,6 +53,7 @@ import itemRoutes     from './modules/item/item.route.js';
 import itemStockRoutes     from './modules/item-stock/item-stock.route.js';
 import storeRoutes     from './modules/store/store.route.js';
 import uomRoutes from "./modules/inv_uom/inv-uom.route.js";
+import invTypeRouter from './modules/inv-type/route.js';
 
 import reqMasterRouter from './modules/requisition/req-master.route.js';
 import reqDetailRouter from './modules/requisition/req-detail.route.js';
@@ -258,6 +259,9 @@ app.use("/api/item-stock",  itemStockRoutes);
 
 app.use("/api/stores", storeRoutes);
 app.use("/api/inv-uom", uomRoutes);
+
+
+app.use('/api/inv-type', invTypeRouter);
 
 
 app.use('/api/reqmaster', reqMasterRouter);
