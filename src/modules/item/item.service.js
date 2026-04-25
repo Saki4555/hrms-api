@@ -72,15 +72,38 @@ export const updateItem = async (itemId, data) => {
 };
 
 // ─── GET ALL ──────────────────────────────────────────────────────────────────
+// export const getAllItems = async ({ page = 1, limit = 20 } = {}) => {
+//   const conn = await getConnection();
+//   try {
+//     const offset = (page - 1) * limit;
+//     const sql = `
+//       SELECT * FROM (
+//         SELECT i.*, ROWNUM rn
+//         FROM ITEM i
+//         ORDER BY ITEM_ID
+//       ) WHERE rn > :offset AND rn <= :end
+//     `;
+//     const result = await conn.execute(sql, { offset, end: offset + limit });
+//     return result.rows;
+//   } finally {
+//     await conn.close();
+//   }
+// };
+
+// ─── GET ALL ──────────────────────────────────────────────────────────────────
 export const getAllItems = async ({ page = 1, limit = 20 } = {}) => {
   const conn = await getConnection();
   try {
     const offset = (page - 1) * limit;
     const sql = `
       SELECT * FROM (
-        SELECT i.*, ROWNUM rn
+        SELECT
+          i.*,
+          t.DESCRIPTIO AS TYPE_NAME,
+          ROWNUM rn
         FROM ITEM i
-        ORDER BY ITEM_ID
+        LEFT JOIN INV_TYPE t ON t.ID = i.TYPE_ID
+        ORDER BY i.ITEM_ID
       ) WHERE rn > :offset AND rn <= :end
     `;
     const result = await conn.execute(sql, { offset, end: offset + limit });
@@ -95,7 +118,12 @@ export const getItemById = async (itemId) => {
   const conn = await getConnection();
   try {
     const result = await conn.execute(
-      `SELECT * FROM ITEM WHERE ITEM_ID = :itemId`,
+      `SELECT
+         i.*,
+         t.DESCRIPTIO AS TYPE_NAME
+       FROM ITEM i
+       LEFT JOIN INV_TYPE t ON t.ID = i.TYPE_ID
+       WHERE i.ITEM_ID = :itemId`,
       { itemId }
     );
     return result.rows[0] ?? null;
@@ -103,6 +131,19 @@ export const getItemById = async (itemId) => {
     await conn.close();
   }
 };
+// ─── GET SINGLE ───────────────────────────────────────────────────────────────
+// export const getItemById = async (itemId) => {
+//   const conn = await getConnection();
+//   try {
+//     const result = await conn.execute(
+//       `SELECT * FROM ITEM WHERE ITEM_ID = :itemId`,
+//       { itemId }
+//     );
+//     return result.rows[0] ?? null;
+//   } finally {
+//     await conn.close();
+//   }
+// };
 
 // ─── DELETE ───────────────────────────────────────────────────────────────────
 export const deleteItem = async (itemId) => {
