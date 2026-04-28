@@ -48,17 +48,10 @@ import { startAttendanceScheduler } from "./modules/attendacne/attendance.schedu
 import supervisorRoutes     from "./modules/employee-supervisor/employee-supervisor.routes.js";
 import notificationRoutes   from "./modules/employee-notification/employee-notification.routes.js";
 
-import inventoriesRoutes     from './modules/inventory/inventory.route.js';
-import itemRoutes     from './modules/item/item.route.js';
-import itemStockRoutes     from './modules/item-stock/item-stock.route.js';
-import storeRoutes     from './modules/store/store.route.js';
-import uomRoutes from "./modules/inv_uom/inv-uom.route.js";
-import invTypeRouter from './modules/inv-type/route.js';
 
-import reqMasterRouter from './modules/requisition/req-master.route.js';
-import reqDetailRouter from './modules/requisition/req-detail.route.js';
-// import requisitionRoutes from './modules/requisition-management/requisition.route.js';
-import requisitionRoutes from "./modules/requisition-master/requisition-master.routes.js";
+
+
+
 import authV2Route from "./modules/auth-v2/auth-v2.routes.js";
 
 
@@ -253,21 +246,13 @@ app.use("/api/users", userManagementRoutes);
 app.use("/api/supervisors",    supervisorRoutes);
 app.use("/api/notifications",  notificationRoutes);
 
-app.use("/api/inventory",  inventoriesRoutes);
-app.use("/api/item",  itemRoutes);
-app.use("/api/item-stock",  itemStockRoutes);
-
-app.use("/api/stores", storeRoutes);
-app.use("/api/inv-uom", uomRoutes);
 
 
-app.use('/api/inv-type', invTypeRouter);
 
 
-app.use('/api/reqmaster', reqMasterRouter);
-app.use('/api/reqdetail', reqDetailRouter);
-// app.use('/api/requisitions', requisitionRoutes);
-app.use("/api/requisitions", requisitionRoutes);
+
+
+
 
 
 app.use("/api/attendance", attendanceRoutes);
