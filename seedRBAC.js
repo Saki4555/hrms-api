@@ -305,11 +305,7 @@ export const seedRbacData = async () => {
         desc: "Generate payroll reports including salary summary, deduction summary, bonus, and tax reports. Admin and HR only."
       },
 
- // ── 13. Inventory (1) ─────────────────────────────────────────────────
-      {
-        mName: "Inventory", code: "INVENTORY_VIEW", name: "View Inventory",
-        desc: "Access inventory list, items, item stocks and dispatch pages. Assigned manually per user."
-      },
+
 
     ];
 
@@ -349,8 +345,7 @@ export const seedRbacData = async () => {
     console.log("  Self-Service:8 | PF:4 | Gratuity:4 | Loan:3 | Documents:4 | Comm:3 | Reports:3");
     console.log("  ─────────────────────────────────────────────────────────────────────");
 
-     console.log("  Inventory:1");
-    console.log("  ─────────────────────────────────────────────────────────────────────");
+    
     console.log("  Total: 55 ✓");
 
   } catch (err) {
