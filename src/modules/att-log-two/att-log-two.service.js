@@ -1,11 +1,11 @@
-// src\services\att-log.service.js
-import { getConnection } from "../config/db.js";
+// src\modules\att-log-two\att-log-two.service.js
+import { getConnection } from "../../config/db.js";
 
 /* INSERT */
 export const createAttLog = async (data) => {
   const conn = await getConnection();
 
-  const sql = `INSERT INTO ATT_LOG
+  const sql = `INSERT INTO ATT_LOG_TWO
     (AM_EMPNO, AM_TIME_IN_OUT, AM_TYPE_IN_OUT, AM_MAC_ID,
      AM_LAT_IN_OUT, AM_LON_IN_OUT, T_ZONE, LOCATION_ID, TEAM_LEAD_ID)
     VALUES (:1, :2, :3, :4, :5, :6, :7, :8, :9)`;
@@ -46,7 +46,7 @@ export const getAllAttLogs = async (page = 1, limit = 10) => {
 
     const result = await conn.execute(
       `SELECT *
-       FROM ATT_LOG
+       FROM ATT_LOG_TWO
        ORDER BY AM_TIME_IN_OUT DESC
        OFFSET :offset ROWS FETCH NEXT :limit ROWS ONLY`,
       { offset, limit },
@@ -70,7 +70,7 @@ export const getSingleAttLog = async (empno) => {
   try {
 
     const result = await conn.execute(
-      `SELECT * FROM ATT_LOG WHERE AM_EMPNO = :empno`,
+      `SELECT * FROM ATT_LOG_TWO WHERE AM_EMPNO = :empno`,
       { empno },
       { outFormat: 4002 }
     );
@@ -91,7 +91,7 @@ export const updateAttLog = async (empno, data) => {
 
   try {
 
-    const sql = `UPDATE HCM.ATT_LOG
+    const sql = `UPDATE HCM.ATT_LOG_TWO
       SET AM_TIME_IN_OUT = :AM_TIME_IN_OUT,
           AM_TYPE_IN_OUT = :AM_TYPE_IN_OUT,
           AM_MAC_ID = :AM_MAC_ID
@@ -114,7 +114,7 @@ export const deleteAttLog = async (empno) => {
   try {
 
     await conn.execute(
-      `DELETE FROM HCM.ATT_LOG WHERE AM_EMPNO = :empno`,
+      `DELETE FROM HCM.ATT_LOG_TWO WHERE AM_EMPNO = :empno`,
       { empno },
       { autoCommit: true }
     );

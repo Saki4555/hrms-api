@@ -4,6 +4,10 @@ import {
   getAttendanceForExport,
   getAttendanceSummary,
   processAttendance,
+  getSupervisorTeamAttendance,  
+  getTeamAttendanceStats,       
+  getMyAttendanceList,          
+  getMyAttendanceSummary,       
 } from "./attendance.service.js";
 import {
   generateCSV,
@@ -187,6 +191,86 @@ export const exportPDF = async (req, res) => {
     res.send(buffer);
   } catch (err) {
     console.error("[Attendance] exportPDF error:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+
+
+// ── Supervisor: team attendance list ───────────────────────────────────────
+// GET /api/attendance/team/:supervisorId
+export const getTeamAttendance = async (req, res) => {
+  try {
+    const { supervisorId } = req.params;
+    const result = await getSupervisorTeamAttendance(supervisorId, {
+      page:      req.query.page,
+      limit:     req.query.limit,
+      date:      req.query.date,
+      fromDate:  req.query.fromDate,
+      toDate:    req.query.toDate,
+      status:    req.query.status,
+      sortBy:    req.query.sortBy,
+      sortOrder: req.query.sortOrder,
+    });
+    res.json({ success: true, ...result });
+  } catch (err) {
+    console.error("[Attendance] getTeamAttendance error:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// ── Supervisor: team attendance stats ──────────────────────────────────────
+// GET /api/attendance/team/:supervisorId/stats
+export const getTeamStats = async (req, res) => {
+  try {
+    const { supervisorId } = req.params;
+    const data = await getTeamAttendanceStats(supervisorId, {
+      date:     req.query.date,
+      fromDate: req.query.fromDate,
+      toDate:   req.query.toDate,
+    });
+    res.json({ success: true, data });
+  } catch (err) {
+    console.error("[Attendance] getTeamStats error:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// ── ESS: my attendance list ────────────────────────────────────────────────
+// GET /api/attendance/my/:employeeId
+export const getMyAttendance = async (req, res) => {
+  try {
+    const { employeeId } = req.params;
+    const result = await getMyAttendanceList(employeeId, {
+      page:      req.query.page,
+      limit:     req.query.limit,
+      date:      req.query.date,
+      fromDate:  req.query.fromDate,
+      toDate:    req.query.toDate,
+      status:    req.query.status,
+      sortBy:    req.query.sortBy,
+      sortOrder: req.query.sortOrder,
+    });
+    res.json({ success: true, ...result });
+  } catch (err) {
+    console.error("[Attendance] getMyAttendance error:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// ── ESS: my attendance summary ─────────────────────────────────────────────
+// GET /api/attendance/my/:employeeId/summary
+export const getMyAttendanceSummaryHandler = async (req, res) => {
+  try {
+    const { employeeId } = req.params;
+    const data = await getMyAttendanceSummary(employeeId, {
+      fromDate: req.query.fromDate,
+      toDate:   req.query.toDate,
+    });
+    
+    res.json({ success: true, data });
+  } catch (err) {
+    console.error("[Attendance] getMyAttendanceSummary error:", err.message);
     res.status(500).json({ error: err.message });
   }
 };
