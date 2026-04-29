@@ -1,7 +1,7 @@
 // src\controllers\att-log.controller.js
 import { success } from "zod";
-import * as service from "../services/att-log.service.js";
-import { verifyToken } from "../utils/auth.js";
+import * as service from "./att-log-two.service.js";
+import { verifyToken } from "../../utils/auth.js";
 
 
 export const create = async (req, res) => {

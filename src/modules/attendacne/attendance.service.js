@@ -28,24 +28,23 @@
 // TODO: approveCorrectionRequest — Admin/HR reviews and applies the correction
 // TODO: getCorrectionRequests    — list pending correction requests for HR/Admin dashboard
 
-
-
 import { getConnection } from "../../config/db.js";
 import oracledb from "oracledb";
+import { format, startOfMonth, endOfMonth } from "date-fns";
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  CONSTANTS
 // ─────────────────────────────────────────────────────────────────────────────
 
 const STATUS = {
-  PRESENT:      "PRESENT",
-  LATE:         "LATE",
-  EARLY_LEAVE:  "EARLY_LEAVE",
-  ABSENT:       "ABSENT",
-  UNSCHEDULED:  "UNSCHEDULED", // punched in but no shift assigned — cannot classify
-  HOLIDAY:      "HOLIDAY",     // date is a public/company holiday for the employee's location
-  WEEKLY_OFF:   "WEEKLY_OFF",  // date falls on the shift's configured weekly rest day(s)
-  ON_LEAVE:     "ON_LEAVE",    // approved leave record covers this date
+  PRESENT: "PRESENT",
+  LATE: "LATE",
+  EARLY_LEAVE: "EARLY_LEAVE",
+  ABSENT: "ABSENT",
+  UNSCHEDULED: "UNSCHEDULED", // punched in but no shift assigned — cannot classify
+  HOLIDAY: "HOLIDAY", // date is a public/company holiday for the employee's location
+  WEEKLY_OFF: "WEEKLY_OFF", // date falls on the shift's configured weekly rest day(s)
+  ON_LEAVE: "ON_LEAVE", // approved leave record covers this date
 };
 
 const ISO_TZ_FMT = `'YYYY-MM-DD"T"HH24:MI:SSTZH:TZM'`;
@@ -101,13 +100,13 @@ const calculateStatusAndHours = (inTime, outTime, shift) => {
   }
 
   // ── SHIFT-AWARE LOGIC ───────────────────────────────────────────────────────
-  const actualInMinutes  = toMinutes(extractTime(inTime));
+  const actualInMinutes = toMinutes(extractTime(inTime));
   const actualOutMinutes = outTime ? toMinutes(extractTime(outTime)) : null;
 
   const shiftStartMinutes = toMinutes(shift.START_TIME);
-  const shiftEndMinutes   = toMinutes(shift.END_TIME);
-  const graceIn           = shift.GRACE_IN_MINUTES  ?? 0;
-  const graceOut          = shift.GRACE_OUT_MINUTES ?? 0;
+  const shiftEndMinutes = toMinutes(shift.END_TIME);
+  const graceIn = shift.GRACE_IN_MINUTES ?? 0;
+  const graceOut = shift.GRACE_OUT_MINUTES ?? 0;
 
   // Overnight: explicitly flagged OR end < start (e.g. 22:00–06:00)
   const isOvernightShift =
@@ -115,7 +114,7 @@ const calculateStatusAndHours = (inTime, outTime, shift) => {
 
   const isLate = actualInMinutes > shiftStartMinutes + graceIn;
 
-  let isEarlyLeave    = false;
+  let isEarlyLeave = false;
   let overtimeMinutes = 0;
 
   if (actualOutMinutes !== null) {
@@ -123,18 +122,18 @@ const calculateStatusAndHours = (inTime, outTime, shift) => {
       if (actualOutMinutes >= shiftStartMinutes) {
         isEarlyLeave = true; // left before crossing midnight
       } else {
-        isEarlyLeave    = actualOutMinutes < shiftEndMinutes - graceOut;
+        isEarlyLeave = actualOutMinutes < shiftEndMinutes - graceOut;
         overtimeMinutes = Math.max(0, actualOutMinutes - shiftEndMinutes);
       }
     } else {
-      isEarlyLeave    = actualOutMinutes < shiftEndMinutes - graceOut;
+      isEarlyLeave = actualOutMinutes < shiftEndMinutes - graceOut;
       overtimeMinutes = Math.max(0, actualOutMinutes - shiftEndMinutes);
     }
   }
 
   // Late takes priority over early leave when both are true (edge case)
   let status = STATUS.PRESENT;
-  if (isLate)            status = STATUS.LATE;
+  if (isLate) status = STATUS.LATE;
   else if (isEarlyLeave) status = STATUS.EARLY_LEAVE;
 
   return { status, workMinutes, overtimeMinutes };
@@ -163,8 +162,8 @@ export const processAttendance = async (fromDate, toDate) => {
     // ── STEP 1: MERGE raw punches → HR_ATTENDANCE ────────────────────────────
     //
     // SHIFT_ID comes from HR_EMP_SHIFT (effective-dated).
-    // Employees with no ATT_LOG punch on a working day will have no row here;
-    // those ABSENT rows must be seeded separately (see insertAbsentRecords).
+    // MIN(AM_MAC_ID) collapses multiple devices per employee per day
+    // to avoid ORA-30926 (unstable row set in MERGE).
 
     await conn.execute(
       `
@@ -215,6 +214,62 @@ export const processAttendance = async (fromDate, toDate) => {
         VALUES (
           source.PERSON_ID, source.ATT_DATE, source.FIRST_IN, source.LAST_OUT,
           source.SHIFT_ID, source.DEVICE_ID, 'PENDING', 'Y',
+          0, 0,
+          'SCHEDULER', SYSTIMESTAMP
+        )
+      `,
+      { FROM_DATE: fromDate, TO_DATE: toDate },
+    );
+
+    // ── STEP 1.5: Seed ABSENT rows for employees with no punch ───────────────
+    //
+    // For every active employee who has a shift assignment covering the date
+    // but zero ATT_LOG records on that date → insert HR_ATTENDANCE with
+    // STATUS = 'PENDING' (IN_TIME = NULL). Step 3 will classify as ABSENT.
+    // Already-existing rows (from Step 1) are skipped via WHEN NOT MATCHED.
+
+    await conn.execute(
+      `
+      MERGE INTO HCM.HR_ATTENDANCE target
+      USING (
+        SELECT DISTINCT
+          e.PERSON_ID,
+          cal.DT       AS ATT_DATE,
+          es.SHIFT_ID
+        FROM (
+          SELECT TO_DATE(:FROM_DATE,'YYYY-MM-DD') + LEVEL - 1 AS DT
+            FROM DUAL
+          CONNECT BY LEVEL <=
+            TO_DATE(:TO_DATE,'YYYY-MM-DD') - TO_DATE(:FROM_DATE,'YYYY-MM-DD') + 1
+        ) cal
+        JOIN HCM.HR_EMP_SHIFT es
+          ON cal.DT
+             BETWEEN NVL(es.EFFECTIVE_START_DATE, TO_DATE('1900-01-01','YYYY-MM-DD'))
+                 AND NVL(es.EFFECTIVE_END_DATE,   TO_DATE('9999-12-31','YYYY-MM-DD'))
+         AND es.STATUS = 1
+        JOIN HCM.HR_EMPLOYEE e ON es.EMP_NO = e.PERSON_ID
+        -- Only employees with zero punches on that date
+        WHERE NOT EXISTS (
+          SELECT 1
+            FROM HCM.ATT_LOG l
+           WHERE TO_CHAR(l.AM_EMPNO) = e.EMP_NO
+             AND TRUNC(TO_TIMESTAMP_TZ(l.AM_TIME_IN_OUT, ${ISO_TZ_FMT})) = cal.DT
+        )
+      ) source
+      ON (
+            target.EMPLOYEE_ID     = source.PERSON_ID
+        AND target.ATTENDANCE_DATE = source.ATT_DATE
+      )
+      WHEN NOT MATCHED THEN
+        INSERT (
+          EMPLOYEE_ID, ATTENDANCE_DATE, IN_TIME, OUT_TIME,
+          SHIFT_ID, STATUS, PAYROLL_FLAG,
+          WORK_MINUTES, OVERTIME_MINUTES,
+          CREATED_BY, CREATED_DATE
+        )
+        VALUES (
+          source.PERSON_ID, source.ATT_DATE, NULL, NULL,
+          source.SHIFT_ID, 'PENDING', 'Y',
           0, 0,
           'SCHEDULER', SYSTIMESTAMP
         )
@@ -282,6 +337,12 @@ export const processAttendance = async (fromDate, toDate) => {
     );
 
     // ── STEP 3: Classify each PENDING row (5-step priority) ──────────────────
+    //
+    //   1. HOLIDAY    — public holiday for employee's location
+    //   2. WEEKLY_OFF — date matches shift's weekly rest day(s)
+    //   3. ON_LEAVE   — approved leave covers this date
+    //   4. ABSENT     — no IN_TIME punch (IN_TIME = NULL)
+    //   5. LATE / EARLY_LEAVE / PRESENT — calculated from punch vs shift
 
     for (const row of pendingResult.rows) {
       let status          = null;
@@ -374,26 +435,26 @@ export const processAttendance = async (fromDate, toDate) => {
 
 const ALLOWED_SORT_COLUMNS = {
   ATTENDANCE_DATE: "att.ATTENDANCE_DATE",
-  FIRST_NAME:      "e.FIRST_NAME",
+  FIRST_NAME: "e.FIRST_NAME",
 };
 
 export const getAttendanceList = async ({
-  page       = 1,
-  limit      = 20,
-  date       = "",
-  fromDate   = "",
-  toDate     = "",
+  page = 1,
+  limit = 20,
+  date = "",
+  fromDate = "",
+  toDate = "",
   employeeId = "",
-  companyId  = "",
-  orgId      = "",
-  status     = "",
-  sortBy     = "ATTENDANCE_DATE",
-  sortOrder  = "DESC",
+  companyId = "",
+  orgId = "",
+  status = "",
+  sortBy = "ATTENDANCE_DATE",
+  sortOrder = "DESC",
 } = {}) => {
   const conn = await getConnection();
 
-  const pageNum   = Math.max(1, parseInt(page,  10) || 1);
-  const limitNum  = Math.max(1, parseInt(limit, 10) || 20);
+  const pageNum = Math.max(1, parseInt(page, 10) || 1);
+  const limitNum = Math.max(1, parseInt(limit, 10) || 20);
   const rownumMin = (pageNum - 1) * limitNum + 1;
   const rownumMax = pageNum * limitNum;
 
@@ -404,7 +465,9 @@ export const getAttendanceList = async ({
   const bindParams = {};
 
   if (date && date.trim()) {
-    conditions.push(`TRUNC(att.ATTENDANCE_DATE) = TO_DATE(:ATT_DATE, 'YYYY-MM-DD')`);
+    conditions.push(
+      `TRUNC(att.ATTENDANCE_DATE) = TO_DATE(:ATT_DATE, 'YYYY-MM-DD')`,
+    );
     bindParams.ATT_DATE = date.trim();
   }
 
@@ -413,7 +476,7 @@ export const getAttendanceList = async ({
       `att.ATTENDANCE_DATE BETWEEN TO_DATE(:FROM_DATE,'YYYY-MM-DD') AND TO_DATE(:TO_DATE,'YYYY-MM-DD')`,
     );
     bindParams.FROM_DATE = fromDate;
-    bindParams.TO_DATE   = toDate;
+    bindParams.TO_DATE = toDate;
   }
 
   if (employeeId && employeeId !== "") {
@@ -511,8 +574,8 @@ export const getAttendanceList = async ({
       data: result.rows,
       pagination: {
         total,
-        page:       pageNum,
-        limit:      limitNum,
+        page: pageNum,
+        limit: limitNum,
         totalPages: Math.ceil(total / limitNum),
       },
     };
@@ -556,7 +619,7 @@ export const getAttendanceDetail = async (employeeId, date) => {
       ORDER BY TO_TIMESTAMP_TZ(L.AM_TIME_IN_OUT, ${ISO_TZ_FMT}) ASC
       `,
       {
-        EMP_NO:   String(employeeId),
+        EMP_NO: String(employeeId),
         ATT_DATE: date,
       },
       { outFormat: oracledb.OUT_FORMAT_OBJECT },
@@ -574,13 +637,13 @@ export const getAttendanceDetail = async (employeeId, date) => {
 
 export const getAttendanceForExport = async (filters = {}) => {
   const {
-    date       = "",
-    fromDate   = "",
-    toDate     = "",
+    date = "",
+    fromDate = "",
+    toDate = "",
     employeeId = "",
-    companyId  = "",
-    orgId      = "",
-    status     = "",
+    companyId = "",
+    orgId = "",
+    status = "",
   } = filters;
 
   const conn = await getConnection();
@@ -589,7 +652,9 @@ export const getAttendanceForExport = async (filters = {}) => {
   const bindParams = {};
 
   if (date && date.trim()) {
-    conditions.push(`TRUNC(att.ATTENDANCE_DATE) = TO_DATE(:ATT_DATE, 'YYYY-MM-DD')`);
+    conditions.push(
+      `TRUNC(att.ATTENDANCE_DATE) = TO_DATE(:ATT_DATE, 'YYYY-MM-DD')`,
+    );
     bindParams.ATT_DATE = date.trim();
   }
 
@@ -598,7 +663,7 @@ export const getAttendanceForExport = async (filters = {}) => {
       `att.ATTENDANCE_DATE BETWEEN TO_DATE(:FROM_DATE,'YYYY-MM-DD') AND TO_DATE(:TO_DATE,'YYYY-MM-DD')`,
     );
     bindParams.FROM_DATE = fromDate;
-    bindParams.TO_DATE   = toDate;
+    bindParams.TO_DATE = toDate;
   }
 
   if (employeeId && employeeId !== "") {
@@ -675,14 +740,16 @@ export const getAttendanceSummary = async ({ date, fromDate, toDate }) => {
     const bindParams = {};
 
     if (date && date.trim()) {
-      conditions.push(`TRUNC(att.ATTENDANCE_DATE) = TO_DATE(:ATT_DATE, 'YYYY-MM-DD')`);
+      conditions.push(
+        `TRUNC(att.ATTENDANCE_DATE) = TO_DATE(:ATT_DATE, 'YYYY-MM-DD')`,
+      );
       bindParams.ATT_DATE = date.trim();
     } else if (fromDate && toDate) {
       conditions.push(
         `att.ATTENDANCE_DATE BETWEEN TO_DATE(:FROM_DATE,'YYYY-MM-DD') AND TO_DATE(:TO_DATE,'YYYY-MM-DD')`,
       );
       bindParams.FROM_DATE = fromDate;
-      bindParams.TO_DATE   = toDate;
+      bindParams.TO_DATE = toDate;
     }
 
     const whereClause =
@@ -725,7 +792,11 @@ export const getAttendanceSummary = async ({ date, fromDate, toDate }) => {
 //  Roles: Admin, HR only
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const reprocessAttendanceForEmployee = async (employeeId, fromDate, toDate) => {
+export const reprocessAttendanceForEmployee = async (
+  employeeId,
+  fromDate,
+  toDate,
+) => {
   const conn = await getConnection();
   try {
     // Reset rows to PENDING and re-stamp the correct SHIFT_ID from HR_EMP_SHIFT
@@ -757,10 +828,412 @@ export const reprocessAttendanceForEmployee = async (employeeId, fromDate, toDat
 
     // Re-run the full 5-step processor — picks up PENDING rows
     return await processAttendance(fromDate, toDate);
-
   } catch (err) {
     await conn.rollback();
     throw err;
+  } finally {
+    await conn.close();
+  }
+};
+
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  SUPERVISOR — TEAM ATTENDANCE LIST
+//  Returns paginated attendance records for direct reports of a supervisor.
+//  Same shape as getAttendanceList — just scoped to the supervisor's team
+//  via HR_EMPLOYEE_SUPERVISOR.
+//
+//  GET /api/attendance/team/:supervisorId
+// ─────────────────────────────────────────────────────────────────────────────
+
+const ALLOWED_SORT_COLUMNS_TEAM = {
+  ATTENDANCE_DATE: "att.ATTENDANCE_DATE",
+  FIRST_NAME:      "e.FIRST_NAME",
+};
+
+export const getSupervisorTeamAttendance = async (supervisorId, {
+  page      = 1,
+  limit     = 20,
+  date      = "",
+  fromDate  = "",
+  toDate    = "",
+  status    = "",
+  sortBy    = "ATTENDANCE_DATE",
+  sortOrder = "DESC",
+} = {}) => {
+  const conn = await getConnection();
+
+  const pageNum   = Math.max(1, parseInt(page,  10) || 1);
+  const limitNum  = Math.max(1, parseInt(limit, 10) || 20);
+  const rownumMin = (pageNum - 1) * limitNum + 1;
+  const rownumMax = pageNum * limitNum;
+
+  const orderCol = ALLOWED_SORT_COLUMNS_TEAM[sortBy] ?? "att.ATTENDANCE_DATE";
+  const orderDir = sortOrder === "ASC" ? "ASC" : "DESC";
+
+  const conditions = [
+    `es.SUPERVISOR_ID = :SUPERVISOR_ID`,
+    `es.STATUS        = 1`,
+  ];
+  const bindParams = { SUPERVISOR_ID: parseInt(supervisorId, 10) };
+
+  if (date && date.trim()) {
+    conditions.push(`TRUNC(att.ATTENDANCE_DATE) = TO_DATE(:ATT_DATE,'YYYY-MM-DD')`);
+    bindParams.ATT_DATE = date.trim();
+  } else if (fromDate && toDate) {
+    conditions.push(
+      `att.ATTENDANCE_DATE BETWEEN TO_DATE(:FROM_DATE,'YYYY-MM-DD') AND TO_DATE(:TO_DATE,'YYYY-MM-DD')`,
+    );
+    bindParams.FROM_DATE = fromDate;
+    bindParams.TO_DATE   = toDate;
+  }
+
+  if (status && status.trim()) {
+    conditions.push(`att.STATUS = :STATUS`);
+    bindParams.STATUS = status.trim().toUpperCase();
+  }
+
+  const whereClause = `WHERE ${conditions.join("\n      AND ")}`;
+
+  try {
+    const countResult = await conn.execute(
+      `
+      SELECT COUNT(*) AS TOTAL
+        FROM HCM.HR_ATTENDANCE              att
+        JOIN HCM.HR_EMPLOYEE                e   ON att.EMPLOYEE_ID  = e.PERSON_ID
+        JOIN HCM.HR_EMPLOYEE_SUPERVISOR     es  ON e.PERSON_ID      = es.PERSON_ID
+        LEFT JOIN HCM.HR_EMP_ASSIGNMENT     a   ON e.PERSON_ID      = a.PERSON_ID AND a.STATUS = 1
+        LEFT JOIN HCM.HR_COMPANY            c   ON a.COMPANY_ID     = c.COMPANY_ID
+        LEFT JOIN HCM.HR_SHIFT              s   ON att.SHIFT_ID     = s.SHIFT_ID
+        ${whereClause}
+      `,
+      bindParams,
+      { outFormat: oracledb.OUT_FORMAT_OBJECT },
+    );
+
+    const total = countResult.rows[0].TOTAL;
+
+    const result = await conn.execute(
+      `
+      SELECT * FROM (
+        SELECT ROWNUM AS RN, sq.* FROM (
+
+          SELECT
+            att.ATTENDANCE_ID,
+            att.EMPLOYEE_ID,
+            att.ATTENDANCE_DATE,
+            att.IN_TIME,
+            att.OUT_TIME,
+            att.STATUS,
+            att.SHIFT_ID,
+            att.DEVICE_ID,
+            att.PAYROLL_FLAG,
+            att.WORK_MINUTES,
+            att.OVERTIME_MINUTES,
+            ROUND(att.WORK_MINUTES     / 60, 2) AS WORK_HOURS,
+            ROUND(att.OVERTIME_MINUTES / 60, 2) AS OVERTIME_HOURS,
+            att.CREATED_DATE,
+            att.UPDATED_DATE,
+            e.EMP_NO,
+            e.TITLE,
+            e.FIRST_NAME,
+            e.LAST_NAME,
+            e.GENDER,
+            e.JOIN_DATE,
+            s.CODE       AS SHIFT_CODE,
+            s.NAME       AS SHIFT_NAME,
+            s.START_TIME AS SHIFT_START,
+            s.END_TIME   AS SHIFT_END,
+            s.GRACE_IN_MINUTES,
+            s.GRACE_OUT_MINUTES,
+            c.COMPANY_NAME
+
+          FROM HCM.HR_ATTENDANCE              att
+          JOIN HCM.HR_EMPLOYEE                e   ON att.EMPLOYEE_ID  = e.PERSON_ID
+          JOIN HCM.HR_EMPLOYEE_SUPERVISOR     es  ON e.PERSON_ID      = es.PERSON_ID
+          LEFT JOIN HCM.HR_EMP_ASSIGNMENT     a   ON e.PERSON_ID      = a.PERSON_ID AND a.STATUS = 1
+          LEFT JOIN HCM.HR_COMPANY            c   ON a.COMPANY_ID     = c.COMPANY_ID
+          LEFT JOIN HCM.HR_SHIFT              s   ON att.SHIFT_ID     = s.SHIFT_ID
+          ${whereClause}
+          ORDER BY ${orderCol} ${orderDir}
+
+        ) sq WHERE ROWNUM <= ${rownumMax}
+      ) WHERE RN >= ${rownumMin}
+      `,
+      bindParams,
+      { outFormat: oracledb.OUT_FORMAT_OBJECT },
+    );
+
+    return {
+      data: result.rows,
+      pagination: {
+        total,
+        page:       pageNum,
+        limit:      limitNum,
+        totalPages: Math.ceil(total / limitNum),
+      },
+    };
+  } finally {
+    await conn.close();
+  }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  SUPERVISOR — TEAM ATTENDANCE STATS
+//  Quick count aggregation for dashboard widgets.
+//  Returns: present, late, absent, early leave, on leave, holiday, weekly off
+//  for the supervisor's direct reports on a given date / date range.
+//
+//  GET /api/attendance/team/:supervisorId/stats
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const getTeamAttendanceStats = async (supervisorId, {
+  date     = "",
+  fromDate = "",
+  toDate   = "",
+} = {}) => {
+  const conn = await getConnection();
+
+  const conditions = [
+    `es.SUPERVISOR_ID = :SUPERVISOR_ID`,
+    `es.STATUS        = 1`,
+  ];
+  const bindParams = { SUPERVISOR_ID: parseInt(supervisorId, 10) };
+
+  if (date && date.trim()) {
+    conditions.push(`TRUNC(att.ATTENDANCE_DATE) = TO_DATE(:ATT_DATE,'YYYY-MM-DD')`);
+    bindParams.ATT_DATE = date.trim();
+  } else if (fromDate && toDate) {
+    conditions.push(
+      `att.ATTENDANCE_DATE BETWEEN TO_DATE(:FROM_DATE,'YYYY-MM-DD') AND TO_DATE(:TO_DATE,'YYYY-MM-DD')`,
+    );
+    bindParams.FROM_DATE = fromDate;
+    bindParams.TO_DATE   = toDate;
+  }
+
+  const whereClause = `WHERE ${conditions.join("\n      AND ")}`;
+
+  try {
+    const result = await conn.execute(
+      `
+      SELECT
+        COUNT(*)                                                         AS TOTAL,
+        SUM(CASE WHEN att.STATUS = 'PRESENT'     THEN 1 ELSE 0 END)   AS PRESENT,
+        SUM(CASE WHEN att.STATUS = 'LATE'        THEN 1 ELSE 0 END)   AS LATE,
+        SUM(CASE WHEN att.STATUS = 'EARLY_LEAVE' THEN 1 ELSE 0 END)   AS EARLY_LEAVE,
+        SUM(CASE WHEN att.STATUS = 'ABSENT'      THEN 1 ELSE 0 END)   AS ABSENT,
+        SUM(CASE WHEN att.STATUS = 'ON_LEAVE'    THEN 1 ELSE 0 END)   AS ON_LEAVE,
+        SUM(CASE WHEN att.STATUS = 'HOLIDAY'     THEN 1 ELSE 0 END)   AS HOLIDAY,
+        SUM(CASE WHEN att.STATUS = 'WEEKLY_OFF'  THEN 1 ELSE 0 END)   AS WEEKLY_OFF,
+        SUM(CASE WHEN att.STATUS = 'UNSCHEDULED' THEN 1 ELSE 0 END)   AS UNSCHEDULED,
+        ROUND(SUM(NVL(att.WORK_MINUTES,     0)) / 60, 2)              AS TOTAL_WORK_HOURS,
+        ROUND(SUM(NVL(att.OVERTIME_MINUTES, 0)) / 60, 2)              AS TOTAL_OVERTIME_HOURS
+      FROM HCM.HR_ATTENDANCE          att
+      JOIN HCM.HR_EMPLOYEE            e   ON att.EMPLOYEE_ID = e.PERSON_ID
+      JOIN HCM.HR_EMPLOYEE_SUPERVISOR es  ON e.PERSON_ID     = es.PERSON_ID
+      ${whereClause}
+      `,
+      bindParams,
+      { outFormat: oracledb.OUT_FORMAT_OBJECT },
+    );
+
+    return result.rows[0];
+  } finally {
+    await conn.close();
+  }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  ESS — MY ATTENDANCE LIST
+//  Employee's own paginated attendance history.
+//  Hard-filtered by employeeId — no cross-employee data possible.
+//
+//  GET /api/attendance/my/:employeeId
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const getMyAttendanceList = async (employeeId, {
+  page      = 1,
+  limit     = 20,
+  date      = "",
+  fromDate  = "",
+  toDate    = "",
+  status    = "",
+  sortBy    = "ATTENDANCE_DATE",
+  sortOrder = "DESC",
+} = {}) => {
+  const conn = await getConnection();
+
+  const pageNum   = Math.max(1, parseInt(page,  10) || 1);
+  const limitNum  = Math.max(1, parseInt(limit, 10) || 20);
+  const rownumMin = (pageNum - 1) * limitNum + 1;
+  const rownumMax = pageNum * limitNum;
+
+  const orderCol = ALLOWED_SORT_COLUMNS[sortBy] ?? "att.ATTENDANCE_DATE";
+  const orderDir = sortOrder === "ASC" ? "ASC" : "DESC";
+
+  const conditions = [`att.EMPLOYEE_ID = :EMPLOYEE_ID`];
+  const bindParams = { EMPLOYEE_ID: parseInt(employeeId, 10) };
+
+  if (date && date.trim()) {
+    conditions.push(`TRUNC(att.ATTENDANCE_DATE) = TO_DATE(:ATT_DATE,'YYYY-MM-DD')`);
+    bindParams.ATT_DATE = date.trim();
+  } else if (fromDate && toDate) {
+    conditions.push(
+      `att.ATTENDANCE_DATE BETWEEN TO_DATE(:FROM_DATE,'YYYY-MM-DD') AND TO_DATE(:TO_DATE,'YYYY-MM-DD')`,
+    );
+    bindParams.FROM_DATE = fromDate;
+    bindParams.TO_DATE   = toDate;
+  }
+
+  if (status && status.trim()) {
+    conditions.push(`att.STATUS = :STATUS`);
+    bindParams.STATUS = status.trim().toUpperCase();
+  }
+
+  const whereClause = `WHERE ${conditions.join("\n      AND ")}`;
+
+  try {
+    const countResult = await conn.execute(
+      `
+      SELECT COUNT(*) AS TOTAL
+        FROM HCM.HR_ATTENDANCE         att
+        JOIN HCM.HR_EMPLOYEE           e  ON att.EMPLOYEE_ID = e.PERSON_ID
+        LEFT JOIN HCM.HR_EMP_ASSIGNMENT a  ON e.PERSON_ID    = a.PERSON_ID AND a.STATUS = 1
+        LEFT JOIN HCM.HR_COMPANY       c  ON a.COMPANY_ID    = c.COMPANY_ID
+        LEFT JOIN HCM.HR_SHIFT         s  ON att.SHIFT_ID    = s.SHIFT_ID
+        ${whereClause}
+      `,
+      bindParams,
+      { outFormat: oracledb.OUT_FORMAT_OBJECT },
+    );
+
+    const total = countResult.rows[0].TOTAL;
+
+    const result = await conn.execute(
+      `
+      SELECT * FROM (
+        SELECT ROWNUM AS RN, sq.* FROM (
+
+          SELECT
+            att.ATTENDANCE_ID,
+            att.ATTENDANCE_DATE,
+            att.IN_TIME,
+            att.OUT_TIME,
+            att.STATUS,
+            att.SHIFT_ID,
+            att.DEVICE_ID,
+            att.PAYROLL_FLAG,
+            att.WORK_MINUTES,
+            att.OVERTIME_MINUTES,
+            ROUND(att.WORK_MINUTES     / 60, 2) AS WORK_HOURS,
+            ROUND(att.OVERTIME_MINUTES / 60, 2) AS OVERTIME_HOURS,
+            att.CREATED_DATE,
+            att.UPDATED_DATE,
+            e.EMP_NO,
+            e.TITLE,
+            e.FIRST_NAME,
+            e.LAST_NAME,
+            s.CODE       AS SHIFT_CODE,
+            s.NAME       AS SHIFT_NAME,
+            s.START_TIME AS SHIFT_START,
+            s.END_TIME   AS SHIFT_END,
+            c.COMPANY_NAME
+
+          FROM HCM.HR_ATTENDANCE         att
+          JOIN HCM.HR_EMPLOYEE           e  ON att.EMPLOYEE_ID = e.PERSON_ID
+          LEFT JOIN HCM.HR_EMP_ASSIGNMENT a  ON e.PERSON_ID    = a.PERSON_ID AND a.STATUS = 1
+          LEFT JOIN HCM.HR_COMPANY       c  ON a.COMPANY_ID    = c.COMPANY_ID
+          LEFT JOIN HCM.HR_SHIFT         s  ON att.SHIFT_ID    = s.SHIFT_ID
+          ${whereClause}
+          ORDER BY ${orderCol} ${orderDir}
+
+        ) sq WHERE ROWNUM <= ${rownumMax}
+      ) WHERE RN >= ${rownumMin}
+      `,
+      bindParams,
+      { outFormat: oracledb.OUT_FORMAT_OBJECT },
+    );
+
+    return {
+      data: result.rows,
+      pagination: {
+        total,
+        page:       pageNum,
+        limit:      limitNum,
+        totalPages: Math.ceil(total / limitNum),
+      },
+    };
+  } finally {
+    await conn.close();
+  }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  ESS — MY ATTENDANCE SUMMARY
+//  Aggregated attendance totals for a single employee.
+//  Defaults to current calendar month if no date range is provided.
+//  Used for the ESS dashboard widget and mobile app home screen.
+//
+//  GET /api/attendance/my/:employeeId/summary
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const getMyAttendanceSummary = async (employeeId, {
+  fromDate = "",
+  toDate   = "",
+} = {}) => {
+  const conn = await getConnection();
+
+  // Default to current month if no range supplied
+  const from = fromDate || format(startOfMonth(new Date()), "yyyy-MM-dd");
+  const to   = toDate   || format(endOfMonth(new Date()),   "yyyy-MM-dd");
+
+  try {
+    const result = await conn.execute(
+      `
+      SELECT
+        COUNT(*)                                                         AS TOTAL_DAYS,
+        SUM(CASE WHEN att.STATUS = 'PRESENT'     THEN 1 ELSE 0 END)   AS PRESENT,
+        SUM(CASE WHEN att.STATUS = 'LATE'        THEN 1 ELSE 0 END)   AS LATE,
+        SUM(CASE WHEN att.STATUS = 'EARLY_LEAVE' THEN 1 ELSE 0 END)   AS EARLY_LEAVE,
+        SUM(CASE WHEN att.STATUS = 'ABSENT'      THEN 1 ELSE 0 END)   AS ABSENT,
+        SUM(CASE WHEN att.STATUS = 'ON_LEAVE'    THEN 1 ELSE 0 END)   AS ON_LEAVE,
+        SUM(CASE WHEN att.STATUS = 'HOLIDAY'     THEN 1 ELSE 0 END)   AS HOLIDAY,
+        SUM(CASE WHEN att.STATUS = 'WEEKLY_OFF'  THEN 1 ELSE 0 END)   AS WEEKLY_OFF,
+        -- Working days = days the employee was actually expected to work
+        SUM(CASE WHEN att.STATUS NOT IN ('HOLIDAY','WEEKLY_OFF')
+                 THEN 1 ELSE 0 END)                                    AS WORKING_DAYS,
+        -- Attended = present + late + early leave (physically came in)
+        SUM(CASE WHEN att.STATUS IN ('PRESENT','LATE','EARLY_LEAVE')
+                 THEN 1 ELSE 0 END)                                    AS ATTENDED_DAYS,
+        ROUND(SUM(NVL(att.WORK_MINUTES,     0)) / 60, 2)              AS TOTAL_WORK_HOURS,
+        ROUND(SUM(NVL(att.OVERTIME_MINUTES, 0)) / 60, 2)              AS TOTAL_OVERTIME_HOURS,
+        -- Average work hours on days the employee came in
+        ROUND(
+          CASE
+            WHEN SUM(CASE WHEN att.IN_TIME IS NOT NULL THEN 1 ELSE 0 END) = 0 THEN 0
+            ELSE SUM(NVL(att.WORK_MINUTES, 0)) /
+                 SUM(CASE WHEN att.IN_TIME IS NOT NULL THEN 1 ELSE 0 END) / 60
+          END, 2
+        )                                                              AS AVG_WORK_HOURS_PER_DAY
+      FROM HCM.HR_ATTENDANCE att
+      WHERE att.EMPLOYEE_ID    = :EMPLOYEE_ID
+        AND att.ATTENDANCE_DATE
+            BETWEEN TO_DATE(:FROM_DATE,'YYYY-MM-DD')
+                AND TO_DATE(:TO_DATE,  'YYYY-MM-DD')
+      `,
+      {
+        EMPLOYEE_ID: parseInt(employeeId, 10),
+        FROM_DATE:   from,
+        TO_DATE:     to,
+      },
+      { outFormat: oracledb.OUT_FORMAT_OBJECT },
+    );
+
+    return {
+      period: { from, to },
+      ...result.rows[0],
+    };
   } finally {
     await conn.close();
   }
