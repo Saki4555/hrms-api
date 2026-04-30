@@ -11,8 +11,8 @@ export const searchSupervisorsLite = async (searchTerm = "") => {
     const result = await conn.execute(
       `SELECT * FROM (
          SELECT DISTINCT
-           e.PERSON_ID                                                   AS "id",
-           u.EMPLOYEE_ID                                                  AS "employeeId",
+           u.ID                                                               AS "id",
+  e.PERSON_ID                                                        AS "employeeId",
            TRIM(NVL(e.FIRST_NAME, '') || ' ' || NVL(e.LAST_NAME, ''))   AS "name",
            e.EMP_NO                                                       AS "empNo",
            r.ROLE_NAME                                                    AS "role"
@@ -35,7 +35,7 @@ export const searchSupervisorsLite = async (searchTerm = "") => {
          ORDER BY e.EMP_NO ASC
        ) WHERE ROWNUM <= 10`,
       { SEARCH: `%${searchTerm.trim()}%` },
-      { outFormat: 4002 }
+      { outFormat: 4002 },
     );
 
     return result.rows;
