@@ -43,8 +43,6 @@ export const getAllUsers = async ({
   sortBy    = "CREATED_AT",
   sortOrder = "DESC",
   roleId    = "",
-  moduleId  = "",
-  permissionId = "", 
 } = {}) => {
   const conn = await getConnection();
   try {
@@ -72,24 +70,6 @@ export const getAllUsers = async ({
         WHERE ur2.USER_ID = u.ID AND ur2.ROLE_ID = :ROLE_ID
       )`);
       binds.ROLE_ID = parseInt(roleId);
-    }
-
-    if (permissionId) {
-  conditions.push(`EXISTS (
-    SELECT 1 FROM HCM.USER_PERMISSIONS up2
-    WHERE up2.USER_ID = u.ID AND up2.PERMISSION_ID = :PERMISSION_ID
-  )`);
-  binds.PERMISSION_ID = parseInt(permissionId);
-}
-
-    // Filter by module: user must have at least one permission in this module
-    if (moduleId) {
-      conditions.push(`EXISTS (
-        SELECT 1 FROM HCM.USER_PERMISSIONS up2
-        JOIN HCM.PERMISSIONS p2 ON up2.PERMISSION_ID = p2.ID
-        WHERE up2.USER_ID = u.ID AND p2.MODULE_ID = :MODULE_ID
-      )`);
-      binds.MODULE_ID = parseInt(moduleId);
     }
 
     const whereClause = conditions.length > 0

@@ -35,6 +35,7 @@ export const getAttendance = async (req, res) => {
       employeeId: req.query.employeeId,
       companyId:  req.query.companyId,
       orgId:      req.query.orgId,
+      shiftId:    req.query.shiftId,
       locationId: req.query.locationId,
       status:     req.query.status,
       search:     req.query.search,
@@ -86,6 +87,10 @@ export const getSummary = async (req, res) => {
       date:     req.query.date,
       fromDate: req.query.fromDate,
       toDate:   req.query.toDate,
+      companyId:  req.query.companyId,  
+    orgId:      req.query.orgId,      
+    locationId: req.query.locationId, 
+    shiftId:    req.query.shiftId,    
     });
     res.json({ success: true, data });
   } catch (err) {

@@ -157,7 +157,9 @@ const calculateStatusAndHours = (inTime, outTime, shift) => {
 export const processAttendance = async (fromDate, toDate) => {
   const conn = await getConnection();
   try {
-    console.log(`[Attendance] Processing ATT_LOG from ${fromDate} to ${toDate}...`);
+    console.log(
+      `[Attendance] Processing ATT_LOG from ${fromDate} to ${toDate}...`,
+    );
 
     // ── STEP 1: MERGE raw punches → HR_ATTENDANCE ────────────────────────────
     //
@@ -345,8 +347,8 @@ export const processAttendance = async (fromDate, toDate) => {
     //   5. LATE / EARLY_LEAVE / PRESENT — calculated from punch vs shift
 
     for (const row of pendingResult.rows) {
-      let status          = null;
-      let workMinutes     = 0;
+      let status = null;
+      let workMinutes = 0;
       let overtimeMinutes = 0;
 
       // Priority 1 — Public holiday
@@ -359,8 +361,7 @@ export const processAttendance = async (fromDate, toDate) => {
         row.DAY_OF_WEEK === row.WEEKLY_HOLIDAY_1.trim().toUpperCase()
       ) {
         status = STATUS.WEEKLY_OFF;
-      }
-      else if (
+      } else if (
         row.WEEKLY_HOLIDAY_2 &&
         row.DAY_OF_WEEK === row.WEEKLY_HOLIDAY_2.trim().toUpperCase()
       ) {
@@ -390,10 +391,10 @@ export const processAttendance = async (fromDate, toDate) => {
          WHERE ATTENDANCE_ID    = :ATTENDANCE_ID
         `,
         {
-          STATUS:           status,
-          WORK_MINUTES:     workMinutes,
+          STATUS: status,
+          WORK_MINUTES: workMinutes,
           OVERTIME_MINUTES: overtimeMinutes,
-          ATTENDANCE_ID:    row.ATTENDANCE_ID,
+          ATTENDANCE_ID: row.ATTENDANCE_ID,
         },
       );
     }
@@ -416,9 +417,9 @@ export const processAttendance = async (fromDate, toDate) => {
     console.log(`[Attendance] Processing complete for ${fromDate} → ${toDate}`);
 
     return {
-      success:       true,
+      success: true,
       processedDate: `${fromDate} → ${toDate}`,
-      updatedRows:   pendingResult.rows.length,
+      updatedRows: pendingResult.rows.length,
     };
   } catch (err) {
     await conn.rollback();
@@ -447,6 +448,8 @@ export const getAttendanceList = async ({
   employeeId = "",
   companyId = "",
   orgId = "",
+  locationId = "",
+  shiftId = "",
   status = "",
   sortBy = "ATTENDANCE_DATE",
   sortOrder = "DESC",
@@ -492,6 +495,15 @@ export const getAttendanceList = async ({
   if (orgId && orgId !== "") {
     conditions.push(`a.ORG_ID = :ORG_ID`);
     bindParams.ORG_ID = parseInt(orgId, 10);
+  }
+  if (locationId && locationId !== "") {
+    conditions.push(`a.LOCATION_ID = :LOCATION_ID`);
+    bindParams.LOCATION_ID = parseInt(locationId, 10);
+  }
+
+  if (shiftId && shiftId !== "") {
+    conditions.push(`att.SHIFT_ID = :SHIFT_ID`); // HR_ATTENDANCE.SHIFT_ID directly
+    bindParams.SHIFT_ID = parseInt(shiftId, 10);
   }
 
   if (status && status.trim()) {
@@ -643,6 +655,8 @@ export const getAttendanceForExport = async (filters = {}) => {
     employeeId = "",
     companyId = "",
     orgId = "",
+    locationId = "",
+    shiftId = "",
     status = "",
   } = filters;
 
@@ -679,6 +693,15 @@ export const getAttendanceForExport = async (filters = {}) => {
   if (orgId && orgId !== "") {
     conditions.push(`a.ORG_ID = :ORG_ID`);
     bindParams.ORG_ID = parseInt(orgId, 10);
+  }
+  if (locationId && locationId !== "") {
+    conditions.push(`a.LOCATION_ID = :LOCATION_ID`);
+    bindParams.LOCATION_ID = parseInt(locationId, 10);
+  }
+
+  if (shiftId && shiftId !== "") {
+    conditions.push(`att.SHIFT_ID = :SHIFT_ID`);
+    bindParams.SHIFT_ID = parseInt(shiftId, 10);
   }
 
   if (status && status.trim()) {
@@ -733,7 +756,15 @@ export const getAttendanceForExport = async (filters = {}) => {
 //  GET ATTENDANCE SUMMARY STATS
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const getAttendanceSummary = async ({ date, fromDate, toDate }) => {
+export const getAttendanceSummary = async ({
+  date,
+  fromDate,
+  toDate,
+  companyId = "",
+  orgId = "",
+  locationId = "",
+  shiftId = "",
+}) => {
   const conn = await getConnection();
   try {
     const conditions = [];
@@ -751,27 +782,47 @@ export const getAttendanceSummary = async ({ date, fromDate, toDate }) => {
       bindParams.FROM_DATE = fromDate;
       bindParams.TO_DATE = toDate;
     }
+    if (companyId && companyId !== "") {
+      conditions.push(`a.COMPANY_ID = :COMPANY_ID`);
+      bindParams.COMPANY_ID = parseInt(companyId, 10);
+    }
+
+    if (orgId && orgId !== "") {
+      conditions.push(`a.ORG_ID = :ORG_ID`);
+      bindParams.ORG_ID = parseInt(orgId, 10);
+    }
+
+    if (locationId && locationId !== "") {
+      conditions.push(`a.LOCATION_ID = :LOCATION_ID`);
+      bindParams.LOCATION_ID = parseInt(locationId, 10);
+    }
+
+    if (shiftId && shiftId !== "") {
+      conditions.push(`att.SHIFT_ID = :SHIFT_ID`);
+      bindParams.SHIFT_ID = parseInt(shiftId, 10);
+    }
 
     const whereClause =
       conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
     const result = await conn.execute(
       `
-      SELECT
-        COUNT(*)                                                          AS TOTAL,
-        SUM(CASE WHEN att.STATUS = 'PRESENT'     THEN 1 ELSE 0 END)    AS PRESENT,
-        SUM(CASE WHEN att.STATUS = 'LATE'        THEN 1 ELSE 0 END)    AS LATE,
-        SUM(CASE WHEN att.STATUS = 'EARLY_LEAVE' THEN 1 ELSE 0 END)    AS EARLY_LEAVE,
-        SUM(CASE WHEN att.STATUS = 'ABSENT'      THEN 1 ELSE 0 END)    AS ABSENT,
-        SUM(CASE WHEN att.STATUS = 'UNSCHEDULED' THEN 1 ELSE 0 END)    AS UNSCHEDULED,
-        SUM(CASE WHEN att.STATUS = 'HOLIDAY'     THEN 1 ELSE 0 END)    AS HOLIDAY,
-        SUM(CASE WHEN att.STATUS = 'WEEKLY_OFF'  THEN 1 ELSE 0 END)    AS WEEKLY_OFF,
-        SUM(CASE WHEN att.STATUS = 'ON_LEAVE'    THEN 1 ELSE 0 END)    AS ON_LEAVE,
-        ROUND(SUM(NVL(att.WORK_MINUTES,     0)) / 60, 2)               AS TOTAL_WORK_HOURS,
-        ROUND(SUM(NVL(att.OVERTIME_MINUTES, 0)) / 60, 2)               AS TOTAL_OVERTIME_HOURS
-      FROM HCM.HR_ATTENDANCE att
-      ${whereClause}
-      `,
+  SELECT
+    COUNT(*)                                                          AS TOTAL,
+    SUM(CASE WHEN att.STATUS = 'PRESENT'     THEN 1 ELSE 0 END)    AS PRESENT,
+    SUM(CASE WHEN att.STATUS = 'LATE'        THEN 1 ELSE 0 END)    AS LATE,
+    SUM(CASE WHEN att.STATUS = 'EARLY_LEAVE' THEN 1 ELSE 0 END)    AS EARLY_LEAVE,
+    SUM(CASE WHEN att.STATUS = 'ABSENT'      THEN 1 ELSE 0 END)    AS ABSENT,
+    SUM(CASE WHEN att.STATUS = 'UNSCHEDULED' THEN 1 ELSE 0 END)    AS UNSCHEDULED,
+    SUM(CASE WHEN att.STATUS = 'HOLIDAY'     THEN 1 ELSE 0 END)    AS HOLIDAY,
+    SUM(CASE WHEN att.STATUS = 'WEEKLY_OFF'  THEN 1 ELSE 0 END)    AS WEEKLY_OFF,
+    SUM(CASE WHEN att.STATUS = 'ON_LEAVE'    THEN 1 ELSE 0 END)    AS ON_LEAVE,
+    ROUND(SUM(NVL(att.WORK_MINUTES,     0)) / 60, 2)               AS TOTAL_WORK_HOURS,
+    ROUND(SUM(NVL(att.OVERTIME_MINUTES, 0)) / 60, 2)               AS TOTAL_OVERTIME_HOURS
+  FROM HCM.HR_ATTENDANCE att
+  LEFT JOIN HCM.HR_EMP_ASSIGNMENT a ON att.EMPLOYEE_ID = a.PERSON_ID AND a.STATUS = 1
+  ${whereClause}
+  `,
       bindParams,
       { outFormat: oracledb.OUT_FORMAT_OBJECT },
     );
@@ -836,8 +887,6 @@ export const reprocessAttendanceForEmployee = async (
   }
 };
 
-
-
 // ─────────────────────────────────────────────────────────────────────────────
 //  SUPERVISOR — TEAM ATTENDANCE LIST
 //  Returns paginated attendance records for direct reports of a supervisor.
@@ -849,23 +898,26 @@ export const reprocessAttendanceForEmployee = async (
 
 const ALLOWED_SORT_COLUMNS_TEAM = {
   ATTENDANCE_DATE: "att.ATTENDANCE_DATE",
-  FIRST_NAME:      "e.FIRST_NAME",
+  FIRST_NAME: "e.FIRST_NAME",
 };
 
-export const getSupervisorTeamAttendance = async (supervisorId, {
-  page      = 1,
-  limit     = 20,
-  date      = "",
-  fromDate  = "",
-  toDate    = "",
-  status    = "",
-  sortBy    = "ATTENDANCE_DATE",
-  sortOrder = "DESC",
-} = {}) => {
+export const getSupervisorTeamAttendance = async (
+  supervisorId,
+  {
+    page = 1,
+    limit = 20,
+    date = "",
+    fromDate = "",
+    toDate = "",
+    status = "",
+    sortBy = "ATTENDANCE_DATE",
+    sortOrder = "DESC",
+  } = {},
+) => {
   const conn = await getConnection();
 
-  const pageNum   = Math.max(1, parseInt(page,  10) || 1);
-  const limitNum  = Math.max(1, parseInt(limit, 10) || 20);
+  const pageNum = Math.max(1, parseInt(page, 10) || 1);
+  const limitNum = Math.max(1, parseInt(limit, 10) || 20);
   const rownumMin = (pageNum - 1) * limitNum + 1;
   const rownumMax = pageNum * limitNum;
 
@@ -879,14 +931,16 @@ export const getSupervisorTeamAttendance = async (supervisorId, {
   const bindParams = { SUPERVISOR_ID: parseInt(supervisorId, 10) };
 
   if (date && date.trim()) {
-    conditions.push(`TRUNC(att.ATTENDANCE_DATE) = TO_DATE(:ATT_DATE,'YYYY-MM-DD')`);
+    conditions.push(
+      `TRUNC(att.ATTENDANCE_DATE) = TO_DATE(:ATT_DATE,'YYYY-MM-DD')`,
+    );
     bindParams.ATT_DATE = date.trim();
   } else if (fromDate && toDate) {
     conditions.push(
       `att.ATTENDANCE_DATE BETWEEN TO_DATE(:FROM_DATE,'YYYY-MM-DD') AND TO_DATE(:TO_DATE,'YYYY-MM-DD')`,
     );
     bindParams.FROM_DATE = fromDate;
-    bindParams.TO_DATE   = toDate;
+    bindParams.TO_DATE = toDate;
   }
 
   if (status && status.trim()) {
@@ -969,8 +1023,8 @@ export const getSupervisorTeamAttendance = async (supervisorId, {
       data: result.rows,
       pagination: {
         total,
-        page:       pageNum,
-        limit:      limitNum,
+        page: pageNum,
+        limit: limitNum,
         totalPages: Math.ceil(total / limitNum),
       },
     };
@@ -988,11 +1042,10 @@ export const getSupervisorTeamAttendance = async (supervisorId, {
 //  GET /api/attendance/team/:supervisorId/stats
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const getTeamAttendanceStats = async (supervisorId, {
-  date     = "",
-  fromDate = "",
-  toDate   = "",
-} = {}) => {
+export const getTeamAttendanceStats = async (
+  supervisorId,
+  { date = "", fromDate = "", toDate = "" } = {},
+) => {
   const conn = await getConnection();
 
   const conditions = [
@@ -1002,14 +1055,16 @@ export const getTeamAttendanceStats = async (supervisorId, {
   const bindParams = { SUPERVISOR_ID: parseInt(supervisorId, 10) };
 
   if (date && date.trim()) {
-    conditions.push(`TRUNC(att.ATTENDANCE_DATE) = TO_DATE(:ATT_DATE,'YYYY-MM-DD')`);
+    conditions.push(
+      `TRUNC(att.ATTENDANCE_DATE) = TO_DATE(:ATT_DATE,'YYYY-MM-DD')`,
+    );
     bindParams.ATT_DATE = date.trim();
   } else if (fromDate && toDate) {
     conditions.push(
       `att.ATTENDANCE_DATE BETWEEN TO_DATE(:FROM_DATE,'YYYY-MM-DD') AND TO_DATE(:TO_DATE,'YYYY-MM-DD')`,
     );
     bindParams.FROM_DATE = fromDate;
-    bindParams.TO_DATE   = toDate;
+    bindParams.TO_DATE = toDate;
   }
 
   const whereClause = `WHERE ${conditions.join("\n      AND ")}`;
@@ -1052,20 +1107,23 @@ export const getTeamAttendanceStats = async (supervisorId, {
 //  GET /api/attendance/my/:employeeId
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const getMyAttendanceList = async (employeeId, {
-  page      = 1,
-  limit     = 20,
-  date      = "",
-  fromDate  = "",
-  toDate    = "",
-  status    = "",
-  sortBy    = "ATTENDANCE_DATE",
-  sortOrder = "DESC",
-} = {}) => {
+export const getMyAttendanceList = async (
+  employeeId,
+  {
+    page = 1,
+    limit = 20,
+    date = "",
+    fromDate = "",
+    toDate = "",
+    status = "",
+    sortBy = "ATTENDANCE_DATE",
+    sortOrder = "DESC",
+  } = {},
+) => {
   const conn = await getConnection();
 
-  const pageNum   = Math.max(1, parseInt(page,  10) || 1);
-  const limitNum  = Math.max(1, parseInt(limit, 10) || 20);
+  const pageNum = Math.max(1, parseInt(page, 10) || 1);
+  const limitNum = Math.max(1, parseInt(limit, 10) || 20);
   const rownumMin = (pageNum - 1) * limitNum + 1;
   const rownumMax = pageNum * limitNum;
 
@@ -1076,14 +1134,16 @@ export const getMyAttendanceList = async (employeeId, {
   const bindParams = { EMPLOYEE_ID: parseInt(employeeId, 10) };
 
   if (date && date.trim()) {
-    conditions.push(`TRUNC(att.ATTENDANCE_DATE) = TO_DATE(:ATT_DATE,'YYYY-MM-DD')`);
+    conditions.push(
+      `TRUNC(att.ATTENDANCE_DATE) = TO_DATE(:ATT_DATE,'YYYY-MM-DD')`,
+    );
     bindParams.ATT_DATE = date.trim();
   } else if (fromDate && toDate) {
     conditions.push(
       `att.ATTENDANCE_DATE BETWEEN TO_DATE(:FROM_DATE,'YYYY-MM-DD') AND TO_DATE(:TO_DATE,'YYYY-MM-DD')`,
     );
     bindParams.FROM_DATE = fromDate;
-    bindParams.TO_DATE   = toDate;
+    bindParams.TO_DATE = toDate;
   }
 
   if (status && status.trim()) {
@@ -1159,8 +1219,8 @@ export const getMyAttendanceList = async (employeeId, {
       data: result.rows,
       pagination: {
         total,
-        page:       pageNum,
-        limit:      limitNum,
+        page: pageNum,
+        limit: limitNum,
         totalPages: Math.ceil(total / limitNum),
       },
     };
@@ -1178,15 +1238,15 @@ export const getMyAttendanceList = async (employeeId, {
 //  GET /api/attendance/my/:employeeId/summary
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const getMyAttendanceSummary = async (employeeId, {
-  fromDate = "",
-  toDate   = "",
-} = {}) => {
+export const getMyAttendanceSummary = async (
+  employeeId,
+  { fromDate = "", toDate = "" } = {},
+) => {
   const conn = await getConnection();
 
   // Default to current month if no range supplied
   const from = fromDate || format(startOfMonth(new Date()), "yyyy-MM-dd");
-  const to   = toDate   || format(endOfMonth(new Date()),   "yyyy-MM-dd");
+  const to = toDate || format(endOfMonth(new Date()), "yyyy-MM-dd");
 
   try {
     const result = await conn.execute(
@@ -1224,8 +1284,8 @@ export const getMyAttendanceSummary = async (employeeId, {
       `,
       {
         EMPLOYEE_ID: parseInt(employeeId, 10),
-        FROM_DATE:   from,
-        TO_DATE:     to,
+        FROM_DATE: from,
+        TO_DATE: to,
       },
       { outFormat: oracledb.OUT_FORMAT_OBJECT },
     );
