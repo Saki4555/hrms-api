@@ -450,6 +450,7 @@ export const getAttendanceList = async ({
   orgId = "",
   locationId = "",
   shiftId = "",
+  supervisorId = "",
   status = "",
   sortBy = "ATTENDANCE_DATE",
   sortOrder = "DESC",
@@ -505,6 +506,10 @@ export const getAttendanceList = async ({
     conditions.push(`att.SHIFT_ID = :SHIFT_ID`); // HR_ATTENDANCE.SHIFT_ID directly
     bindParams.SHIFT_ID = parseInt(shiftId, 10);
   }
+   if (supervisorId && supervisorId !== "") {
+    conditions.push(`es.SUPERVISOR_ID = :SUPERVISOR_ID`);
+    bindParams.SUPERVISOR_ID = parseInt(supervisorId, 10);
+  }
 
   if (status && status.trim()) {
     conditions.push(`att.STATUS = :STATUS`);
@@ -513,6 +518,9 @@ export const getAttendanceList = async ({
 
   const whereClause =
     conditions.length > 0 ? `WHERE ${conditions.join("\n      AND ")}` : "";
+    const supervisorJoin = supervisorId
+    ? `JOIN HCM.HR_EMPLOYEE_SUPERVISOR es ON e.PERSON_ID = es.PERSON_ID AND es.STATUS = 1`
+    : "";
 
   try {
     const countResult = await conn.execute(
@@ -520,6 +528,7 @@ export const getAttendanceList = async ({
       SELECT COUNT(*) AS TOTAL
         FROM HCM.HR_ATTENDANCE         att
         JOIN HCM.HR_EMPLOYEE           e  ON att.EMPLOYEE_ID = e.PERSON_ID
+        ${supervisorJoin} 
         LEFT JOIN HCM.HR_EMP_ASSIGNMENT a  ON e.PERSON_ID    = a.PERSON_ID AND a.STATUS = 1
         LEFT JOIN HCM.HR_COMPANY       c  ON a.COMPANY_ID    = c.COMPANY_ID
         LEFT JOIN HCM.HR_SHIFT         s  ON att.SHIFT_ID    = s.SHIFT_ID
@@ -569,6 +578,7 @@ export const getAttendanceList = async ({
 
           FROM HCM.HR_ATTENDANCE         att
           JOIN HCM.HR_EMPLOYEE           e  ON att.EMPLOYEE_ID = e.PERSON_ID
+          ${supervisorJoin} 
           LEFT JOIN HCM.HR_EMP_ASSIGNMENT a  ON e.PERSON_ID    = a.PERSON_ID AND a.STATUS = 1
           LEFT JOIN HCM.HR_COMPANY       c  ON a.COMPANY_ID    = c.COMPANY_ID
           LEFT JOIN HCM.HR_SHIFT         s  ON att.SHIFT_ID    = s.SHIFT_ID
@@ -655,9 +665,8 @@ export const getAttendanceForExport = async (filters = {}) => {
     employeeId = "",
     companyId = "",
     orgId = "",
-    locationId = "",
-    shiftId = "",
     status = "",
+    supervisorId = "",   // ← ADD
   } = filters;
 
   const conn = await getConnection();
@@ -677,7 +686,7 @@ export const getAttendanceForExport = async (filters = {}) => {
       `att.ATTENDANCE_DATE BETWEEN TO_DATE(:FROM_DATE,'YYYY-MM-DD') AND TO_DATE(:TO_DATE,'YYYY-MM-DD')`,
     );
     bindParams.FROM_DATE = fromDate;
-    bindParams.TO_DATE = toDate;
+    bindParams.TO_DATE   = toDate;
   }
 
   if (employeeId && employeeId !== "") {
@@ -694,20 +703,22 @@ export const getAttendanceForExport = async (filters = {}) => {
     conditions.push(`a.ORG_ID = :ORG_ID`);
     bindParams.ORG_ID = parseInt(orgId, 10);
   }
-  if (locationId && locationId !== "") {
-    conditions.push(`a.LOCATION_ID = :LOCATION_ID`);
-    bindParams.LOCATION_ID = parseInt(locationId, 10);
-  }
-
-  if (shiftId && shiftId !== "") {
-    conditions.push(`att.SHIFT_ID = :SHIFT_ID`);
-    bindParams.SHIFT_ID = parseInt(shiftId, 10);
-  }
 
   if (status && status.trim()) {
     conditions.push(`att.STATUS = :STATUS`);
     bindParams.STATUS = status.trim().toUpperCase();
   }
+
+  // ── Supervisor filter ──────────────────────────────────────────────────────
+  const supervisorJoin = supervisorId
+    ? `JOIN HCM.HR_EMPLOYEE_SUPERVISOR es ON e.PERSON_ID = es.PERSON_ID AND es.STATUS = 1`
+    : "";
+
+  if (supervisorId && supervisorId !== "") {
+    conditions.push(`es.SUPERVISOR_ID = :SUPERVISOR_ID`);
+    bindParams.SUPERVISOR_ID = parseInt(supervisorId, 10);
+  }
+  // ──────────────────────────────────────────────────────────────────────────
 
   const whereClause =
     conditions.length > 0 ? `WHERE ${conditions.join("\n      AND ")}` : "";
@@ -736,6 +747,7 @@ export const getAttendanceForExport = async (filters = {}) => {
         c.COMPANY_NAME
       FROM HCM.HR_ATTENDANCE         att
       JOIN HCM.HR_EMPLOYEE           e  ON att.EMPLOYEE_ID = e.PERSON_ID
+      ${supervisorJoin}
       LEFT JOIN HCM.HR_EMP_ASSIGNMENT a  ON e.PERSON_ID    = a.PERSON_ID AND a.STATUS = 1
       LEFT JOIN HCM.HR_COMPANY       c  ON a.COMPANY_ID    = c.COMPANY_ID
       LEFT JOIN HCM.HR_SHIFT         s  ON att.SHIFT_ID    = s.SHIFT_ID
@@ -757,31 +769,34 @@ export const getAttendanceForExport = async (filters = {}) => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const getAttendanceSummary = async ({
-  date,
-  fromDate,
-  toDate,
-  companyId = "",
-  orgId = "",
-  locationId = "",
-  shiftId = "",
-}) => {
+  date         = "",
+  fromDate     = "",
+  toDate       = "",
+  employeeId   = "",
+  companyId    = "",
+  orgId        = "",
+  status       = "",
+  supervisorId = "",
+} = {}) => {
   const conn = await getConnection();
   try {
     const conditions = [];
     const bindParams = {};
 
     if (date && date.trim()) {
-      conditions.push(
-        `TRUNC(att.ATTENDANCE_DATE) = TO_DATE(:ATT_DATE, 'YYYY-MM-DD')`,
-      );
+      conditions.push(`TRUNC(att.ATTENDANCE_DATE) = TO_DATE(:ATT_DATE, 'YYYY-MM-DD')`);
       bindParams.ATT_DATE = date.trim();
     } else if (fromDate && toDate) {
-      conditions.push(
-        `att.ATTENDANCE_DATE BETWEEN TO_DATE(:FROM_DATE,'YYYY-MM-DD') AND TO_DATE(:TO_DATE,'YYYY-MM-DD')`,
-      );
+      conditions.push(`att.ATTENDANCE_DATE BETWEEN TO_DATE(:FROM_DATE,'YYYY-MM-DD') AND TO_DATE(:TO_DATE,'YYYY-MM-DD')`);
       bindParams.FROM_DATE = fromDate;
-      bindParams.TO_DATE = toDate;
+      bindParams.TO_DATE   = toDate;
     }
+
+    if (employeeId && employeeId !== "") {
+      conditions.push(`att.EMPLOYEE_ID = :EMPLOYEE_ID`);
+      bindParams.EMPLOYEE_ID = parseInt(employeeId, 10);
+    }
+
     if (companyId && companyId !== "") {
       conditions.push(`a.COMPANY_ID = :COMPANY_ID`);
       bindParams.COMPANY_ID = parseInt(companyId, 10);
@@ -792,37 +807,52 @@ export const getAttendanceSummary = async ({
       bindParams.ORG_ID = parseInt(orgId, 10);
     }
 
-    if (locationId && locationId !== "") {
-      conditions.push(`a.LOCATION_ID = :LOCATION_ID`);
-      bindParams.LOCATION_ID = parseInt(locationId, 10);
+    if (status && status.trim()) {
+      conditions.push(`att.STATUS = :STATUS`);
+      bindParams.STATUS = status.trim().toUpperCase();
     }
 
-    if (shiftId && shiftId !== "") {
-      conditions.push(`att.SHIFT_ID = :SHIFT_ID`);
-      bindParams.SHIFT_ID = parseInt(shiftId, 10);
+    // ── Supervisor filter ──────────────────────────────────────────────────
+    const supervisorJoin = supervisorId
+      ? `JOIN HCM.HR_EMPLOYEE_SUPERVISOR es ON e.PERSON_ID = es.PERSON_ID AND es.STATUS = 1`
+      : "";
+
+    if (supervisorId && supervisorId !== "") {
+      conditions.push(`es.SUPERVISOR_ID = :SUPERVISOR_ID`);
+      bindParams.SUPERVISOR_ID = parseInt(supervisorId, 10);
     }
+    // ──────────────────────────────────────────────────────────────────────
+
+    // companyId / orgId filters need the assignment join
+    const assignmentJoin =
+      companyId || orgId
+        ? `LEFT JOIN HCM.HR_EMP_ASSIGNMENT a ON e.PERSON_ID = a.PERSON_ID AND a.STATUS = 1
+           LEFT JOIN HCM.HR_COMPANY        c ON a.COMPANY_ID = c.COMPANY_ID`
+        : "";
 
     const whereClause =
-      conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+      conditions.length > 0 ? `WHERE ${conditions.join("\n        AND ")}` : "";
 
     const result = await conn.execute(
       `
-  SELECT
-    COUNT(*)                                                          AS TOTAL,
-    SUM(CASE WHEN att.STATUS = 'PRESENT'     THEN 1 ELSE 0 END)    AS PRESENT,
-    SUM(CASE WHEN att.STATUS = 'LATE'        THEN 1 ELSE 0 END)    AS LATE,
-    SUM(CASE WHEN att.STATUS = 'EARLY_LEAVE' THEN 1 ELSE 0 END)    AS EARLY_LEAVE,
-    SUM(CASE WHEN att.STATUS = 'ABSENT'      THEN 1 ELSE 0 END)    AS ABSENT,
-    SUM(CASE WHEN att.STATUS = 'UNSCHEDULED' THEN 1 ELSE 0 END)    AS UNSCHEDULED,
-    SUM(CASE WHEN att.STATUS = 'HOLIDAY'     THEN 1 ELSE 0 END)    AS HOLIDAY,
-    SUM(CASE WHEN att.STATUS = 'WEEKLY_OFF'  THEN 1 ELSE 0 END)    AS WEEKLY_OFF,
-    SUM(CASE WHEN att.STATUS = 'ON_LEAVE'    THEN 1 ELSE 0 END)    AS ON_LEAVE,
-    ROUND(SUM(NVL(att.WORK_MINUTES,     0)) / 60, 2)               AS TOTAL_WORK_HOURS,
-    ROUND(SUM(NVL(att.OVERTIME_MINUTES, 0)) / 60, 2)               AS TOTAL_OVERTIME_HOURS
-  FROM HCM.HR_ATTENDANCE att
-  LEFT JOIN HCM.HR_EMP_ASSIGNMENT a ON att.EMPLOYEE_ID = a.PERSON_ID AND a.STATUS = 1
-  ${whereClause}
-  `,
+      SELECT
+        COUNT(*)                                                          AS TOTAL,
+        SUM(CASE WHEN att.STATUS = 'PRESENT'     THEN 1 ELSE 0 END)    AS PRESENT,
+        SUM(CASE WHEN att.STATUS = 'LATE'        THEN 1 ELSE 0 END)    AS LATE,
+        SUM(CASE WHEN att.STATUS = 'EARLY_LEAVE' THEN 1 ELSE 0 END)    AS EARLY_LEAVE,
+        SUM(CASE WHEN att.STATUS = 'ABSENT'      THEN 1 ELSE 0 END)    AS ABSENT,
+        SUM(CASE WHEN att.STATUS = 'UNSCHEDULED' THEN 1 ELSE 0 END)    AS UNSCHEDULED,
+        SUM(CASE WHEN att.STATUS = 'HOLIDAY'     THEN 1 ELSE 0 END)    AS HOLIDAY,
+        SUM(CASE WHEN att.STATUS = 'WEEKLY_OFF'  THEN 1 ELSE 0 END)    AS WEEKLY_OFF,
+        SUM(CASE WHEN att.STATUS = 'ON_LEAVE'    THEN 1 ELSE 0 END)    AS ON_LEAVE,
+        ROUND(SUM(NVL(att.WORK_MINUTES,     0)) / 60, 2)               AS TOTAL_WORK_HOURS,
+        ROUND(SUM(NVL(att.OVERTIME_MINUTES, 0)) / 60, 2)               AS TOTAL_OVERTIME_HOURS
+      FROM HCM.HR_ATTENDANCE att
+      JOIN HCM.HR_EMPLOYEE   e  ON att.EMPLOYEE_ID = e.PERSON_ID
+      ${supervisorJoin}
+      ${assignmentJoin}
+      ${whereClause}
+      `,
       bindParams,
       { outFormat: oracledb.OUT_FORMAT_OBJECT },
     );
