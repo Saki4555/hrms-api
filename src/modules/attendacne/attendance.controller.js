@@ -37,10 +37,11 @@ export const getAttendance = async (req, res) => {
       orgId:      req.query.orgId,
       shiftId:    req.query.shiftId,
       locationId: req.query.locationId,
+      supervisorId: req.query.supervisorId,
       status:     req.query.status,
       search:     req.query.search,
-      sortBy:     req.query.sortBy,     // ← add
-      sortOrder:  req.query.sortOrder,  // ← add
+      sortBy:     req.query.sortBy,     
+      sortOrder:  req.query.sortOrder, 
     });
 
     res.json({ success: true, ...result });
@@ -84,13 +85,16 @@ export const getDetail = async (req, res) => {
 export const getSummary = async (req, res) => {
   try {
     const data = await getAttendanceSummary({
-      date:     req.query.date,
-      fromDate: req.query.fromDate,
-      toDate:   req.query.toDate,
-      companyId:  req.query.companyId,  
-    orgId:      req.query.orgId,      
-    locationId: req.query.locationId, 
-    shiftId:    req.query.shiftId,    
+      date:         req.query.date,
+      fromDate:     req.query.fromDate,
+      toDate:       req.query.toDate,
+      employeeId:   req.query.employeeId,   
+      companyId:    req.query.companyId,
+      orgId:        req.query.orgId,
+      locationId:   req.query.locationId,
+      shiftId:      req.query.shiftId,
+      status:       req.query.status,       
+      supervisorId: req.query.supervisorId, 
     });
     res.json({ success: true, data });
   } catch (err) {
