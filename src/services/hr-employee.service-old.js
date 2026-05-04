@@ -13,7 +13,7 @@ export const createEmployee = async (data) => {
         console.log(data)
     // 1️⃣ Employee Insert
     const empResult = await conn.execute(`
-      INSERT INTO HCM.HR_EMPLOYEE (
+      INSERT INTO HR_EMPLOYEE (
         EMP_NO, TITLE, FIRST_NAME, LAST_NAME,
         FATHERS_NAME, FATHERS_NAME_B, MOTHERS_NAME, MOTHERS_NAME_B,
         GENDER, DATE_OF_BIRTH, NID, BIRTH_REG_NO, TOWN_OF_BIRTH,
@@ -66,7 +66,7 @@ export const createEmployee = async (data) => {
 
     for (const { typeId, addr } of addressTypes) {
       await conn.execute(`
-        INSERT INTO  HCM.HR_EMP_ADDRESS (
+        INSERT INTO  HR_EMP_ADDRESS (
           PERSON_ID, EMP_NO, ADDRESS_TYPE_ID, ADDRESS1, ADDRESS1_B,
           COUNTRY, REGION, DISTRICT, UPAZILLA, UNIONS, AREA,
           EFFECTIVE_START_DATE, EFFECTIVEEND_DATE, STATUS, CREATION_DATE
@@ -96,7 +96,7 @@ export const createEmployee = async (data) => {
 
     // 3️⃣ Assignment Insert old
     // await conn.execute(`
-    //   INSERT INTO HCM.HR_EMP_ASSIGNMENT (
+    //   INSERT INTO HR_EMP_ASSIGNMENT (
     //     PERSON_ID, COMPANY_ID, OU_ID, ORG_ID,
     //     POSITION_ID, PAYROLL_ID, GRADE_ID,
     //     EFFECTIVE_START_DATE, EFFECTIVE_END_DATE, STATUS
@@ -121,14 +121,14 @@ export const createEmployee = async (data) => {
 
     // 4️⃣ Increment ACTUAL_COUNT in HR_ORG_POSITION old
     // const countUpdateResult = await conn.execute(`
-    //   UPDATE HCM.HR_ORG_POSITION
+    //   UPDATE HR_ORG_POSITION
     //      SET ACTUAL_COUNT = NVL(ACTUAL_COUNT, 0) + 1
     //    WHERE ID = :ID AND STATUS = 1
     // `, { ID: assignment.POSITION_ID });
 
     // if (countUpdateResult.rowsAffected === 0) {
     //   throw new Error(
-    //     `ACTUAL_COUNT increment failed: no active HCM.HR_ORG_POSITION found with ID ${assignment.POSITION_ID}. ` +
+    //     `ACTUAL_COUNT increment failed: no active HR_ORG_POSITION found with ID ${assignment.POSITION_ID}. ` +
     //     `Please verify the POSITION_ID is correct and the position is active (STATUS = 1).`
     //   );
     // }
@@ -140,7 +140,7 @@ const hasAssignment = assignment.COMPANY_ID || assignment.OU_ID ||
 
 if (hasAssignment) {
   await conn.execute(`
-    INSERT INTO HCM.HR_EMP_ASSIGNMENT (
+    INSERT INTO HR_EMP_ASSIGNMENT (
       PERSON_ID, COMPANY_ID, OU_ID, ORG_ID,
       POSITION_ID, PAYROLL_ID, GRADE_ID,
       EFFECTIVE_START_DATE, EFFECTIVE_END_DATE, STATUS
@@ -166,14 +166,14 @@ if (hasAssignment) {
   // 4️⃣ Increment ACTUAL_COUNT — only if POSITION_ID is provided
   if (assignment.POSITION_ID) {
     const countUpdateResult = await conn.execute(`
-      UPDATE HCM.HR_ORG_POSITION
+      UPDATE HR_ORG_POSITION
          SET ACTUAL_COUNT = NVL(ACTUAL_COUNT, 0) + 1
        WHERE ID = :ID AND STATUS = 1
     `, { ID: assignment.POSITION_ID });
 
     if (countUpdateResult.rowsAffected === 0) {
       throw new Error(
-        `ACTUAL_COUNT increment failed: no active HCM.HR_ORG_POSITION found with ID ${assignment.POSITION_ID}. ` +
+        `ACTUAL_COUNT increment failed: no active HR_ORG_POSITION found with ID ${assignment.POSITION_ID}. ` +
         `Please verify the POSITION_ID is correct and the position is active (STATUS = 1).`
       );
     }
@@ -206,7 +206,7 @@ export const updateEmployee = async (personId, data) => {
 
     // 1️⃣ Employee Update
     await conn.execute(`
-      UPDATE HCM.HR_EMPLOYEE
+      UPDATE HR_EMPLOYEE
          SET EMP_NO               = :EMP_NO,
              TITLE                = :TITLE,
              FIRST_NAME           = :FIRST_NAME,
@@ -267,7 +267,7 @@ export const updateEmployee = async (personId, data) => {
 
     for (const { typeId, addr } of addressTypes) {
       await conn.execute(`
-        UPDATE HCM.HR_EMP_ADDRESS
+        UPDATE HR_EMP_ADDRESS
            SET ADDRESS1             = :ADDRESS1,
                ADDRESS1_B           = :ADDRESS1_B,
                COUNTRY              = :COUNTRY,
@@ -299,7 +299,7 @@ export const updateEmployee = async (personId, data) => {
     // 3️⃣ Handle ACTUAL_COUNT adjustment if POSITION_ID changed
     const oldAssignResult = await conn.execute(`
       SELECT POSITION_ID
-        FROM HCM.HR_EMP_ASSIGNMENT
+        FROM HR_EMP_ASSIGNMENT
        WHERE PERSON_ID = :PERSON_ID AND STATUS = 1
     `, { PERSON_ID: personId }, { outFormat: oracledb.OUT_FORMAT_OBJECT });
 
@@ -309,21 +309,21 @@ export const updateEmployee = async (personId, data) => {
     if (newPositionId && oldPositionId !== newPositionId) {
       if (oldPositionId) {
         await conn.execute(`
-          UPDATE HCM.HR_ORG_POSITION
+          UPDATE HR_ORG_POSITION
              SET ACTUAL_COUNT = GREATEST(NVL(ACTUAL_COUNT, 0) - 1, 0)
            WHERE ID = :ID AND STATUS = 1
         `, { ID: oldPositionId });
       }
 
       const countUpdateResult = await conn.execute(`
-        UPDATE HCM.HR_ORG_POSITION
+        UPDATE HR_ORG_POSITION
            SET ACTUAL_COUNT = NVL(ACTUAL_COUNT, 0) + 1
          WHERE ID = :ID AND STATUS = 1
       `, { ID: newPositionId });
 
       if (countUpdateResult.rowsAffected === 0) {
         throw new Error(
-          `ACTUAL_COUNT increment failed: no active HCM.HR_ORG_POSITION found with ID ${newPositionId}. ` +
+          `ACTUAL_COUNT increment failed: no active HR_ORG_POSITION found with ID ${newPositionId}. ` +
           `Please verify the POSITION_ID is correct and the position is active (STATUS = 1).`
         );
       }
@@ -331,7 +331,7 @@ export const updateEmployee = async (personId, data) => {
 
     // 4️⃣ Assignment Update
     await conn.execute(`
-      UPDATE HCM.HR_EMP_ASSIGNMENT
+      UPDATE HR_EMP_ASSIGNMENT
          SET COMPANY_ID           = :COMPANY_ID,
              OU_ID                = :OU_ID,
              ORG_ID               = :ORG_ID,
@@ -375,33 +375,33 @@ export const softDeleteEmployee = async (personId) => {
   try {
     const assignRow = await conn.execute(`
       SELECT POSITION_ID
-        FROM HCM.HR_EMP_ASSIGNMENT
+        FROM HR_EMP_ASSIGNMENT
        WHERE PERSON_ID = :PERSON_ID AND STATUS = 1
     `, { PERSON_ID: personId }, { outFormat: oracledb.OUT_FORMAT_OBJECT });
 
     const orgPositionId = assignRow.rows[0]?.POSITION_ID ?? null;
 
     await conn.execute(`
-      UPDATE HCM.HR_EMPLOYEE
+      UPDATE HR_EMPLOYEE
          SET STATUS = 0, LAST_UPDATE_DATE = SYSDATE
        WHERE PERSON_ID = :PERSON_ID
     `, { PERSON_ID: personId });
 
     await conn.execute(`
-      UPDATE HCM.HR_EMP_ADDRESS
+      UPDATE HR_EMP_ADDRESS
          SET STATUS = 0, LAST_UPDATE_DATE = SYSDATE
        WHERE PERSON_ID = :PERSON_ID
     `, { PERSON_ID: personId });
 
     await conn.execute(`
-      UPDATE HCM.HR_EMP_ASSIGNMENT
+      UPDATE HR_EMP_ASSIGNMENT
          SET STATUS = 0
        WHERE PERSON_ID = :PERSON_ID
     `, { PERSON_ID: personId });
 
     if (orgPositionId) {
       await conn.execute(`
-        UPDATE HCM.HR_ORG_POSITION
+        UPDATE HR_ORG_POSITION
            SET ACTUAL_COUNT = GREATEST(NVL(ACTUAL_COUNT, 0) - 1, 0)
          WHERE ID = :ID AND STATUS = 1
       `, { ID: orgPositionId });
@@ -524,7 +524,7 @@ export const getEmployeeList = async ({
 
   // 🔽 Filter: Country ID (COUNTRY_LIST.COUNTRY_ID — present address)
   if (countryId !== "" && countryId != null) {
-    conditions.push(`pa.COUNTRY IN (SELECT COUNTRY_NAME FROM HCM.COUNTRY_LIST WHERE COUNTRY_ID = :COUNTRY_ID)`);
+    conditions.push(`pa.COUNTRY IN (SELECT COUNTRY_NAME FROM COUNTRY_LIST WHERE COUNTRY_ID = :COUNTRY_ID)`);
     bindParams.COUNTRY_ID = parseInt(countryId, 10);
   }
 
@@ -536,11 +536,11 @@ export const getEmployeeList = async ({
     // 1️⃣ Total count (all filters applied)
     const countResult = await conn.execute(
       `SELECT COUNT(*) AS TOTAL
-         FROM HCM.HR_EMPLOYEE e
-         LEFT JOIN HCM.hr_emp_address    pa ON e.PERSON_ID = pa.PERSON_ID AND pa.ADDRESS_TYPE_ID = 1
-         LEFT JOIN HCM.hr_emp_assignment s  ON e.PERSON_ID = s.PERSON_ID
+         FROM HR_EMPLOYEE e
+         LEFT JOIN hr_emp_address    pa ON e.PERSON_ID = pa.PERSON_ID AND pa.ADDRESS_TYPE_ID = 1
+         LEFT JOIN hr_emp_assignment s  ON e.PERSON_ID = s.PERSON_ID
          LEFT JOIN hcm.hr_org_position op ON s.POSITION_ID = op.ID
-         LEFT JOIN HCM.hr_position         p  ON op.POSITION_ID = p.POSITION_ID
+         LEFT JOIN hr_position         p  ON op.POSITION_ID = p.POSITION_ID
          ${whereClause}`,
       bindParams,
       { outFormat: oracledb.OUT_FORMAT_OBJECT }
@@ -606,24 +606,24 @@ export const getEmployeeList = async ({
             p.TITLE          AS POSITION_TITLE,
             p.LEVELS         AS POSITION_LEVEL
 
-          FROM HCM.HR_EMPLOYEE e
-          LEFT JOIN HCM.hr_person_type pt      ON e.PERSON_TYPE_ID  = pt.PERSON_TYPE_ID
-          LEFT JOIN HCM.hr_emp_address pa      ON e.PERSON_ID = pa.PERSON_ID  AND pa.ADDRESS_TYPE_ID  = 1
-          LEFT JOIN HCM.hr_emp_address pma     ON e.PERSON_ID = pma.PERSON_ID AND pma.ADDRESS_TYPE_ID = 2
-          LEFT JOIN HCM.hr_emp_assignment s    ON e.PERSON_ID = s.PERSON_ID
-          LEFT JOIN HCM.hr_company c           ON s.COMPANY_ID = c.COMPANY_ID
-          LEFT JOIN HCM.hr_org o               ON s.ORG_ID     = o.ID
-          LEFT JOIN HCM.hr_grade g             ON s.GRADE_ID   = g.ID
+          FROM HR_EMPLOYEE e
+          LEFT JOIN hr_person_type pt      ON e.PERSON_TYPE_ID  = pt.PERSON_TYPE_ID
+          LEFT JOIN hr_emp_address pa      ON e.PERSON_ID = pa.PERSON_ID  AND pa.ADDRESS_TYPE_ID  = 1
+          LEFT JOIN hr_emp_address pma     ON e.PERSON_ID = pma.PERSON_ID AND pma.ADDRESS_TYPE_ID = 2
+          LEFT JOIN hr_emp_assignment s    ON e.PERSON_ID = s.PERSON_ID
+          LEFT JOIN hr_company c           ON s.COMPANY_ID = c.COMPANY_ID
+          LEFT JOIN hr_org o               ON s.ORG_ID     = o.ID
+          LEFT JOIN hr_grade g             ON s.GRADE_ID   = g.ID
           LEFT JOIN hcm.hr_org_position op ON s.POSITION_ID = op.ID
-          LEFT JOIN HCM.hr_position p          ON op.POSITION_ID = p.POSITION_ID
-          LEFT JOIN HCM.COUNTRY_LIST  cl_pa  ON pa.COUNTRY  = cl_pa.COUNTRY_NAME
-          LEFT JOIN HCM.REGION_LIST   rl_pa  ON pa.REGION   = rl_pa.REGION_NAME   AND rl_pa.COUNTRY_ID  = cl_pa.COUNTRY_ID
-          LEFT JOIN HCM.DISTRICT_LIST dl_pa  ON pa.DISTRICT = dl_pa.DISTRICT_NAME  AND dl_pa.REGION_ID   = rl_pa.REGION_ID
-          LEFT JOIN HCM.UPAZILLA_LIST ul_pa  ON pa.UPAZILLA = ul_pa.UPAZILLA_NAME  AND ul_pa.DISTRICT_ID = dl_pa.DISTRICT_ID
-          LEFT JOIN HCM.COUNTRY_LIST  cl_pma ON pma.COUNTRY  = cl_pma.COUNTRY_NAME
-          LEFT JOIN HCM.REGION_LIST   rl_pma ON pma.REGION   = rl_pma.REGION_NAME  AND rl_pma.COUNTRY_ID  = cl_pma.COUNTRY_ID
-          LEFT JOIN HCM.DISTRICT_LIST dl_pma ON pma.DISTRICT = dl_pma.DISTRICT_NAME AND dl_pma.REGION_ID   = rl_pma.REGION_ID
-          LEFT JOIN HCM.UPAZILLA_LIST ul_pma ON pma.UPAZILLA = ul_pma.UPAZILLA_NAME AND ul_pma.DISTRICT_ID = dl_pma.DISTRICT_ID
+          LEFT JOIN hr_position p          ON op.POSITION_ID = p.POSITION_ID
+          LEFT JOIN COUNTRY_LIST  cl_pa  ON pa.COUNTRY  = cl_pa.COUNTRY_NAME
+          LEFT JOIN REGION_LIST   rl_pa  ON pa.REGION   = rl_pa.REGION_NAME   AND rl_pa.COUNTRY_ID  = cl_pa.COUNTRY_ID
+          LEFT JOIN DISTRICT_LIST dl_pa  ON pa.DISTRICT = dl_pa.DISTRICT_NAME  AND dl_pa.REGION_ID   = rl_pa.REGION_ID
+          LEFT JOIN UPAZILLA_LIST ul_pa  ON pa.UPAZILLA = ul_pa.UPAZILLA_NAME  AND ul_pa.DISTRICT_ID = dl_pa.DISTRICT_ID
+          LEFT JOIN COUNTRY_LIST  cl_pma ON pma.COUNTRY  = cl_pma.COUNTRY_NAME
+          LEFT JOIN REGION_LIST   rl_pma ON pma.REGION   = rl_pma.REGION_NAME  AND rl_pma.COUNTRY_ID  = cl_pma.COUNTRY_ID
+          LEFT JOIN DISTRICT_LIST dl_pma ON pma.DISTRICT = dl_pma.DISTRICT_NAME AND dl_pma.REGION_ID   = rl_pma.REGION_ID
+          LEFT JOIN UPAZILLA_LIST ul_pma ON pma.UPAZILLA = ul_pma.UPAZILLA_NAME AND ul_pma.DISTRICT_ID = dl_pma.DISTRICT_ID
 
           ${whereClause}
 
@@ -715,26 +715,26 @@ export const getEmployeeById = async (personId) => {
       p.TITLE          AS POSITION_TITLE,
       p.LEVELS         AS POSITION_LEVEL
 
-    FROM HCM.HR_EMPLOYEE e
-    LEFT JOIN HCM.hr_person_type pt      ON e.PERSON_TYPE_ID  = pt.PERSON_TYPE_ID
-    LEFT JOIN HCM.hr_emp_address pa      ON e.PERSON_ID = pa.PERSON_ID  AND pa.ADDRESS_TYPE_ID  = 1
-    LEFT JOIN HCM.hr_emp_address pma     ON e.PERSON_ID = pma.PERSON_ID AND pma.ADDRESS_TYPE_ID = 2
-    LEFT JOIN HCM.hr_emp_assignment s    ON e.PERSON_ID = s.PERSON_ID
-    LEFT JOIN HCM.hr_company c           ON s.COMPANY_ID = c.COMPANY_ID
-    LEFT JOIN HCM.hr_org o               ON s.ORG_ID     = o.ID
-    LEFT JOIN HCM.hr_grade g             ON s.GRADE_ID   = g.ID
+    FROM HR_EMPLOYEE e
+    LEFT JOIN hr_person_type pt      ON e.PERSON_TYPE_ID  = pt.PERSON_TYPE_ID
+    LEFT JOIN hr_emp_address pa      ON e.PERSON_ID = pa.PERSON_ID  AND pa.ADDRESS_TYPE_ID  = 1
+    LEFT JOIN hr_emp_address pma     ON e.PERSON_ID = pma.PERSON_ID AND pma.ADDRESS_TYPE_ID = 2
+    LEFT JOIN hr_emp_assignment s    ON e.PERSON_ID = s.PERSON_ID
+    LEFT JOIN hr_company c           ON s.COMPANY_ID = c.COMPANY_ID
+    LEFT JOIN hr_org o               ON s.ORG_ID     = o.ID
+    LEFT JOIN hr_grade g             ON s.GRADE_ID   = g.ID
     LEFT JOIN hcm.hr_org_position op ON s.POSITION_ID = op.ID
-    LEFT JOIN HCM.hr_position p          ON op.POSITION_ID = p.POSITION_ID
+    LEFT JOIN hr_position p          ON op.POSITION_ID = p.POSITION_ID
 
-    LEFT JOIN HCM.COUNTRY_LIST  cl_pa  ON pa.COUNTRY  = cl_pa.COUNTRY_NAME
-    LEFT JOIN HCM.REGION_LIST   rl_pa  ON pa.REGION   = rl_pa.REGION_NAME   AND rl_pa.COUNTRY_ID  = cl_pa.COUNTRY_ID
-    LEFT JOIN HCM.DISTRICT_LIST dl_pa  ON pa.DISTRICT = dl_pa.DISTRICT_NAME  AND dl_pa.REGION_ID   = rl_pa.REGION_ID
-    LEFT JOIN HCM.UPAZILLA_LIST ul_pa  ON pa.UPAZILLA = ul_pa.UPAZILLA_NAME  AND ul_pa.DISTRICT_ID = dl_pa.DISTRICT_ID
+    LEFT JOIN COUNTRY_LIST  cl_pa  ON pa.COUNTRY  = cl_pa.COUNTRY_NAME
+    LEFT JOIN REGION_LIST   rl_pa  ON pa.REGION   = rl_pa.REGION_NAME   AND rl_pa.COUNTRY_ID  = cl_pa.COUNTRY_ID
+    LEFT JOIN DISTRICT_LIST dl_pa  ON pa.DISTRICT = dl_pa.DISTRICT_NAME  AND dl_pa.REGION_ID   = rl_pa.REGION_ID
+    LEFT JOIN UPAZILLA_LIST ul_pa  ON pa.UPAZILLA = ul_pa.UPAZILLA_NAME  AND ul_pa.DISTRICT_ID = dl_pa.DISTRICT_ID
 
-    LEFT JOIN HCM.COUNTRY_LIST  cl_pma ON pma.COUNTRY  = cl_pma.COUNTRY_NAME
-    LEFT JOIN HCM.REGION_LIST   rl_pma ON pma.REGION   = rl_pma.REGION_NAME  AND rl_pma.COUNTRY_ID  = cl_pma.COUNTRY_ID
-    LEFT JOIN HCM.DISTRICT_LIST dl_pma ON pma.DISTRICT = dl_pma.DISTRICT_NAME AND dl_pma.REGION_ID   = rl_pma.REGION_ID
-    LEFT JOIN HCM.UPAZILLA_LIST ul_pma ON pma.UPAZILLA = ul_pma.UPAZILLA_NAME AND ul_pma.DISTRICT_ID = dl_pma.DISTRICT_ID
+    LEFT JOIN COUNTRY_LIST  cl_pma ON pma.COUNTRY  = cl_pma.COUNTRY_NAME
+    LEFT JOIN REGION_LIST   rl_pma ON pma.REGION   = rl_pma.REGION_NAME  AND rl_pma.COUNTRY_ID  = cl_pma.COUNTRY_ID
+    LEFT JOIN DISTRICT_LIST dl_pma ON pma.DISTRICT = dl_pma.DISTRICT_NAME AND dl_pma.REGION_ID   = rl_pma.REGION_ID
+    LEFT JOIN UPAZILLA_LIST ul_pma ON pma.UPAZILLA = ul_pma.UPAZILLA_NAME AND ul_pma.DISTRICT_ID = dl_pma.DISTRICT_ID
 
    WHERE e.PERSON_ID = :id
     ORDER BY

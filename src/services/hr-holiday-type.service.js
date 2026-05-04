@@ -5,7 +5,7 @@ export const createHolidayType = async (data) => {
   const conn = await getConnection();
   try {
     await conn.execute(
-      `INSERT INTO HCM.HR_HOLIDAY_TYPE (NAME, STATUS)
+      `INSERT INTO HR_HOLIDAY_TYPE (NAME, STATUS)
        VALUES (:NAME, 1)`,
       data,
       { autoCommit: true }
@@ -20,7 +20,7 @@ export const updateHolidayType = async (id, data) => {
   const conn = await getConnection();
   try {
     await conn.execute(
-      `UPDATE HCM.HR_HOLIDAY_TYPE
+      `UPDATE HR_HOLIDAY_TYPE
        SET NAME = :NAME
          
        WHERE ID = :ID`,
@@ -37,7 +37,7 @@ export const softDeleteHolidayType = async (id) => {
   const conn = await getConnection();
   try {
     await conn.execute(
-      `UPDATE HCM.HR_HOLIDAY_TYPE
+      `UPDATE HR_HOLIDAY_TYPE
        SET STATUS = 0
        WHERE ID = :ID`,
       { ID: id },
@@ -54,7 +54,7 @@ export const getHolidayTypeById = async (id) => {
   try {
     const result = await conn.execute(
       `SELECT ID, NAME, STATUS
-       FROM HCM.HR_HOLIDAY_TYPE
+       FROM HR_HOLIDAY_TYPE
        WHERE ID = :ID`,
       { ID: id },
       { outFormat: 4002 }
@@ -71,7 +71,7 @@ export const getAllHolidayType = async () => {
   try {
     const result = await conn.execute(
       `SELECT ID, NAME, STATUS
-       FROM HCM.HR_HOLIDAY_TYPE
+       FROM HR_HOLIDAY_TYPE
        WHERE STATUS = 1`,
       [],
       { outFormat: 4002 }

@@ -12,7 +12,7 @@ export const seedRolePermissions = async () => {
     // ── 1. Fetch role IDs ─────────────────────────────────────────────────────
     const getRoleId = async (name) => {
       const res = await conn.execute(
-        `SELECT ID FROM HCM.ROLES WHERE ROLE_NAME = :1`, [name]
+        `SELECT ID FROM ROLES WHERE ROLE_NAME = :1`, [name]
       );
       if (res.rows.length === 0)
         throw new Error(`Role '${name}' not found. Run seedRoles.js first.`);
@@ -28,7 +28,7 @@ export const seedRolePermissions = async () => {
 
     // ── 2. Fetch all permissions: code → id ───────────────────────────────────
     const allPermsRes = await conn.execute(
-      `SELECT ID, PERMISSION_CODE FROM HCM.PERMISSIONS`
+      `SELECT ID, PERMISSION_CODE FROM PERMISSIONS`
     );
     const permMap = {};
     for (const [id, code] of allPermsRes.rows) {
@@ -44,13 +44,13 @@ export const seedRolePermissions = async () => {
         return;
       }
       const check = await conn.execute(
-        `SELECT 1 FROM HCM.ROLE_PERMISSIONS
+        `SELECT 1 FROM ROLE_PERMISSIONS
           WHERE ROLE_ID = :1 AND PERMISSION_ID = :2`,
         [roleId, permId]
       );
       if (check.rows.length === 0) {
         await conn.execute(
-          `INSERT INTO HCM.ROLE_PERMISSIONS (ROLE_ID, PERMISSION_ID, GRANTED_BY)
+          `INSERT INTO ROLE_PERMISSIONS (ROLE_ID, PERMISSION_ID, GRANTED_BY)
            VALUES (:1, :2, NULL)`,
           [roleId, permId]
         );
@@ -213,8 +213,8 @@ export const seedRolePermissions = async () => {
     // ── Summary ───────────────────────────────────────────────────────────────
     const countRes = await conn.execute(
       `SELECT r.ROLE_NAME, COUNT(rp.PERMISSION_ID) AS CNT
-       FROM HCM.ROLES r
-       LEFT JOIN HCM.ROLE_PERMISSIONS rp ON r.ID = rp.ROLE_ID
+       FROM ROLES r
+       LEFT JOIN ROLE_PERMISSIONS rp ON r.ID = rp.ROLE_ID
        GROUP BY r.ROLE_NAME
        ORDER BY CNT DESC`
     );

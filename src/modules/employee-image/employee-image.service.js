@@ -26,7 +26,7 @@ export const uploadImage = async (personId, imageBuffer) => {
   try {
     const processed = await processImage(imageBuffer); // ← added
     const result = await conn.execute(
-      `INSERT INTO HCM.HR_EMP_IMGES (PERSON_ID, IMAGE, STATUS)
+      `INSERT INTO HR_EMP_IMGES (PERSON_ID, IMAGE, STATUS)
        VALUES (:PERSON_ID, :IMAGE, 1)
        RETURNING ID INTO :ID`,
       {
@@ -48,7 +48,7 @@ export const getImageByPersonId = async (personId) => {
   try {
     const result = await conn.execute(
       `SELECT ID, PERSON_ID, IMAGE, STATUS
-         FROM HCM.HR_EMP_IMGES
+         FROM HR_EMP_IMGES
         WHERE PERSON_ID = :PERSON_ID AND STATUS = 1
         ORDER BY ID DESC
         FETCH FIRST 1 ROW ONLY`,
@@ -70,7 +70,7 @@ export const getImageById = async (id) => {
   try {
     const result = await conn.execute(
       `SELECT ID, PERSON_ID, IMAGE, STATUS
-         FROM HCM.HR_EMP_IMGES
+         FROM HR_EMP_IMGES
         WHERE ID = :ID AND STATUS = 1`,
       { ID: parseInt(id) },
       {
@@ -90,7 +90,7 @@ export const updateImage = async (personId, imageBuffer) => {
   try {
     const processed = await processImage(imageBuffer); // ← added
     const result = await conn.execute(
-      `UPDATE HCM.HR_EMP_IMGES
+      `UPDATE HR_EMP_IMGES
           SET IMAGE = :IMAGE
         WHERE PERSON_ID = :PERSON_ID AND STATUS = 1`,
       {
@@ -110,7 +110,7 @@ export const deleteImage = async (id) => {
   const conn = await getConnection();
   try {
     const result = await conn.execute(
-      `UPDATE HCM.HR_EMP_IMGES SET STATUS = 0 WHERE ID = :ID`,
+      `UPDATE HR_EMP_IMGES SET STATUS = 0 WHERE ID = :ID`,
       { ID: parseInt(id) },
       { autoCommit: true }
     );

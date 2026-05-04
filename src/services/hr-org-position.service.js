@@ -7,7 +7,7 @@ export const createHrOrgPosition = async (data) => {
   const conn = await getConnection();
   try {
     const sql = `
-      INSERT INTO HCM.HR_ORG_POSITION (
+      INSERT INTO HR_ORG_POSITION (
         ORG_ID,
         POSITION_ID,
         FTE,
@@ -40,7 +40,7 @@ export const updateHrOrgPosition = async (id, data) => {
   const conn = await getConnection();
   try {
     const sql = `
-      UPDATE HCM.HR_ORG_POSITION SET
+      UPDATE HR_ORG_POSITION SET
         ORG_ID = :ORG_ID,
         POSITION_ID = :POSITION_ID,
         FTE = :FTE,
@@ -74,7 +74,7 @@ export const deleteHrOrgPosition = async (id) => {
 
   try {
     const result = await conn.execute(
-      `UPDATE HCM.HR_ORG_POSITION
+      `UPDATE HR_ORG_POSITION
        SET STATUS = 0
        WHERE ID = :ID`,
       { ID: id },

@@ -35,7 +35,7 @@ export const getAllShift = async () => {
   const conn = await getConnection();
 
   const result = await conn.execute(`
-    SELECT * FROM HCM.HR_SHIFT
+    SELECT * FROM HR_SHIFT
     ORDER BY SHIFT_ID DESC
   `, [], {outFormat : 4002});
 
@@ -51,7 +51,7 @@ export const getShiftById = async (id) => {
   const conn = await getConnection();
 
   const result = await conn.execute(
-    `SELECT * FROM HCM.HR_SHIFT WHERE SHIFT_ID = :id`,
+    `SELECT * FROM HR_SHIFT WHERE SHIFT_ID = :id`,
     [id]
   );
 
@@ -67,7 +67,7 @@ export const updateShift = async (id, data) => {
   const conn = await getConnection();
 
   const sql = `
-  UPDATE HCM.HR_SHIFT SET
+  UPDATE HR_SHIFT SET
     CODE = :CODE,
     NAME = :NAME,
     START_TIME = :START_TIME,
@@ -96,7 +96,7 @@ export const deleteShift = async (id) => {
   const conn = await getConnection();
 
   await conn.execute(
-    `DELETE FROM HCM.HR_SHIFT WHERE SHIFT_ID = :id`,
+    `DELETE FROM HR_SHIFT WHERE SHIFT_ID = :id`,
     [id],
     { autoCommit: true }
   );

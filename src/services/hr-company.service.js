@@ -6,7 +6,7 @@ export const createCompany = async (data) => {
   const conn = await getConnection();
 
   const sql = `
-    INSERT INTO HCM.HR_COMPANY (
+    INSERT INTO HR_COMPANY (
     
       COMPANY_NAME,
       COMPANY_DETAIL,
@@ -37,7 +37,7 @@ export const updateCompany = async (id, data) => {
   const conn = await getConnection();
 
   const sql = `
-    UPDATE HCM.HR_COMPANY SET
+    UPDATE HR_COMPANY SET
       COMPANY_NAME = :COMPANY_NAME,
       COMPANY_DETAIL = :COMPANY_DETAIL,
       BIN_NO = :BIN_NO,
@@ -65,7 +65,7 @@ export const deleteCompany = async (id) => {
   const conn = await getConnection();
 
   const sql = `
-    UPDATE HCM.HR_COMPANY
+    UPDATE HR_COMPANY
     SET STATUS = 0
     WHERE COMPANY_ID = :id
   `;
@@ -80,7 +80,7 @@ export const getAllCompanies = async () => {
   const conn = await getConnection();
 
   const result = await conn.execute(`
-    SELECT * FROM HCM.HR_COMPANY
+    SELECT * FROM HR_COMPANY
     WHERE STATUS = 1
     ORDER BY COMPANY_ID
   `, [],{outFormat : 4002} );
@@ -96,7 +96,7 @@ export const getCompanyById = async (id) => {
   const conn = await getConnection();
 
   const result = await conn.execute(
-    `SELECT * FROM HCM.HR_COMPANY
+    `SELECT * FROM HR_COMPANY
      WHERE COMPANY_ID = :id`,
     { id }, {outFormat : 4002}
   );

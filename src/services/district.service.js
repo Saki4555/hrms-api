@@ -12,9 +12,9 @@ export const getAllDistricts = async () => {
           c.COUNTRY_NAME,
           d.REGION_ID,
           r.REGION_NAME
-       FROM HCM.DISTRICT_LIST d
-       JOIN HCM.COUNTRY_LIST c ON d.COUNTRY_ID = c.COUNTRY_ID
-       JOIN HCM.REGION_LIST r ON d.REGION_ID = r.REGION_ID
+       FROM DISTRICT_LIST d
+       JOIN COUNTRY_LIST c ON d.COUNTRY_ID = c.COUNTRY_ID
+       JOIN REGION_LIST r ON d.REGION_ID = r.REGION_ID
        ORDER BY d.DISTRICT_ID`,
       [],
       { outFormat: 4002 } // OUT_FORMAT_OBJECT
@@ -38,9 +38,9 @@ export const getDistrictById = async (id) => {
           c.COUNTRY_NAME,
           d.REGION_ID,
           r.REGION_NAME
-       FROM HCM.DISTRICT_LIST d
-       JOIN HCM.COUNTRY_LIST c ON d.COUNTRY_ID = c.COUNTRY_ID
-       JOIN HCM.REGION_LIST r ON d.REGION_ID = r.REGION_ID
+       FROM DISTRICT_LIST d
+       JOIN COUNTRY_LIST c ON d.COUNTRY_ID = c.COUNTRY_ID
+       JOIN REGION_LIST r ON d.REGION_ID = r.REGION_ID
        WHERE d.DISTRICT_ID = :id`,
       { id },
       { outFormat: 4002 }
@@ -73,7 +73,7 @@ export const updateDistrict = async (id, data) => {
   const conn = await getConnection();
   try {
     const result = await conn.execute(
-      `UPDATE HCM.DISTRICT_LIST
+      `UPDATE DISTRICT_LIST
        SET COUNTRY_ID = :COUNTRY_ID,
            REGION_ID = :REGION_ID,
            DISTRICT_NAME = :DISTRICT_NAME
@@ -92,7 +92,7 @@ export const deleteDistrict = async (id) => {
   const conn = await getConnection();
   try {
     const result = await conn.execute(
-      `DELETE FROM HCM.DISTRICT_LIST WHERE DISTRICT_ID = :id`,
+      `DELETE FROM DISTRICT_LIST WHERE DISTRICT_ID = :id`,
       { id },
       { autoCommit: true }
     );

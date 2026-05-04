@@ -17,13 +17,13 @@ export const seedRoles = async () => {
     console.log("🚀 Processing System Roles...");
 
     for (const r of rolesData) {
-      const checkSql = `SELECT ID FROM HCM.ROLES WHERE ROLE_NAME = :1`;
+      const checkSql = `SELECT ID FROM ROLES WHERE ROLE_NAME = :1`;
       const checkRes = await conn.execute(checkSql, [r.name]);
 
       if (checkRes.rows.length === 0) {
         // Removed IS_SYSTEM_ROLE from the query
         const insertSql = `
-          INSERT INTO HCM.ROLES (ROLE_NAME, DESCRIPTION) 
+          INSERT INTO ROLES (ROLE_NAME, DESCRIPTION) 
           VALUES (:1, :2)
         `;
         await conn.execute(insertSql, [r.name, r.desc]);

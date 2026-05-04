@@ -27,8 +27,8 @@ export const getAllRegions = async () => {
           r.REGION_NAME,
           r.COUNTRY_ID,
           c.COUNTRY_NAME
-       FROM HCM.REGION_LIST r
-       JOIN HCM.COUNTRY_LIST c ON r.COUNTRY_ID = c.COUNTRY_ID
+       FROM REGION_LIST r
+       JOIN COUNTRY_LIST c ON r.COUNTRY_ID = c.COUNTRY_ID
        ORDER BY r.REGION_ID`,
       [],
       { outFormat: 4002 }
@@ -49,8 +49,8 @@ export const getRegionById = async (id) => {
           r.REGION_NAME,
           r.COUNTRY_ID,
           c.COUNTRY_NAME
-       FROM HCM.REGION_LIST r
-       JOIN HCM.COUNTRY_LIST c ON r.COUNTRY_ID = c.COUNTRY_ID
+       FROM REGION_LIST r
+       JOIN COUNTRY_LIST c ON r.COUNTRY_ID = c.COUNTRY_ID
        WHERE r.REGION_ID = :id`,
       { id },
       { outFormat: 4002 }
@@ -66,7 +66,7 @@ export const updateRegion = async (id, data) => {
   const conn = await getConnection();
   try {
     const result = await conn.execute(
-      `UPDATE HCM.REGION_LIST
+      `UPDATE REGION_LIST
        SET COUNTRY_ID = :COUNTRY_ID,
            REGION_NAME = :REGION_NAME
        WHERE REGION_ID = :id`,
@@ -84,7 +84,7 @@ export const deleteRegion = async (id) => {
   const conn = await getConnection();
   try {
     const result = await conn.execute(
-      `DELETE FROM HCM.REGION_LIST WHERE REGION_ID = :id`,
+      `DELETE FROM REGION_LIST WHERE REGION_ID = :id`,
       { id },
       { autoCommit: true }
     );

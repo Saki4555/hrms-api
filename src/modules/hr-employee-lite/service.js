@@ -11,7 +11,7 @@ export const searchEmployeesLite = async (searchTerm = "") => {
            PERSON_ID AS "id",
            TRIM(NVL(FIRST_NAME, '') || ' ' || NVL(LAST_NAME, '')) AS "name",
            EMP_NO AS "empNo"
-         FROM HCM.HR_EMPLOYEE
+         FROM HR_EMPLOYEE
          WHERE (
               UPPER(EMP_NO)                                                 LIKE UPPER(:SEARCH)
            OR UPPER(NVL(FIRST_NAME, ''))                                    LIKE UPPER(:SEARCH)

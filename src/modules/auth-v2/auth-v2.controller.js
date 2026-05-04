@@ -22,7 +22,7 @@ export const registerV2 = async (req, res) => {
 
     // 1. Username already exists?
     const userExists = await connection.execute(
-      `SELECT ID FROM HCM.USERS WHERE UPPER(USERNAME) = UPPER(:username)`,
+      `SELECT ID FROM USERS WHERE UPPER(USERNAME) = UPPER(:username)`,
       { username },
       { outFormat: oracledb.OUT_FORMAT_OBJECT }
     );
@@ -32,7 +32,7 @@ export const registerV2 = async (req, res) => {
 
     // 2. Role exists?
     const roleResult = await connection.execute(
-      `SELECT ID FROM HCM.ROLES WHERE UPPER(ROLE_NAME) = UPPER(:role_name)`,
+      `SELECT ID FROM ROLES WHERE UPPER(ROLE_NAME) = UPPER(:role_name)`,
       { role_name },
       { outFormat: oracledb.OUT_FORMAT_OBJECT }
     );
@@ -47,7 +47,7 @@ export const registerV2 = async (req, res) => {
 
     // 4. Insert user
     const result = await connection.execute(
-      `INSERT INTO HCM.USERS (EMPLOYEE_ID, USERNAME, PASSWORD_HASH, STATUS, CREATED_AT)
+      `INSERT INTO USERS (EMPLOYEE_ID, USERNAME, PASSWORD_HASH, STATUS, CREATED_AT)
        VALUES (:employee_id, :username, :password_hash, 'ACTIVE', SYSDATE)
        RETURNING ID INTO :userId`,
       {
@@ -62,7 +62,7 @@ export const registerV2 = async (req, res) => {
 
     // 5. Assign role
     await connection.execute(
-      `INSERT INTO HCM.USER_ROLES (USER_ID, ROLE_ID, ASSIGNED_AT)
+      `INSERT INTO USER_ROLES (USER_ID, ROLE_ID, ASSIGNED_AT)
        VALUES (:user_id, :role_id, SYSDATE)`,
       { user_id: userId, role_id: roleId },
       { autoCommit: false }
@@ -106,7 +106,7 @@ export const loginV2 = async (req, res) => {
     // 1. Find user
     const result = await connection.execute(
       `SELECT ID, USERNAME, PASSWORD_HASH, STATUS, EMPLOYEE_ID
-       FROM HCM.USERS
+       FROM USERS
        WHERE UPPER(USERNAME) = UPPER(:username)`,
       { username },
       { outFormat: oracledb.OUT_FORMAT_OBJECT }
@@ -131,8 +131,8 @@ export const loginV2 = async (req, res) => {
     // 4. Fetch roles
     const rolesResult = await connection.execute(
       `SELECT R.ROLE_NAME
-       FROM HCM.ROLES R
-       JOIN HCM.USER_ROLES UR ON R.ID = UR.ROLE_ID
+       FROM ROLES R
+       JOIN USER_ROLES UR ON R.ID = UR.ROLE_ID
        WHERE UR.USER_ID = :user_id`,
       { user_id: user.ID },
       { outFormat: oracledb.OUT_FORMAT_OBJECT }
@@ -142,13 +142,13 @@ export const loginV2 = async (req, res) => {
     // 5. Fetch effective permissions (direct + via roles)
     const permissionsResult = await connection.execute(
       `SELECT DISTINCT p.PERMISSION_CODE
-       FROM HCM.PERMISSIONS p
+       FROM PERMISSIONS p
        WHERE p.ID IN (
-         SELECT up.PERMISSION_ID FROM HCM.USER_PERMISSIONS up WHERE up.USER_ID = :user_id
+         SELECT up.PERMISSION_ID FROM USER_PERMISSIONS up WHERE up.USER_ID = :user_id
          UNION
          SELECT rp.PERMISSION_ID
-         FROM HCM.ROLE_PERMISSIONS rp
-         JOIN HCM.USER_ROLES ur ON rp.ROLE_ID = ur.ROLE_ID
+         FROM ROLE_PERMISSIONS rp
+         JOIN USER_ROLES ur ON rp.ROLE_ID = ur.ROLE_ID
          WHERE ur.USER_ID = :user_id
        )
        ORDER BY p.PERMISSION_CODE`,

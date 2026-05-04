@@ -19,7 +19,7 @@ const wouldCreateCircularChain = async (conn, employeeId, supervisorId) => {
     `SELECT COUNT(*) AS CNT
        FROM (
          SELECT SUPERVISOR_ID
-           FROM HCM.HR_EMPLOYEE_SUPERVISOR
+           FROM HR_EMPLOYEE_SUPERVISOR
           WHERE STATUS = 1
           START WITH PERSON_ID = :SUPERVISOR_ID
           CONNECT BY NOCYCLE PRIOR SUPERVISOR_ID = PERSON_ID
@@ -54,7 +54,7 @@ export const assignSupervisor = async (data) => {
     //  Multiple supervisors per employee are allowed, but the exact same
     //  (PERSON_ID, SUPERVISOR_ID) pair cannot be active twice.
     const duplicate = await conn.execute(
-      `SELECT ID FROM HCM.HR_EMPLOYEE_SUPERVISOR
+      `SELECT ID FROM HR_EMPLOYEE_SUPERVISOR
         WHERE PERSON_ID     = :PERSON_ID
           AND SUPERVISOR_ID = :SUPERVISOR_ID
           AND STATUS        = 1`,
@@ -83,7 +83,7 @@ export const assignSupervisor = async (data) => {
 
     // ── Insert ────────────────────────────────────────────────────────────────
     const result = await conn.execute(
-      `INSERT INTO HCM.HR_EMPLOYEE_SUPERVISOR
+      `INSERT INTO HR_EMPLOYEE_SUPERVISOR
          (PERSON_ID, SUPERVISOR_ID, STATUS, CREATED_BY, CREATED_DATE)
        VALUES
          (:PERSON_ID, :SUPERVISOR_ID, 1, :CREATED_BY, SYSDATE)
@@ -156,9 +156,9 @@ export const getAllSupervisorAssignments = async ({
   try {
     const countResult = await conn.execute(
       `SELECT COUNT(*) AS TOTAL
-         FROM HCM.HR_EMPLOYEE_SUPERVISOR es
-         LEFT JOIN HCM.HR_EMPLOYEE e ON es.PERSON_ID     = e.PERSON_ID
-         LEFT JOIN HCM.HR_EMPLOYEE s ON es.SUPERVISOR_ID = s.PERSON_ID
+         FROM HR_EMPLOYEE_SUPERVISOR es
+         LEFT JOIN HR_EMPLOYEE e ON es.PERSON_ID     = e.PERSON_ID
+         LEFT JOIN HR_EMPLOYEE s ON es.SUPERVISOR_ID = s.PERSON_ID
          ${whereClause}`,
       bindParams,
       { outFormat: oracledb.OUT_FORMAT_OBJECT }
@@ -184,9 +184,9 @@ export const getAllSupervisorAssignments = async ({
              s.EMP_NO               AS SUP_EMP_NO,
              s.TITLE                AS SUP_TITLE
 
-           FROM HCM.HR_EMPLOYEE_SUPERVISOR es
-           LEFT JOIN HCM.HR_EMPLOYEE e ON es.PERSON_ID     = e.PERSON_ID
-           LEFT JOIN HCM.HR_EMPLOYEE s ON es.SUPERVISOR_ID = s.PERSON_ID
+           FROM HR_EMPLOYEE_SUPERVISOR es
+           LEFT JOIN HR_EMPLOYEE e ON es.PERSON_ID     = e.PERSON_ID
+           LEFT JOIN HR_EMPLOYEE s ON es.SUPERVISOR_ID = s.PERSON_ID
            ${whereClause}
            ORDER BY ${orderCol} ${orderDir}
 
@@ -227,8 +227,8 @@ export const getSupervisorByEmployee = async (personId) => {
          s.LAST_NAME   AS SUP_LAST_NAME,
          s.EMP_NO      AS SUP_EMP_NO,
          s.TITLE       AS SUP_TITLE
-       FROM HCM.HR_EMPLOYEE_SUPERVISOR es
-       LEFT JOIN HCM.HR_EMPLOYEE s ON es.SUPERVISOR_ID = s.PERSON_ID
+       FROM HR_EMPLOYEE_SUPERVISOR es
+       LEFT JOIN HR_EMPLOYEE s ON es.SUPERVISOR_ID = s.PERSON_ID
        WHERE es.PERSON_ID = :PERSON_ID AND es.STATUS = 1`,
       { PERSON_ID: parseInt(personId) },
       { outFormat: oracledb.OUT_FORMAT_OBJECT }
@@ -258,8 +258,8 @@ export const getTeamBySupervisor = async (supervisorId) => {
          e.TITLE,
          e.GENDER,
          e.JOIN_DATE
-       FROM HCM.HR_EMPLOYEE_SUPERVISOR es
-       LEFT JOIN HCM.HR_EMPLOYEE e ON es.PERSON_ID = e.PERSON_ID
+       FROM HR_EMPLOYEE_SUPERVISOR es
+       LEFT JOIN HR_EMPLOYEE e ON es.PERSON_ID = e.PERSON_ID
        WHERE es.SUPERVISOR_ID = :SUPERVISOR_ID AND es.STATUS = 1
        ORDER BY e.FIRST_NAME`,
       { SUPERVISOR_ID: parseInt(supervisorId) },
@@ -282,7 +282,7 @@ export const updateSupervisor = async (id, data) => {
     // Fetch the current assignment so we know which employee (PERSON_ID) this
     // record belongs to — needed for the circular and duplicate checks below.
     const current = await conn.execute(
-      `SELECT PERSON_ID, SUPERVISOR_ID FROM HCM.HR_EMPLOYEE_SUPERVISOR WHERE ID = :ID`,
+      `SELECT PERSON_ID, SUPERVISOR_ID FROM HR_EMPLOYEE_SUPERVISOR WHERE ID = :ID`,
       { ID: parseInt(id) },
       { outFormat: oracledb.OUT_FORMAT_OBJECT }
     );
@@ -301,7 +301,7 @@ export const updateSupervisor = async (id, data) => {
     //  Another active row for the same (PERSON_ID, SUPERVISOR_ID) pair must
     //  not already exist (excluding the current row being updated).
     const duplicate = await conn.execute(
-      `SELECT ID FROM HCM.HR_EMPLOYEE_SUPERVISOR
+      `SELECT ID FROM HR_EMPLOYEE_SUPERVISOR
         WHERE PERSON_ID     = :PERSON_ID
           AND SUPERVISOR_ID = :SUPERVISOR_ID
           AND STATUS        = 1
@@ -332,7 +332,7 @@ export const updateSupervisor = async (id, data) => {
 
     // ── Update ────────────────────────────────────────────────────────────────
     const result = await conn.execute(
-      `UPDATE HCM.HR_EMPLOYEE_SUPERVISOR
+      `UPDATE HR_EMPLOYEE_SUPERVISOR
           SET SUPERVISOR_ID = :SUPERVISOR_ID,
               UPDATED_BY    = :UPDATED_BY,
               UPDATED_DATE  = SYSDATE
@@ -361,7 +361,7 @@ export const removeSupervisor = async (id) => {
   const conn = await getConnection();
   try {
     const result = await conn.execute(
-      `UPDATE HCM.HR_EMPLOYEE_SUPERVISOR
+      `UPDATE HR_EMPLOYEE_SUPERVISOR
           SET STATUS = 0, UPDATED_DATE = SYSDATE
         WHERE ID = :ID`,
       { ID: parseInt(id) },

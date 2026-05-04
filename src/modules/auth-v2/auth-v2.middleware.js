@@ -41,7 +41,7 @@ export const protectRouteV2 = async (req, res, next) => {
 
       const result = await connection.execute(
         `SELECT ID, USERNAME, STATUS, EMPLOYEE_ID
-         FROM HCM.USERS WHERE ID = :id`,
+         FROM USERS WHERE ID = :id`,
         { id: decoded.id },
         { outFormat: oracledb.OUT_FORMAT_OBJECT }
       );

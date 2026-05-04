@@ -5,7 +5,7 @@ export const createUpazilla = async (data) => {
   const conn = await getConnection();
   try {
     await conn.execute(
-      `INSERT INTO HCM.UPAZILLA_LIST
+      `INSERT INTO UPAZILLA_LIST
        (UPAZILLA_NAME, DISTRICT_ID)
        VALUES (:UPAZILLA_NAME, :DISTRICT_ID)`,
       data,
@@ -30,10 +30,10 @@ export const getAllUpazillas = async () => {
           r.REGION_NAME,
           c.COUNTRY_ID,
           c.COUNTRY_NAME
-       FROM HCM.UPAZILLA_LIST u
-       JOIN HCM.DISTRICT_LIST d ON u.DISTRICT_ID = d.DISTRICT_ID
-       JOIN HCM.REGION_LIST r ON d.REGION_ID = r.REGION_ID
-       JOIN HCM.COUNTRY_LIST c ON d.COUNTRY_ID = c.COUNTRY_ID
+       FROM UPAZILLA_LIST u
+       JOIN DISTRICT_LIST d ON u.DISTRICT_ID = d.DISTRICT_ID
+       JOIN REGION_LIST r ON d.REGION_ID = r.REGION_ID
+       JOIN COUNTRY_LIST c ON d.COUNTRY_ID = c.COUNTRY_ID
        ORDER BY u.UPAZILLA_ID`,
       [],
       { outFormat: 4002 } // object format
@@ -58,10 +58,10 @@ export const getUpazillaById = async (id) => {
           r.REGION_NAME,
           c.COUNTRY_ID,
           c.COUNTRY_NAME
-       FROM HCM.UPAZILLA_LIST u
-       JOIN HCM.DISTRICT_LIST d ON u.DISTRICT_ID = d.DISTRICT_ID
-       JOIN HCM.REGION_LIST r ON d.REGION_ID = r.REGION_ID
-       JOIN HCM.COUNTRY_LIST c ON d.COUNTRY_ID = c.COUNTRY_ID
+       FROM UPAZILLA_LIST u
+       JOIN DISTRICT_LIST d ON u.DISTRICT_ID = d.DISTRICT_ID
+       JOIN REGION_LIST r ON d.REGION_ID = r.REGION_ID
+       JOIN COUNTRY_LIST c ON d.COUNTRY_ID = c.COUNTRY_ID
        WHERE u.UPAZILLA_ID = :id`,
       { id },
       { outFormat: 4002 }
@@ -77,7 +77,7 @@ export const updateUpazilla = async (id, data) => {
   const conn = await getConnection();
   try {
     const result = await conn.execute(
-      `UPDATE HCM.UPAZILLA_LIST
+      `UPDATE UPAZILLA_LIST
        SET UPAZILLA_NAME = :UPAZILLA_NAME,
            DISTRICT_ID = :DISTRICT_ID
        WHERE UPAZILLA_ID = :id`,
@@ -95,7 +95,7 @@ export const deleteUpazilla = async (id) => {
   const conn = await getConnection();
   try {
     const result = await conn.execute(
-      `DELETE FROM HCM.UPAZILLA_LIST WHERE UPAZILLA_ID = :id`,
+      `DELETE FROM UPAZILLA_LIST WHERE UPAZILLA_ID = :id`,
       { id },
       { autoCommit: true }
     );
