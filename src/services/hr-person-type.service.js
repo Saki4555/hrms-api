@@ -10,7 +10,7 @@ export const create = async (data) => {
   try {
    
      await conn.execute(
-      `INSERT INTO HCM.HR_PERSON_TYPE (
+      `INSERT INTO HR_PERSON_TYPE (
           
           PERSON_TYPE,
           DESCRIPTION,
@@ -60,7 +60,7 @@ export const getAll = async () => {
       TO_CHAR(EFFECTIVE_START_DATE, 'YYYY-MM-DD') AS EFFECTIVE_START_DATE,
       TO_CHAR(EFFECTIVE_END_DATE, 'YYYY-MM-DD') AS EFFECTIVE_END_DATE,
       STATUS
-   FROM HCM.HR_PERSON_TYPE
+   FROM HR_PERSON_TYPE
    WHERE STATUS = 1`,
   [],
   { outFormat: 4002 }
@@ -85,7 +85,7 @@ export const getById = async (id) => {
 
     const result = await conn.execute(
       `SELECT *
-       FROM HCM.HR_PERSON_TYPE
+       FROM HR_PERSON_TYPE
        WHERE PERSON_TYPE_ID = :PERSON_TYPE_ID
          AND STATUS = 1`,
       { PERSON_TYPE_ID: Number(id) },
@@ -110,7 +110,7 @@ export const update = async (id, data) => {
     conn = await getConnection();
 
     await conn.execute(
-      `UPDATE HCM.HR_PERSON_TYPE
+      `UPDATE HR_PERSON_TYPE
        SET PERSON_TYPE = :PERSON_TYPE,
            DESCRIPTION = :DESCRIPTION,
            EFFECTIVE_START_DATE = :EFFECTIVE_START_DATE,
@@ -149,7 +149,7 @@ export const softDelete = async (id) => {
     conn = await getConnection();
 
     await conn.execute(
-      `UPDATE HCM.HR_PERSON_TYPE
+      `UPDATE HR_PERSON_TYPE
        SET STATUS = 0
        WHERE PERSON_TYPE_ID = :PERSON_TYPE_ID`,
       { PERSON_TYPE_ID: Number(id) },

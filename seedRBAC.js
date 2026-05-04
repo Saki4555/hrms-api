@@ -34,7 +34,7 @@ export const seedRbacData = async () => {
     for (const m of modulesData) {
       // Check if module already exists
       const existing = await conn.execute(
-        `SELECT ID FROM HCM.MODULES WHERE MODULE_NAME = :1`, [m.name]
+        `SELECT ID FROM MODULES WHERE MODULE_NAME = :1`, [m.name]
       );
       if (existing.rows.length > 0) {
         moduleMap[m.name] = existing.rows[0][0];
@@ -42,7 +42,7 @@ export const seedRbacData = async () => {
         continue;
       }
       const result = await conn.execute(
-        `INSERT INTO HCM.MODULES (MODULE_NAME, DESCRIPTION, SEQUENCE_NO)
+        `INSERT INTO MODULES (MODULE_NAME, DESCRIPTION, SEQUENCE_NO)
          VALUES (:m_name, :m_desc, :m_seq)
          RETURNING ID INTO :returned_id`,
         {
@@ -319,7 +319,7 @@ export const seedRbacData = async () => {
 
       // Check if permission already exists
       const existing = await conn.execute(
-        `SELECT ID FROM HCM.PERMISSIONS WHERE PERMISSION_CODE = :1`, [p.code]
+        `SELECT ID FROM PERMISSIONS WHERE PERMISSION_CODE = :1`, [p.code]
       );
       if (existing.rows.length > 0) {
         console.log(`  - Permission '${p.code}' already exists. Skipping.`);
@@ -327,7 +327,7 @@ export const seedRbacData = async () => {
       }
 
       await conn.execute(
-        `INSERT INTO HCM.PERMISSIONS (MODULE_ID, PERMISSION_CODE, PERMISSION_NAME, DESCRIPTION)
+        `INSERT INTO PERMISSIONS (MODULE_ID, PERMISSION_CODE, PERMISSION_NAME, DESCRIPTION)
          VALUES (:mod_id, :p_code, :p_name, :p_desc)`,
         {
           mod_id: modId,

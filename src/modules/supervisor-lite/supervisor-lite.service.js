@@ -16,11 +16,11 @@ export const searchSupervisorsLite = async (searchTerm = "") => {
            TRIM(NVL(e.FIRST_NAME, '') || ' ' || NVL(e.LAST_NAME, ''))   AS "name",
            e.EMP_NO                                                       AS "empNo",
            r.ROLE_NAME                                                    AS "role"
-         FROM HCM.HR_EMPLOYEE  e
-         JOIN HCM.USERS        u   ON u.EMPLOYEE_ID  = e.PERSON_ID
+         FROM HR_EMPLOYEE  e
+         JOIN USERS        u   ON u.EMPLOYEE_ID  = e.PERSON_ID
                                   AND u.STATUS        = 'ACTIVE'
-         JOIN HCM.USER_ROLES   ur  ON ur.USER_ID      = u.ID
-         JOIN HCM.ROLES        r   ON r.ID            = ur.ROLE_ID
+         JOIN USER_ROLES   ur  ON ur.USER_ID      = u.ID
+         JOIN ROLES        r   ON r.ID            = ur.ROLE_ID
                                   AND UPPER(r.ROLE_NAME) IN (
                                         ${SUPERVISOR_ROLES.map((r) => `UPPER('${r}')`).join(", ")}
                                       )

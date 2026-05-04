@@ -5,7 +5,7 @@ export const insertHoliday = async (data) => {
   const conn = await getConnection();
   try {
     await conn.execute(
-      `INSERT INTO HCM.HR_HOLIDAY_CALENDER
+      `INSERT INTO HR_HOLIDAY_CALENDER
       (LOCATION_ID, TDATE, HOLIDAY_TYPE_ID, STATUS, DESCRIPTION)
       VALUES
       ( :LOCATION_ID, TO_DATE(:TDATE,'YYYY-MM-DD'), :HOLIDAY_TYPE_ID, 1, :DESCRIPTION)`,
@@ -22,7 +22,7 @@ export const updateHoliday = async (id, data) => {
   const conn = await getConnection();
   try {
     await conn.execute(
-      `UPDATE HCM.HR_HOLIDAY_CALENDER SET
+      `UPDATE HR_HOLIDAY_CALENDER SET
         LOCATION_ID = :LOCATION_ID,
         TDATE = TO_DATE(:TDATE,'YYYY-MM-DD'),
         HOLIDAY_TYPE_ID = :HOLIDAY_TYPE_ID,
@@ -43,7 +43,7 @@ export const softDeleteHoliday = async (id) => {
   const conn = await getConnection();
   try {
     await conn.execute(
-      `UPDATE HCM.HR_HOLIDAY_CALENDER
+      `UPDATE HR_HOLIDAY_CALENDER
        SET STATUS = 0
        WHERE ID = :ID`,
       { ID: id },
@@ -68,9 +68,9 @@ export const getHolidayById = async (id) => {
         t.NAME AS HOLIDAY_TYPE,
         h.DESCRIPTION,
         h.STATUS
-       FROM HCM.HR_HOLIDAY_CALENDER h
-       JOIN HCM.HR_LOCATION l ON h.LOCATION_ID = l.ID
-       JOIN HCM.HR_HOLIDAY_TYPE t ON h.HOLIDAY_TYPE_ID = t.ID
+       FROM HR_HOLIDAY_CALENDER h
+       JOIN HR_LOCATION l ON h.LOCATION_ID = l.ID
+       JOIN HR_HOLIDAY_TYPE t ON h.HOLIDAY_TYPE_ID = t.ID
        WHERE h.ID = :ID`,
       { ID: id },
       { outFormat: 4002 }
@@ -95,9 +95,9 @@ export const getAllHoliday = async () => {
         t.NAME AS HOLIDAY_TYPE,
         h.DESCRIPTION,
         h.STATUS
-       FROM HCM.HR_HOLIDAY_CALENDER h
-       JOIN HCM.HR_LOCATION l ON h.LOCATION_ID = l.ID
-       JOIN HCM.HR_HOLIDAY_TYPE t ON h.HOLIDAY_TYPE_ID = t.ID
+       FROM HR_HOLIDAY_CALENDER h
+       JOIN HR_LOCATION l ON h.LOCATION_ID = l.ID
+       JOIN HR_HOLIDAY_TYPE t ON h.HOLIDAY_TYPE_ID = t.ID
        WHERE h.STATUS = 1`,
       [],
       { outFormat: 4002 }

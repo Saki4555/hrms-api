@@ -16,7 +16,7 @@ export const getHrOrgTypeById = async (id) => {
          TO_CHAR(EFFECTIVE_START_DATE, 'YYYY-MM-DD') AS EFFECTIVE_START_DATE,
          TO_CHAR(EFFECTIVE_END_DATE, 'YYYY-MM-DD') AS EFFECTIVE_END_DATE,
          STATUS
-       FROM HCM.HR_ORG_TYPE
+       FROM HR_ORG_TYPE
        WHERE ID = :ID`,
       { ID: id },
       { outFormat: 4002 }
@@ -42,7 +42,7 @@ export const getAllHrOrgTypes = async () => {
   TO_CHAR(EFFECTIVE_START_DATE, 'YYYY-MM-DD') AS EFFECTIVE_START_DATE,
   TO_CHAR(EFFECTIVE_END_DATE, 'YYYY-MM-DD') AS EFFECTIVE_END_DATE,
   STATUS
-FROM HCM.HR_ORG_TYPE
+FROM HR_ORG_TYPE
 WHERE STATUS = 1
       `,
        [],
@@ -63,7 +63,7 @@ export const createHrOrgType = async (data) => {
 
   try {
     await conn.execute(
-      `INSERT INTO HCM.HR_ORG_TYPE (
+      `INSERT INTO HR_ORG_TYPE (
           
           ORG_TYPE,
           EFFECTIVE_START_DATE,
@@ -104,7 +104,7 @@ export const updateHrOrgType = async (id, data) => {
 
   try {
     const result = await conn.execute(
-      `UPDATE HCM.HR_ORG_TYPE
+      `UPDATE HR_ORG_TYPE
        SET ORG_TYPE = :ORG_TYPE,
            EFFECTIVE_START_DATE = :EFFECTIVE_START_DATE,
            EFFECTIVE_END_DATE = :EFFECTIVE_END_DATE
@@ -134,7 +134,7 @@ export const deleteHrOrgType = async (id) => {
   const conn = await getConnection();
   try {
     await conn.execute(
-  `UPDATE HCM.HR_ORG_TYPE
+  `UPDATE HR_ORG_TYPE
    SET STATUS = 0,
        EFFECTIVE_END_DATE = SYSDATE
    WHERE ID = :id`,

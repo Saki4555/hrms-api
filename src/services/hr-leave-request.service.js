@@ -46,7 +46,7 @@ oracledb.outFormat = oracledb.OUT_FORMAT_OBJECT;
 
 const notifySupervior = async (conn, employeeId, leaveData) => {
   const supResult = await conn.execute(
-    `SELECT SUPERVISOR_ID FROM HCM.HR_EMPLOYEE_SUPERVISOR
+    `SELECT SUPERVISOR_ID FROM HR_EMPLOYEE_SUPERVISOR
       WHERE PERSON_ID = :PERSON_ID AND STATUS = 1`,
     { PERSON_ID: parseInt(employeeId) },
     { outFormat: oracledb.OUT_FORMAT_OBJECT },
@@ -56,7 +56,7 @@ const notifySupervior = async (conn, employeeId, leaveData) => {
   if (!supervisorId) return;
 
   const empResult = await conn.execute(
-    `SELECT FIRST_NAME, LAST_NAME FROM HCM.HR_EMPLOYEE WHERE PERSON_ID = :ID`,
+    `SELECT FIRST_NAME, LAST_NAME FROM HR_EMPLOYEE WHERE PERSON_ID = :ID`,
     { ID: parseInt(employeeId) },
     { outFormat: oracledb.OUT_FORMAT_OBJECT },
   );
@@ -66,7 +66,7 @@ const notifySupervior = async (conn, employeeId, leaveData) => {
     : `Employee #${employeeId}`;
 
   await conn.execute(
-    `INSERT INTO HCM.HR_EMPLOYEE_NOTIFICATION
+    `INSERT INTO HR_EMPLOYEE_NOTIFICATION
        (EMPLYEE_ID, SUPERVISOR_ID, LEAVE_ID, NOTIFICATION_DETAILS, STATUS, CREATE_BY, CREATED_DATE)
      VALUES
        (:EMPLOYEE_ID, :SUPERVISOR_ID, :LEAVE_ID, :NOTIFICATION_DETAILS, 0, :CREATE_BY, SYSDATE)`,
@@ -87,7 +87,7 @@ export const createLeaveService = async (data) => {
     const isAdminHR = data.status === "APPROVED"; // Admin/HR always creates as APPROVED
 
     const result = await conn.execute(
-      `INSERT INTO HCM.HR_LEAVE_REQUEST
+      `INSERT INTO HR_LEAVE_REQUEST
         (EMPLOYEE_ID, LEAVE_TYPE_ID, START_DATE, END_DATE, DAYS, REASON,
          STATUS, APPROVER_ID, APPROVED_ON, CREATED_BY)
        VALUES
@@ -151,9 +151,9 @@ export const createLeaveService = async (data) => {
 //           lr.STATUS,
 //           lr.REASON,
 //           lr.APPLIED_ON
-//        FROM HCM.HR_LEAVE_REQUEST  lr
-//        JOIN HCM.HR_LEAVE_TYPE     lt  ON lr.LEAVE_TYPE_ID = lt.LEAVE_TYPE_ID
-//        LEFT JOIN HCM.HR_EMPLOYEE  e   ON lr.EMPLOYEE_ID   = e.PERSON_ID
+//        FROM HR_LEAVE_REQUEST  lr
+//        JOIN HR_LEAVE_TYPE     lt  ON lr.LEAVE_TYPE_ID = lt.LEAVE_TYPE_ID
+//        LEFT JOIN HR_EMPLOYEE  e   ON lr.EMPLOYEE_ID   = e.PERSON_ID
 //        ORDER BY lr.LEAVE_ID DESC`
 //     );
 //     return result.rows;
@@ -220,9 +220,9 @@ export const getAllLeavesService = async ({
   try {
     const countResult = await conn.execute(
       `SELECT COUNT(*) AS TOTAL
-         FROM HCM.HR_LEAVE_REQUEST  lr
-         JOIN HCM.HR_LEAVE_TYPE     lt  ON lr.LEAVE_TYPE_ID = lt.LEAVE_TYPE_ID
-         LEFT JOIN HCM.HR_EMPLOYEE  e   ON lr.EMPLOYEE_ID   = e.PERSON_ID
+         FROM HR_LEAVE_REQUEST  lr
+         JOIN HR_LEAVE_TYPE     lt  ON lr.LEAVE_TYPE_ID = lt.LEAVE_TYPE_ID
+         LEFT JOIN HR_EMPLOYEE  e   ON lr.EMPLOYEE_ID   = e.PERSON_ID
          ${whereClause}`,
       bindParams,
       { outFormat: oracledb.OUT_FORMAT_OBJECT },
@@ -258,11 +258,11 @@ export const getAllLeavesService = async ({
             lr.APPROVED_ON,
             lr.UPDATED_BY,
             lr.UPDATED_DATE
-          FROM HCM.HR_LEAVE_REQUEST  lr
-          JOIN HCM.HR_LEAVE_TYPE     lt       ON lr.LEAVE_TYPE_ID = lt.LEAVE_TYPE_ID
-          LEFT JOIN HCM.HR_EMPLOYEE  e        ON lr.EMPLOYEE_ID   = e.PERSON_ID
-          LEFT JOIN HCM.HR_EMPLOYEE  approver ON lr.APPROVER_ID   = approver.PERSON_ID
-          LEFT JOIN HCM.USERS au ON lr.APPROVER_ID = au.ID
+          FROM HR_LEAVE_REQUEST  lr
+          JOIN HR_LEAVE_TYPE     lt       ON lr.LEAVE_TYPE_ID = lt.LEAVE_TYPE_ID
+          LEFT JOIN HR_EMPLOYEE  e        ON lr.EMPLOYEE_ID   = e.PERSON_ID
+          LEFT JOIN HR_EMPLOYEE  approver ON lr.APPROVER_ID   = approver.PERSON_ID
+          LEFT JOIN USERS au ON lr.APPROVER_ID = au.ID
           ${whereClause}
           ORDER BY ${orderCol} ${orderDir}
         ) sq WHERE ROWNUM <= ${rownumMax}
@@ -314,11 +314,11 @@ export const getLeaveByIdService = async (id) => {
           lr.APPROVED_ON,
           lr.UPDATED_BY,
           lr.UPDATED_DATE
-       FROM HCM.HR_LEAVE_REQUEST  lr
-       JOIN HCM.HR_LEAVE_TYPE     lt       ON lr.LEAVE_TYPE_ID = lt.LEAVE_TYPE_ID
-       LEFT JOIN HCM.HR_EMPLOYEE  e        ON lr.EMPLOYEE_ID   = e.PERSON_ID
-       LEFT JOIN HCM.HR_EMPLOYEE  approver ON lr.APPROVER_ID   = approver.PERSON_ID
-       LEFT JOIN HCM.USERS au ON lr.APPROVER_ID = au.ID
+       FROM HR_LEAVE_REQUEST  lr
+       JOIN HR_LEAVE_TYPE     lt       ON lr.LEAVE_TYPE_ID = lt.LEAVE_TYPE_ID
+       LEFT JOIN HR_EMPLOYEE  e        ON lr.EMPLOYEE_ID   = e.PERSON_ID
+       LEFT JOIN HR_EMPLOYEE  approver ON lr.APPROVER_ID   = approver.PERSON_ID
+       LEFT JOIN USERS au ON lr.APPROVER_ID = au.ID
        WHERE lr.LEAVE_ID = :id`,
       { id },
     );
@@ -349,9 +349,9 @@ export const getLeaveByIdService = async (id) => {
 //           lr.STATUS,
 //           lr.REASON,
 //           lr.APPLIED_ON
-//        FROM HCM.HR_LEAVE_REQUEST  lr
-//        JOIN HCM.HR_LEAVE_TYPE     lt  ON lr.LEAVE_TYPE_ID = lt.LEAVE_TYPE_ID
-//        LEFT JOIN HCM.HR_EMPLOYEE  e   ON lr.EMPLOYEE_ID   = e.PERSON_ID
+//        FROM HR_LEAVE_REQUEST  lr
+//        JOIN HR_LEAVE_TYPE     lt  ON lr.LEAVE_TYPE_ID = lt.LEAVE_TYPE_ID
+//        LEFT JOIN HR_EMPLOYEE  e   ON lr.EMPLOYEE_ID   = e.PERSON_ID
 //        WHERE lr.LEAVE_ID = :id`,
 //       { id }
 //     );
@@ -366,7 +366,7 @@ export const getLeaveByIdService = async (id) => {
 //   const conn = await getConnection();
 //   try {
 //     const result = await conn.execute(
-//       `UPDATE HCM.HR_LEAVE_REQUEST
+//       `UPDATE HR_LEAVE_REQUEST
 //        SET START_DATE   = :start_date,
 //            END_DATE     = :end_date,
 //            DAYS         = :days,
@@ -395,7 +395,7 @@ export const getLeaveByIdService = async (id) => {
 //     const isApproved = data.status === "APPROVED";
 
 //     const result = await conn.execute(
-//       `UPDATE HCM.HR_LEAVE_REQUEST
+//       `UPDATE HR_LEAVE_REQUEST
 //        SET EMPLOYEE_ID   = :employee_id,
 //            LEAVE_TYPE_ID = :leave_type_id,
 //            START_DATE    = :start_date,
@@ -435,7 +435,7 @@ export const updateLeaveService = async (id, data) => {
     const isApproved = data.status === "APPROVED";
 
     const result = await conn.execute(
-      `UPDATE HCM.HR_LEAVE_REQUEST
+      `UPDATE HR_LEAVE_REQUEST
        SET EMPLOYEE_ID   = :employee_id,
            LEAVE_TYPE_ID = :leave_type_id,
            START_DATE    = :start_date,
@@ -478,9 +478,9 @@ export const deleteLeaveService = async (id, employeeId) => {
       `SELECT lr.EMPLOYEE_ID, lr.STATUS, lr.START_DATE, lr.END_DATE, lr.DAYS,
               lt.NAME AS LEAVE_TYPE_NAME,
               e.FIRST_NAME, e.LAST_NAME
-         FROM HCM.HR_LEAVE_REQUEST lr
-         LEFT JOIN HCM.HR_LEAVE_TYPE lt ON lr.LEAVE_TYPE_ID = lt.LEAVE_TYPE_ID
-         LEFT JOIN HCM.HR_EMPLOYEE   e  ON lr.EMPLOYEE_ID   = e.PERSON_ID
+         FROM HR_LEAVE_REQUEST lr
+         LEFT JOIN HR_LEAVE_TYPE lt ON lr.LEAVE_TYPE_ID = lt.LEAVE_TYPE_ID
+         LEFT JOIN HR_EMPLOYEE   e  ON lr.EMPLOYEE_ID   = e.PERSON_ID
         WHERE lr.LEAVE_ID = :id`,
       { id },
       { outFormat: oracledb.OUT_FORMAT_OBJECT },
@@ -498,13 +498,13 @@ export const deleteLeaveService = async (id, employeeId) => {
 
     // 3. Delete the leave
     await conn.execute(
-      `DELETE FROM HCM.HR_LEAVE_REQUEST WHERE LEAVE_ID = :id`,
+      `DELETE FROM HR_LEAVE_REQUEST WHERE LEAVE_ID = :id`,
       { id },
     );
 
     // 4. Mark existing supervisor notification as read (clean up the bell)
     await conn.execute(
-      `UPDATE HCM.HR_EMPLOYEE_NOTIFICATION
+      `UPDATE HR_EMPLOYEE_NOTIFICATION
       SET STATUS = 1, UPDATED_DATE = SYSDATE
     WHERE LEAVE_ID = :LEAVE_ID
       AND STATUS = 0`,
@@ -513,7 +513,7 @@ export const deleteLeaveService = async (id, employeeId) => {
 
     // 5. Notify supervisor that the leave was cancelled
     const supResult = await conn.execute(
-      `SELECT SUPERVISOR_ID FROM HCM.HR_EMPLOYEE_SUPERVISOR
+      `SELECT SUPERVISOR_ID FROM HR_EMPLOYEE_SUPERVISOR
         WHERE PERSON_ID = :PERSON_ID AND STATUS = 1`,
       { PERSON_ID: parseInt(leave.EMPLOYEE_ID) },
       { outFormat: oracledb.OUT_FORMAT_OBJECT },
@@ -524,7 +524,7 @@ export const deleteLeaveService = async (id, employeeId) => {
     if (supervisorId) {
       const empName = `${leave.FIRST_NAME} ${leave.LAST_NAME}`;
       await conn.execute(
-        `INSERT INTO HCM.HR_EMPLOYEE_NOTIFICATION
+        `INSERT INTO HR_EMPLOYEE_NOTIFICATION
            (EMPLYEE_ID, SUPERVISOR_ID, NOTIFICATION_DETAILS, STATUS, CREATE_BY, CREATED_DATE)
          VALUES
            (:EMPLOYEE_ID, :SUPERVISOR_ID, :NOTIFICATION_DETAILS, 0, :CREATE_BY, SYSDATE)`,
@@ -581,11 +581,11 @@ export const getLeavesByEmployeeId = async (employeeId, status = null) => {
           )                                                               AS APPROVER_NAME,
           CASE WHEN approver.PERSON_ID IS NOT NULL THEN approver.EMP_NO ELSE NULL END AS APPROVER_EMP_NO,
           lr.APPROVED_ON
-       FROM HCM.HR_LEAVE_REQUEST  lr
-       JOIN HCM.HR_LEAVE_TYPE     lt       ON lr.LEAVE_TYPE_ID = lt.LEAVE_TYPE_ID
-       LEFT JOIN HCM.HR_EMPLOYEE  e        ON lr.EMPLOYEE_ID   = e.PERSON_ID
-       LEFT JOIN HCM.HR_EMPLOYEE  approver ON lr.APPROVER_ID   = approver.PERSON_ID
-       LEFT JOIN HCM.USERS au ON lr.APPROVER_ID = au.ID
+       FROM HR_LEAVE_REQUEST  lr
+       JOIN HR_LEAVE_TYPE     lt       ON lr.LEAVE_TYPE_ID = lt.LEAVE_TYPE_ID
+       LEFT JOIN HR_EMPLOYEE  e        ON lr.EMPLOYEE_ID   = e.PERSON_ID
+       LEFT JOIN HR_EMPLOYEE  approver ON lr.APPROVER_ID   = approver.PERSON_ID
+       LEFT JOIN USERS au ON lr.APPROVER_ID = au.ID
        WHERE lr.EMPLOYEE_ID = :employee_id
          ${hasStatusFilter ? "AND lr.STATUS = :status" : ""}
        ORDER BY lr.LEAVE_ID DESC`,
@@ -633,14 +633,14 @@ export const getLeavesByTeam = async (supervisorId, status = null) => {
           )                                                               AS APPROVER_NAME,
           CASE WHEN approver.PERSON_ID IS NOT NULL THEN approver.EMP_NO ELSE NULL END AS APPROVER_EMP_NO,
           lr.APPROVED_ON
-       FROM HCM.HR_LEAVE_REQUEST      lr
-       JOIN HCM.HR_LEAVE_TYPE         lt       ON lr.LEAVE_TYPE_ID  = lt.LEAVE_TYPE_ID
-       JOIN HCM.HR_EMPLOYEE_SUPERVISOR es       ON lr.EMPLOYEE_ID   = es.PERSON_ID
+       FROM HR_LEAVE_REQUEST      lr
+       JOIN HR_LEAVE_TYPE         lt       ON lr.LEAVE_TYPE_ID  = lt.LEAVE_TYPE_ID
+       JOIN HR_EMPLOYEE_SUPERVISOR es       ON lr.EMPLOYEE_ID   = es.PERSON_ID
                                               AND es.SUPERVISOR_ID  = :supervisor_id
                                               AND es.STATUS         = 1
-       LEFT JOIN HCM.HR_EMPLOYEE      e        ON lr.EMPLOYEE_ID    = e.PERSON_ID
-       LEFT JOIN HCM.HR_EMPLOYEE      approver ON lr.APPROVER_ID    = approver.PERSON_ID
-       LEFT JOIN HCM.USERS au ON lr.APPROVER_ID = au.ID
+       LEFT JOIN HR_EMPLOYEE      e        ON lr.EMPLOYEE_ID    = e.PERSON_ID
+       LEFT JOIN HR_EMPLOYEE      approver ON lr.APPROVER_ID    = approver.PERSON_ID
+       LEFT JOIN USERS au ON lr.APPROVER_ID = au.ID
        ${hasStatusFilter ? "WHERE lr.STATUS = :status" : ""}
        ORDER BY lr.APPLIED_ON DESC`,
       hasStatusFilter

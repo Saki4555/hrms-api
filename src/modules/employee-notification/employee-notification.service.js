@@ -4,7 +4,7 @@ import oracledb from "oracledb";
 /* CREATE NOTIFICATION — internal helper used by other services */
 export const createNotification = async (conn, data) => {
   await conn.execute(
-    `INSERT INTO HCM.HR_EMPLOYEE_NOTIFICATION
+    `INSERT INTO HR_EMPLOYEE_NOTIFICATION
        (EMPLYEE_ID, SUPERVISOR_ID, NOTIFICATION_DETAILS, STATUS, CREATE_BY, CREATED_DATE)
      VALUES
        (:EMPLOYEE_ID, :SUPERVISOR_ID, :NOTIFICATION_DETAILS, 0, :CREATE_BY, SYSDATE)`,
@@ -43,10 +43,10 @@ export const getNotificationsForSupervisor = async (supervisorId) => {
          lr.REASON,
          lr.STATUS            AS LEAVE_STATUS,
          lt.NAME              AS LEAVE_TYPE_NAME
-       FROM HCM.HR_EMPLOYEE_NOTIFICATION n
-       LEFT JOIN HCM.HR_EMPLOYEE         e  ON n.EMPLYEE_ID        = e.PERSON_ID
-       LEFT JOIN HCM.HR_LEAVE_REQUEST    lr ON n.LEAVE_ID          = lr.LEAVE_ID  -- ← exact match
-       LEFT JOIN HCM.HR_LEAVE_TYPE       lt ON lr.LEAVE_TYPE_ID    = lt.LEAVE_TYPE_ID
+       FROM HR_EMPLOYEE_NOTIFICATION n
+       LEFT JOIN HR_EMPLOYEE         e  ON n.EMPLYEE_ID        = e.PERSON_ID
+       LEFT JOIN HR_LEAVE_REQUEST    lr ON n.LEAVE_ID          = lr.LEAVE_ID  -- ← exact match
+       LEFT JOIN HR_LEAVE_TYPE       lt ON lr.LEAVE_TYPE_ID    = lt.LEAVE_TYPE_ID
        WHERE n.SUPERVISOR_ID = :SUPERVISOR_ID
        ORDER BY n.CREATED_DATE DESC`,
       { SUPERVISOR_ID: parseInt(supervisorId) },
@@ -76,8 +76,8 @@ export const getNotificationsForEmployee = async (employeeId) => {
          n.UPDATED_DATE,
          s.FIRST_NAME        AS SUP_FIRST_NAME,
          s.LAST_NAME         AS SUP_LAST_NAME
-       FROM HCM.HR_EMPLOYEE_NOTIFICATION n
-       LEFT JOIN HCM.HR_EMPLOYEE s ON n.SUPERVISOR_ID = s.PERSON_ID
+       FROM HR_EMPLOYEE_NOTIFICATION n
+       LEFT JOIN HR_EMPLOYEE s ON n.SUPERVISOR_ID = s.PERSON_ID
        WHERE n.EMPLYEE_ID = :EMPLOYEE_ID
        AND n.SUPERVISOR_ID IS NULL
        ORDER BY n.CREATED_DATE DESC`,
@@ -99,7 +99,7 @@ export const getUnreadCount = async (supervisorId) => {
   try {
     const result = await conn.execute(
       `SELECT COUNT(*) AS UNREAD_COUNT
-         FROM HCM.HR_EMPLOYEE_NOTIFICATION
+         FROM HR_EMPLOYEE_NOTIFICATION
         WHERE SUPERVISOR_ID = :SUPERVISOR_ID AND STATUS = 0`,
       { SUPERVISOR_ID: parseInt(supervisorId) },
       { outFormat: oracledb.OUT_FORMAT_OBJECT }
@@ -115,7 +115,7 @@ export const markAsRead = async (id) => {
   const conn = await getConnection();
   try {
     const result = await conn.execute(
-      `UPDATE HCM.HR_EMPLOYEE_NOTIFICATION
+      `UPDATE HR_EMPLOYEE_NOTIFICATION
           SET STATUS = 1, UPDATED_DATE = SYSDATE
         WHERE ID = :ID`,
       { ID: parseInt(id) },
@@ -132,7 +132,7 @@ export const markAllAsRead = async (supervisorId) => {
   const conn = await getConnection();
   try {
     await conn.execute(
-      `UPDATE HCM.HR_EMPLOYEE_NOTIFICATION
+      `UPDATE HR_EMPLOYEE_NOTIFICATION
           SET STATUS = 1, UPDATED_DATE = SYSDATE
         WHERE SUPERVISOR_ID = :SUPERVISOR_ID AND STATUS = 0`,
       { SUPERVISOR_ID: parseInt(supervisorId) },
@@ -152,9 +152,9 @@ export const approveLeave = async (leaveId, approverId, notificationId) => {
       `SELECT lr.EMPLOYEE_ID, lr.STATUS, e.FIRST_NAME, e.LAST_NAME,
               lt.NAME AS LEAVE_TYPE_NAME,
               lr.START_DATE, lr.END_DATE, lr.DAYS
-         FROM HCM.HR_LEAVE_REQUEST lr
-         LEFT JOIN HCM.HR_EMPLOYEE   e  ON lr.EMPLOYEE_ID   = e.PERSON_ID
-         LEFT JOIN HCM.HR_LEAVE_TYPE lt ON lr.LEAVE_TYPE_ID = lt.LEAVE_TYPE_ID
+         FROM HR_LEAVE_REQUEST lr
+         LEFT JOIN HR_EMPLOYEE   e  ON lr.EMPLOYEE_ID   = e.PERSON_ID
+         LEFT JOIN HR_LEAVE_TYPE lt ON lr.LEAVE_TYPE_ID = lt.LEAVE_TYPE_ID
         WHERE lr.LEAVE_ID = :LEAVE_ID`,
       { LEAVE_ID: parseInt(leaveId) },
       { outFormat: oracledb.OUT_FORMAT_OBJECT }
@@ -167,7 +167,7 @@ export const approveLeave = async (leaveId, approverId, notificationId) => {
     }
 
     await conn.execute(
-      `UPDATE HCM.HR_LEAVE_REQUEST
+      `UPDATE HR_LEAVE_REQUEST
           SET STATUS       = 'APPROVED',
               APPROVER_ID  = :APPROVER_ID,
               APPROVED_ON  = SYSTIMESTAMP,
@@ -178,7 +178,7 @@ export const approveLeave = async (leaveId, approverId, notificationId) => {
 
     if (notificationId) {
       await conn.execute(
-        `UPDATE HCM.HR_EMPLOYEE_NOTIFICATION
+        `UPDATE HR_EMPLOYEE_NOTIFICATION
             SET STATUS = 1, UPDATED_DATE = SYSDATE
           WHERE ID = :ID`,
         { ID: parseInt(notificationId) }
@@ -187,7 +187,7 @@ export const approveLeave = async (leaveId, approverId, notificationId) => {
 
    // In approveLeave — fix the employee notification INSERT
 await conn.execute(
-  `INSERT INTO HCM.HR_EMPLOYEE_NOTIFICATION
+  `INSERT INTO HR_EMPLOYEE_NOTIFICATION
      (EMPLYEE_ID, SUPERVISOR_ID, NOTIFICATION_DETAILS, STATUS, CREATE_BY, CREATED_DATE)
    VALUES
      (:EMPLOYEE_ID, :SUPERVISOR_ID, :NOTIFICATION_DETAILS, 0, :CREATE_BY, SYSDATE)`,
@@ -218,9 +218,9 @@ export const rejectLeave = async (leaveId, approverId, notificationId, reason) =
       `SELECT lr.EMPLOYEE_ID, lr.STATUS, e.FIRST_NAME, e.LAST_NAME,
               lt.NAME AS LEAVE_TYPE_NAME,
               lr.START_DATE, lr.END_DATE, lr.DAYS
-         FROM HCM.HR_LEAVE_REQUEST lr
-         LEFT JOIN HCM.HR_EMPLOYEE   e  ON lr.EMPLOYEE_ID   = e.PERSON_ID
-         LEFT JOIN HCM.HR_LEAVE_TYPE lt ON lr.LEAVE_TYPE_ID = lt.LEAVE_TYPE_ID
+         FROM HR_LEAVE_REQUEST lr
+         LEFT JOIN HR_EMPLOYEE   e  ON lr.EMPLOYEE_ID   = e.PERSON_ID
+         LEFT JOIN HR_LEAVE_TYPE lt ON lr.LEAVE_TYPE_ID = lt.LEAVE_TYPE_ID
         WHERE lr.LEAVE_ID = :LEAVE_ID`,
       { LEAVE_ID: parseInt(leaveId) },
       { outFormat: oracledb.OUT_FORMAT_OBJECT }
@@ -233,7 +233,7 @@ export const rejectLeave = async (leaveId, approverId, notificationId, reason) =
     }
 
     await conn.execute(
-      `UPDATE HCM.HR_LEAVE_REQUEST
+      `UPDATE HR_LEAVE_REQUEST
           SET STATUS       = 'REJECTED',
               APPROVER_ID  = :APPROVER_ID,
               APPROVED_ON  = SYSTIMESTAMP,
@@ -244,7 +244,7 @@ export const rejectLeave = async (leaveId, approverId, notificationId, reason) =
 
     if (notificationId) {
       await conn.execute(
-        `UPDATE HCM.HR_EMPLOYEE_NOTIFICATION
+        `UPDATE HR_EMPLOYEE_NOTIFICATION
             SET STATUS = 1, UPDATED_DATE = SYSDATE
           WHERE ID = :ID`,
         { ID: parseInt(notificationId) }
@@ -257,7 +257,7 @@ export const rejectLeave = async (leaveId, approverId, notificationId, reason) =
 
     // In rejectLeave — same fix
 await conn.execute(
-  `INSERT INTO HCM.HR_EMPLOYEE_NOTIFICATION
+  `INSERT INTO HR_EMPLOYEE_NOTIFICATION
      (EMPLYEE_ID, SUPERVISOR_ID, NOTIFICATION_DETAILS, STATUS, CREATE_BY, CREATED_DATE)
    VALUES
      (:EMPLOYEE_ID, :SUPERVISOR_ID, :NOTIFICATION_DETAILS, 0, :CREATE_BY, SYSDATE)`,

@@ -169,7 +169,7 @@ export const processAttendance = async (fromDate, toDate) => {
 
     await conn.execute(
       `
-      MERGE INTO HCM.HR_ATTENDANCE target
+      MERGE INTO HR_ATTENDANCE target
       USING (
         SELECT
           E.PERSON_ID,
@@ -178,10 +178,10 @@ export const processAttendance = async (fromDate, toDate) => {
           MAX(TO_TIMESTAMP_TZ(L.AM_TIME_IN_OUT, ${ISO_TZ_FMT}))    AS LAST_OUT,
           MIN(ES.SHIFT_ID)                                          AS SHIFT_ID,
           MIN(L.AM_MAC_ID)                                          AS DEVICE_ID
-        FROM HCM.ATT_LOG L
-        JOIN HCM.HR_EMPLOYEE E
+        FROM ATT_LOG L
+        JOIN HR_EMPLOYEE E
           ON TO_CHAR(L.AM_EMPNO) = E.EMP_NO
-        LEFT JOIN HCM.HR_EMP_SHIFT ES
+        LEFT JOIN HR_EMP_SHIFT ES
           ON  E.PERSON_ID = ES.EMP_NO
           AND ES.STATUS   = 1
           AND TRUNC(TO_TIMESTAMP_TZ(L.AM_TIME_IN_OUT, ${ISO_TZ_FMT}))
@@ -232,7 +232,7 @@ export const processAttendance = async (fromDate, toDate) => {
 
     await conn.execute(
       `
-      MERGE INTO HCM.HR_ATTENDANCE target
+      MERGE INTO HR_ATTENDANCE target
       USING (
         SELECT DISTINCT
           e.PERSON_ID,
@@ -244,16 +244,16 @@ export const processAttendance = async (fromDate, toDate) => {
           CONNECT BY LEVEL <=
             TO_DATE(:TO_DATE,'YYYY-MM-DD') - TO_DATE(:FROM_DATE,'YYYY-MM-DD') + 1
         ) cal
-        JOIN HCM.HR_EMP_SHIFT es
+        JOIN HR_EMP_SHIFT es
           ON cal.DT
              BETWEEN NVL(es.EFFECTIVE_START_DATE, TO_DATE('1900-01-01','YYYY-MM-DD'))
                  AND NVL(es.EFFECTIVE_END_DATE,   TO_DATE('9999-12-31','YYYY-MM-DD'))
          AND es.STATUS = 1
-        JOIN HCM.HR_EMPLOYEE e ON es.EMP_NO = e.PERSON_ID
+        JOIN HR_EMPLOYEE e ON es.EMP_NO = e.PERSON_ID
         -- Only employees with zero punches on that date
         WHERE NOT EXISTS (
           SELECT 1
-            FROM HCM.ATT_LOG l
+            FROM ATT_LOG l
            WHERE TO_CHAR(l.AM_EMPNO) = e.EMP_NO
              AND TRUNC(TO_TIMESTAMP_TZ(l.AM_TIME_IN_OUT, ${ISO_TZ_FMT})) = cal.DT
         )
@@ -310,8 +310,8 @@ export const processAttendance = async (fromDate, toDate) => {
         -- Public holiday check via employee's assigned location
         (
           SELECT COUNT(*)
-            FROM HCM.HR_HOLIDAY_CALENDER hc
-            JOIN HCM.HR_EMP_ASSIGNMENT   ea
+            FROM HR_HOLIDAY_CALENDER hc
+            JOIN HR_EMP_ASSIGNMENT   ea
               ON ea.PERSON_ID = att.EMPLOYEE_ID
              AND ea.STATUS    = 1
            WHERE TRUNC(hc.TDATE) = TRUNC(att.ATTENDANCE_DATE)
@@ -321,14 +321,14 @@ export const processAttendance = async (fromDate, toDate) => {
         -- Approved leave check
         (
           SELECT COUNT(*)
-            FROM HCM.HR_LEAVE_REQUEST lr
+            FROM HR_LEAVE_REQUEST lr
            WHERE lr.EMPLOYEE_ID = att.EMPLOYEE_ID
              AND lr.STATUS      = 'APPROVED'
              AND TRUNC(att.ATTENDANCE_DATE)
                  BETWEEN TRUNC(lr.START_DATE) AND TRUNC(lr.END_DATE)
         ) AS IS_ON_LEAVE
-      FROM HCM.HR_ATTENDANCE att
-      LEFT JOIN HCM.HR_SHIFT s ON att.SHIFT_ID = s.SHIFT_ID
+      FROM HR_ATTENDANCE att
+      LEFT JOIN HR_SHIFT s ON att.SHIFT_ID = s.SHIFT_ID
       WHERE att.STATUS = 'PENDING'
         AND att.ATTENDANCE_DATE
             BETWEEN TO_DATE(:FROM_DATE,'YYYY-MM-DD')
@@ -382,7 +382,7 @@ export const processAttendance = async (fromDate, toDate) => {
 
       await conn.execute(
         `
-        UPDATE HCM.HR_ATTENDANCE
+        UPDATE HR_ATTENDANCE
            SET STATUS           = :STATUS,
                WORK_MINUTES     = :WORK_MINUTES,
                OVERTIME_MINUTES = :OVERTIME_MINUTES,
@@ -403,7 +403,7 @@ export const processAttendance = async (fromDate, toDate) => {
 
     await conn.execute(
       `
-      UPDATE HCM.ATT_LOG
+      UPDATE ATT_LOG
          SET PROCESS_STATUS = 'Y'
        WHERE PROCESS_STATUS = 'N'
          AND TRUNC(TO_TIMESTAMP_TZ(AM_TIME_IN_OUT, ${ISO_TZ_FMT}))
@@ -519,19 +519,19 @@ export const getAttendanceList = async ({
   const whereClause =
     conditions.length > 0 ? `WHERE ${conditions.join("\n      AND ")}` : "";
     const supervisorJoin = supervisorId
-    ? `JOIN HCM.HR_EMPLOYEE_SUPERVISOR es ON e.PERSON_ID = es.PERSON_ID AND es.STATUS = 1`
+    ? `JOIN HR_EMPLOYEE_SUPERVISOR es ON e.PERSON_ID = es.PERSON_ID AND es.STATUS = 1`
     : "";
 
   try {
     const countResult = await conn.execute(
       `
       SELECT COUNT(*) AS TOTAL
-        FROM HCM.HR_ATTENDANCE         att
-        JOIN HCM.HR_EMPLOYEE           e  ON att.EMPLOYEE_ID = e.PERSON_ID
+        FROM HR_ATTENDANCE         att
+        JOIN HR_EMPLOYEE           e  ON att.EMPLOYEE_ID = e.PERSON_ID
         ${supervisorJoin} 
-        LEFT JOIN HCM.HR_EMP_ASSIGNMENT a  ON e.PERSON_ID    = a.PERSON_ID AND a.STATUS = 1
-        LEFT JOIN HCM.HR_COMPANY       c  ON a.COMPANY_ID    = c.COMPANY_ID
-        LEFT JOIN HCM.HR_SHIFT         s  ON att.SHIFT_ID    = s.SHIFT_ID
+        LEFT JOIN HR_EMP_ASSIGNMENT a  ON e.PERSON_ID    = a.PERSON_ID AND a.STATUS = 1
+        LEFT JOIN HR_COMPANY       c  ON a.COMPANY_ID    = c.COMPANY_ID
+        LEFT JOIN HR_SHIFT         s  ON att.SHIFT_ID    = s.SHIFT_ID
         ${whereClause}
       `,
       bindParams,
@@ -576,12 +576,12 @@ export const getAttendanceList = async ({
             s.GRACE_OUT_MINUTES,
             c.COMPANY_NAME
 
-          FROM HCM.HR_ATTENDANCE         att
-          JOIN HCM.HR_EMPLOYEE           e  ON att.EMPLOYEE_ID = e.PERSON_ID
+          FROM HR_ATTENDANCE         att
+          JOIN HR_EMPLOYEE           e  ON att.EMPLOYEE_ID = e.PERSON_ID
           ${supervisorJoin} 
-          LEFT JOIN HCM.HR_EMP_ASSIGNMENT a  ON e.PERSON_ID    = a.PERSON_ID AND a.STATUS = 1
-          LEFT JOIN HCM.HR_COMPANY       c  ON a.COMPANY_ID    = c.COMPANY_ID
-          LEFT JOIN HCM.HR_SHIFT         s  ON att.SHIFT_ID    = s.SHIFT_ID
+          LEFT JOIN HR_EMP_ASSIGNMENT a  ON e.PERSON_ID    = a.PERSON_ID AND a.STATUS = 1
+          LEFT JOIN HR_COMPANY       c  ON a.COMPANY_ID    = c.COMPANY_ID
+          LEFT JOIN HR_SHIFT         s  ON att.SHIFT_ID    = s.SHIFT_ID
           ${whereClause}
           ORDER BY ${orderCol} ${orderDir}
 
@@ -632,9 +632,9 @@ export const getAttendanceDetail = async (employeeId, date) => {
           WHEN 2 THEN 'OUT'
           ELSE 'UNKNOWN'
         END AS PUNCH_LABEL
-      FROM HCM.ATT_LOG      L
-      JOIN HCM.HR_EMPLOYEE  E   ON TO_CHAR(L.AM_EMPNO) = E.EMP_NO
-      LEFT JOIN HCM.HR_LOCATION loc ON L.LOCATION_ID = loc.ID
+      FROM ATT_LOG      L
+      JOIN HR_EMPLOYEE  E   ON TO_CHAR(L.AM_EMPNO) = E.EMP_NO
+      LEFT JOIN HR_LOCATION loc ON L.LOCATION_ID = loc.ID
       WHERE E.EMP_NO = :EMP_NO
         AND TRUNC(TO_TIMESTAMP_TZ(L.AM_TIME_IN_OUT, ${ISO_TZ_FMT}))
             = TO_DATE(:ATT_DATE, 'YYYY-MM-DD')
@@ -711,7 +711,7 @@ export const getAttendanceForExport = async (filters = {}) => {
 
   // ── Supervisor filter ──────────────────────────────────────────────────────
   const supervisorJoin = supervisorId
-    ? `JOIN HCM.HR_EMPLOYEE_SUPERVISOR es ON e.PERSON_ID = es.PERSON_ID AND es.STATUS = 1`
+    ? `JOIN HR_EMPLOYEE_SUPERVISOR es ON e.PERSON_ID = es.PERSON_ID AND es.STATUS = 1`
     : "";
 
   if (supervisorId && supervisorId !== "") {
@@ -745,12 +745,12 @@ export const getAttendanceForExport = async (filters = {}) => {
         s.START_TIME  AS SHIFT_START,
         s.END_TIME    AS SHIFT_END,
         c.COMPANY_NAME
-      FROM HCM.HR_ATTENDANCE         att
-      JOIN HCM.HR_EMPLOYEE           e  ON att.EMPLOYEE_ID = e.PERSON_ID
+      FROM HR_ATTENDANCE         att
+      JOIN HR_EMPLOYEE           e  ON att.EMPLOYEE_ID = e.PERSON_ID
       ${supervisorJoin}
-      LEFT JOIN HCM.HR_EMP_ASSIGNMENT a  ON e.PERSON_ID    = a.PERSON_ID AND a.STATUS = 1
-      LEFT JOIN HCM.HR_COMPANY       c  ON a.COMPANY_ID    = c.COMPANY_ID
-      LEFT JOIN HCM.HR_SHIFT         s  ON att.SHIFT_ID    = s.SHIFT_ID
+      LEFT JOIN HR_EMP_ASSIGNMENT a  ON e.PERSON_ID    = a.PERSON_ID AND a.STATUS = 1
+      LEFT JOIN HR_COMPANY       c  ON a.COMPANY_ID    = c.COMPANY_ID
+      LEFT JOIN HR_SHIFT         s  ON att.SHIFT_ID    = s.SHIFT_ID
       ${whereClause}
       ORDER BY att.ATTENDANCE_DATE DESC, e.FIRST_NAME ASC
       `,
@@ -814,7 +814,7 @@ export const getAttendanceSummary = async ({
 
     // ── Supervisor filter ──────────────────────────────────────────────────
     const supervisorJoin = supervisorId
-      ? `JOIN HCM.HR_EMPLOYEE_SUPERVISOR es ON e.PERSON_ID = es.PERSON_ID AND es.STATUS = 1`
+      ? `JOIN HR_EMPLOYEE_SUPERVISOR es ON e.PERSON_ID = es.PERSON_ID AND es.STATUS = 1`
       : "";
 
     if (supervisorId && supervisorId !== "") {
@@ -826,8 +826,8 @@ export const getAttendanceSummary = async ({
     // companyId / orgId filters need the assignment join
     const assignmentJoin =
       companyId || orgId
-        ? `LEFT JOIN HCM.HR_EMP_ASSIGNMENT a ON e.PERSON_ID = a.PERSON_ID AND a.STATUS = 1
-           LEFT JOIN HCM.HR_COMPANY        c ON a.COMPANY_ID = c.COMPANY_ID`
+        ? `LEFT JOIN HR_EMP_ASSIGNMENT a ON e.PERSON_ID = a.PERSON_ID AND a.STATUS = 1
+           LEFT JOIN HR_COMPANY        c ON a.COMPANY_ID = c.COMPANY_ID`
         : "";
 
     const whereClause =
@@ -847,8 +847,8 @@ export const getAttendanceSummary = async ({
         SUM(CASE WHEN att.STATUS = 'ON_LEAVE'    THEN 1 ELSE 0 END)    AS ON_LEAVE,
         ROUND(SUM(NVL(att.WORK_MINUTES,     0)) / 60, 2)               AS TOTAL_WORK_HOURS,
         ROUND(SUM(NVL(att.OVERTIME_MINUTES, 0)) / 60, 2)               AS TOTAL_OVERTIME_HOURS
-      FROM HCM.HR_ATTENDANCE att
-      JOIN HCM.HR_EMPLOYEE   e  ON att.EMPLOYEE_ID = e.PERSON_ID
+      FROM HR_ATTENDANCE att
+      JOIN HR_EMPLOYEE   e  ON att.EMPLOYEE_ID = e.PERSON_ID
       ${supervisorJoin}
       ${assignmentJoin}
       ${whereClause}
@@ -883,11 +883,11 @@ export const reprocessAttendanceForEmployee = async (
     // Reset rows to PENDING and re-stamp the correct SHIFT_ID from HR_EMP_SHIFT
     await conn.execute(
       `
-      UPDATE HCM.HR_ATTENDANCE att
+      UPDATE HR_ATTENDANCE att
          SET att.STATUS     = 'PENDING',
              att.SHIFT_ID   = (
                SELECT ES.SHIFT_ID
-                 FROM HCM.HR_EMP_SHIFT ES
+                 FROM HR_EMP_SHIFT ES
                 WHERE ES.EMP_NO = att.EMPLOYEE_ID
                   AND ES.STATUS = 1
                   AND att.ATTENDANCE_DATE
@@ -984,12 +984,12 @@ export const getSupervisorTeamAttendance = async (
     const countResult = await conn.execute(
       `
       SELECT COUNT(*) AS TOTAL
-        FROM HCM.HR_ATTENDANCE              att
-        JOIN HCM.HR_EMPLOYEE                e   ON att.EMPLOYEE_ID  = e.PERSON_ID
-        JOIN HCM.HR_EMPLOYEE_SUPERVISOR     es  ON e.PERSON_ID      = es.PERSON_ID
-        LEFT JOIN HCM.HR_EMP_ASSIGNMENT     a   ON e.PERSON_ID      = a.PERSON_ID AND a.STATUS = 1
-        LEFT JOIN HCM.HR_COMPANY            c   ON a.COMPANY_ID     = c.COMPANY_ID
-        LEFT JOIN HCM.HR_SHIFT              s   ON att.SHIFT_ID     = s.SHIFT_ID
+        FROM HR_ATTENDANCE              att
+        JOIN HR_EMPLOYEE                e   ON att.EMPLOYEE_ID  = e.PERSON_ID
+        JOIN HR_EMPLOYEE_SUPERVISOR     es  ON e.PERSON_ID      = es.PERSON_ID
+        LEFT JOIN HR_EMP_ASSIGNMENT     a   ON e.PERSON_ID      = a.PERSON_ID AND a.STATUS = 1
+        LEFT JOIN HR_COMPANY            c   ON a.COMPANY_ID     = c.COMPANY_ID
+        LEFT JOIN HR_SHIFT              s   ON att.SHIFT_ID     = s.SHIFT_ID
         ${whereClause}
       `,
       bindParams,
@@ -1033,12 +1033,12 @@ export const getSupervisorTeamAttendance = async (
             s.GRACE_OUT_MINUTES,
             c.COMPANY_NAME
 
-          FROM HCM.HR_ATTENDANCE              att
-          JOIN HCM.HR_EMPLOYEE                e   ON att.EMPLOYEE_ID  = e.PERSON_ID
-          JOIN HCM.HR_EMPLOYEE_SUPERVISOR     es  ON e.PERSON_ID      = es.PERSON_ID
-          LEFT JOIN HCM.HR_EMP_ASSIGNMENT     a   ON e.PERSON_ID      = a.PERSON_ID AND a.STATUS = 1
-          LEFT JOIN HCM.HR_COMPANY            c   ON a.COMPANY_ID     = c.COMPANY_ID
-          LEFT JOIN HCM.HR_SHIFT              s   ON att.SHIFT_ID     = s.SHIFT_ID
+          FROM HR_ATTENDANCE              att
+          JOIN HR_EMPLOYEE                e   ON att.EMPLOYEE_ID  = e.PERSON_ID
+          JOIN HR_EMPLOYEE_SUPERVISOR     es  ON e.PERSON_ID      = es.PERSON_ID
+          LEFT JOIN HR_EMP_ASSIGNMENT     a   ON e.PERSON_ID      = a.PERSON_ID AND a.STATUS = 1
+          LEFT JOIN HR_COMPANY            c   ON a.COMPANY_ID     = c.COMPANY_ID
+          LEFT JOIN HR_SHIFT              s   ON att.SHIFT_ID     = s.SHIFT_ID
           ${whereClause}
           ORDER BY ${orderCol} ${orderDir}
 
@@ -1114,9 +1114,9 @@ export const getTeamAttendanceStats = async (
         SUM(CASE WHEN att.STATUS = 'UNSCHEDULED' THEN 1 ELSE 0 END)   AS UNSCHEDULED,
         ROUND(SUM(NVL(att.WORK_MINUTES,     0)) / 60, 2)              AS TOTAL_WORK_HOURS,
         ROUND(SUM(NVL(att.OVERTIME_MINUTES, 0)) / 60, 2)              AS TOTAL_OVERTIME_HOURS
-      FROM HCM.HR_ATTENDANCE          att
-      JOIN HCM.HR_EMPLOYEE            e   ON att.EMPLOYEE_ID = e.PERSON_ID
-      JOIN HCM.HR_EMPLOYEE_SUPERVISOR es  ON e.PERSON_ID     = es.PERSON_ID
+      FROM HR_ATTENDANCE          att
+      JOIN HR_EMPLOYEE            e   ON att.EMPLOYEE_ID = e.PERSON_ID
+      JOIN HR_EMPLOYEE_SUPERVISOR es  ON e.PERSON_ID     = es.PERSON_ID
       ${whereClause}
       `,
       bindParams,
@@ -1187,11 +1187,11 @@ export const getMyAttendanceList = async (
     const countResult = await conn.execute(
       `
       SELECT COUNT(*) AS TOTAL
-        FROM HCM.HR_ATTENDANCE         att
-        JOIN HCM.HR_EMPLOYEE           e  ON att.EMPLOYEE_ID = e.PERSON_ID
-        LEFT JOIN HCM.HR_EMP_ASSIGNMENT a  ON e.PERSON_ID    = a.PERSON_ID AND a.STATUS = 1
-        LEFT JOIN HCM.HR_COMPANY       c  ON a.COMPANY_ID    = c.COMPANY_ID
-        LEFT JOIN HCM.HR_SHIFT         s  ON att.SHIFT_ID    = s.SHIFT_ID
+        FROM HR_ATTENDANCE         att
+        JOIN HR_EMPLOYEE           e  ON att.EMPLOYEE_ID = e.PERSON_ID
+        LEFT JOIN HR_EMP_ASSIGNMENT a  ON e.PERSON_ID    = a.PERSON_ID AND a.STATUS = 1
+        LEFT JOIN HR_COMPANY       c  ON a.COMPANY_ID    = c.COMPANY_ID
+        LEFT JOIN HR_SHIFT         s  ON att.SHIFT_ID    = s.SHIFT_ID
         ${whereClause}
       `,
       bindParams,
@@ -1230,11 +1230,11 @@ export const getMyAttendanceList = async (
             s.END_TIME   AS SHIFT_END,
             c.COMPANY_NAME
 
-          FROM HCM.HR_ATTENDANCE         att
-          JOIN HCM.HR_EMPLOYEE           e  ON att.EMPLOYEE_ID = e.PERSON_ID
-          LEFT JOIN HCM.HR_EMP_ASSIGNMENT a  ON e.PERSON_ID    = a.PERSON_ID AND a.STATUS = 1
-          LEFT JOIN HCM.HR_COMPANY       c  ON a.COMPANY_ID    = c.COMPANY_ID
-          LEFT JOIN HCM.HR_SHIFT         s  ON att.SHIFT_ID    = s.SHIFT_ID
+          FROM HR_ATTENDANCE         att
+          JOIN HR_EMPLOYEE           e  ON att.EMPLOYEE_ID = e.PERSON_ID
+          LEFT JOIN HR_EMP_ASSIGNMENT a  ON e.PERSON_ID    = a.PERSON_ID AND a.STATUS = 1
+          LEFT JOIN HR_COMPANY       c  ON a.COMPANY_ID    = c.COMPANY_ID
+          LEFT JOIN HR_SHIFT         s  ON att.SHIFT_ID    = s.SHIFT_ID
           ${whereClause}
           ORDER BY ${orderCol} ${orderDir}
 
@@ -1306,7 +1306,7 @@ export const getMyAttendanceSummary = async (
                  SUM(CASE WHEN att.IN_TIME IS NOT NULL THEN 1 ELSE 0 END) / 60
           END, 2
         )                                                              AS AVG_WORK_HOURS_PER_DAY
-      FROM HCM.HR_ATTENDANCE att
+      FROM HR_ATTENDANCE att
       WHERE att.EMPLOYEE_ID    = :EMPLOYEE_ID
         AND att.ATTENDANCE_DATE
             BETWEEN TO_DATE(:FROM_DATE,'YYYY-MM-DD')

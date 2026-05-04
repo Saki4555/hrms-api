@@ -6,7 +6,7 @@ export const createLeaveType = async (data) => {
   const conn = await getConnection();
   try {
     await conn.execute(
-      `INSERT INTO HCM.HR_LEAVE_TYPE (CODE, NAME, ACCRUAL_POLICY, MAX_BALANCE, CREATED_BY, CREATED_DATE)
+      `INSERT INTO HR_LEAVE_TYPE (CODE, NAME, ACCRUAL_POLICY, MAX_BALANCE, CREATED_BY, CREATED_DATE)
        VALUES (:CODE, :NAME, :ACCRUAL_POLICY, :MAX_BALANCE, :CREATED_BY, SYSTIMESTAMP)`,
       {
         CODE:           data.CODE,
@@ -27,7 +27,7 @@ export const getAllLeaveTypes = async () => {
   const conn = await getConnection();
   try {
     const result = await conn.execute(
-      `SELECT * FROM HCM.HR_LEAVE_TYPE ORDER BY LEAVE_TYPE_ID DESC`,
+      `SELECT * FROM HR_LEAVE_TYPE ORDER BY LEAVE_TYPE_ID DESC`,
       [],
       { outFormat: oracledb.OUT_FORMAT_OBJECT }
     );
@@ -42,7 +42,7 @@ export const getLeaveTypeById = async (id) => {
   const conn = await getConnection();
   try {
     const result = await conn.execute(
-      `SELECT * FROM HCM.HR_LEAVE_TYPE WHERE LEAVE_TYPE_ID = :id`,
+      `SELECT * FROM HR_LEAVE_TYPE WHERE LEAVE_TYPE_ID = :id`,
       { id: parseInt(id) },
       { outFormat: oracledb.OUT_FORMAT_OBJECT }
     );
@@ -57,7 +57,7 @@ export const updateLeaveType = async (id, data) => {
   const conn = await getConnection();
   try {
     const result = await conn.execute(
-      `UPDATE HCM.HR_LEAVE_TYPE
+      `UPDATE HR_LEAVE_TYPE
           SET CODE           = :CODE,
               NAME           = :NAME,
               ACCRUAL_POLICY = :ACCRUAL_POLICY,
@@ -83,7 +83,7 @@ export const deleteLeaveType = async (id) => {
   const conn = await getConnection();
   try {
     const result = await conn.execute(
-      `DELETE FROM HCM.HR_LEAVE_TYPE WHERE LEAVE_TYPE_ID = :id`,
+      `DELETE FROM HR_LEAVE_TYPE WHERE LEAVE_TYPE_ID = :id`,
       { id: parseInt(id) },
       { autoCommit: true }
     );

@@ -13,7 +13,7 @@ export const createContract = async (data) => {
     /*  Insert Contract */
 
     const sql = `
-      INSERT INTO HCM.HR_CONTRACT
+      INSERT INTO HR_CONTRACT
       (
         
         EMPLOYEE_ID,
@@ -65,7 +65,7 @@ export const createContract = async (data) => {
 
 //   const result = await conn.execute(`
 //     SELECT *
-//     FROM HCM.HR_CONTRACT
+//     FROM HR_CONTRACT
 //     ORDER BY CONTRACT_ID DESC
 //   `, [], {outFormat: 4002});
 
@@ -96,8 +96,8 @@ export const getAllContracts = async () => {
       C.NOTICE_PERIOD_DAYS,
       C.CREATED_BY,
       C.CREATED_DATE
-    FROM HCM.HR_CONTRACT C
-    LEFT JOIN HCM.HR_EMPLOYEE E
+    FROM HR_CONTRACT C
+    LEFT JOIN HR_EMPLOYEE E
       ON C.EMPLOYEE_ID = E.PERSON_ID
     ORDER BY C.CONTRACT_ID DESC
   `, [], { outFormat: 4002 });
@@ -113,7 +113,7 @@ export const getAllContracts = async () => {
 //   const conn = await getConnection();
 
 //   const result = await conn.execute(
-//     `SELECT * FROM HCM.HR_CONTRACT WHERE CONTRACT_ID = :id`,
+//     `SELECT * FROM HR_CONTRACT WHERE CONTRACT_ID = :id`,
 //     [id], {outFormat: 4002}
 //   );
 
@@ -143,8 +143,8 @@ export const getContractById = async (id) => {
       C.SALARY_AMOUNT,
       C.PROBATION_PERIOD_MONTHS,
       C.NOTICE_PERIOD_DAYS
-    FROM HCM.HR_CONTRACT C
-    LEFT JOIN HCM.HR_EMPLOYEE E
+    FROM HR_CONTRACT C
+    LEFT JOIN HR_EMPLOYEE E
       ON C.EMPLOYEE_ID = E.PERSON_ID
     WHERE C.CONTRACT_ID = :id
     `,
@@ -163,7 +163,7 @@ export const updateContract = async (id, data) => {
   const conn = await getConnection();
 
   const sql = `
-    UPDATE HCM.HR_CONTRACT SET
+    UPDATE HR_CONTRACT SET
       EMPLOYEE_ID = :EMPLOYEE_ID,
       CONTRACT_TYPE = :CONTRACT_TYPE,
       START_DATE = TO_DATE(:START_DATE,'YYYY-MM-DD'),
@@ -191,7 +191,7 @@ export const deleteContract = async (id) => {
   const conn = await getConnection();
 
   await conn.execute(
-    `DELETE FROM HCM.HR_CONTRACT WHERE CONTRACT_ID = :id`,
+    `DELETE FROM HR_CONTRACT WHERE CONTRACT_ID = :id`,
     [id],
     { autoCommit: true }
   );

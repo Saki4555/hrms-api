@@ -91,7 +91,7 @@ export const updateAttLog = async (empno, data) => {
 
   try {
 
-    const sql = `UPDATE HCM.ATT_LOG
+    const sql = `UPDATE ATT_LOG
       SET AM_TIME_IN_OUT = :AM_TIME_IN_OUT,
           AM_TYPE_IN_OUT = :AM_TYPE_IN_OUT,
           AM_MAC_ID = :AM_MAC_ID
@@ -114,7 +114,7 @@ export const deleteAttLog = async (empno) => {
   try {
 
     await conn.execute(
-      `DELETE FROM HCM.ATT_LOG WHERE AM_EMPNO = :empno`,
+      `DELETE FROM ATT_LOG WHERE AM_EMPNO = :empno`,
       { empno },
       { autoCommit: true }
     );
