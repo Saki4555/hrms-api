@@ -11,8 +11,7 @@
 // TODO: manualAttendanceEdit     — Admin/HR restricted direct edit of HR_ATTENDANCE
 //                                  (ATT_CORRECTION_APPROVE); must log editor + timestamp
 
-// TODO: getMyAttendance          — ESS self-view; same as getAttendanceList but
-//                                  hard-filtered to req.user.employee_id
+
 
 // ── 3.5 ATTENDANCE REPORTS ───────────────────────────────────────────────────
 // TODO: getLateReport            — employees late in a date range with minutes late

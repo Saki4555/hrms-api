@@ -489,6 +489,7 @@ export const getEmployeeList = async ({
   positionId = "",
   countryId  = "",
   shiftId    = "",         // NEW: filter by HR_SHIFT.SHIFT_ID
+  status     = "1",       // ADD THIS — '1'=active | '2'=ended | '0'=deleted | 'all'=everything
 } = {}) => {
   const conn = await getConnection();
 
@@ -512,7 +513,11 @@ export const getEmployeeList = async ({
     : `e.${safeSortBy} ${safeSortOrder} NULLS LAST`;
 
   // ── Build dynamic WHERE + bind params ────────────────────────────
- const conditions = ["(e.STATUS IS NULL OR e.STATUS != 0)"];  // always exclude soft-deleted employees
+const conditions = status === "all"
+  ? []
+  : status === ""  || status == null
+    ? ["(e.STATUS IS NULL OR e.STATUS = 1)"]      // default — active only
+    : [`e.STATUS = ${parseInt(status, 10)}`];
   const bindParams = {};
 
   if (search && search.trim()) {
@@ -556,7 +561,9 @@ export const getEmployeeList = async ({
     bindParams.SHIFT_ID = parseInt(shiftId, 10);
   }
 
-  const whereClause = `WHERE ${conditions.join("\n      AND ")}`;
+  const whereClause = conditions.length
+  ? `WHERE ${conditions.join("\n      AND ")}`
+  : "";   // no WHERE clause when status=all and no other filters
 
   // ── Shared JOIN block (used in both COUNT and data queries) ───────
   const joinBlock = `
