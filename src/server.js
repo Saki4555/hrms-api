@@ -55,6 +55,8 @@ import notificationRoutes   from "./modules/employee-notification/employee-notif
 import authV2Route from "./modules/auth-v2/auth-v2.routes.js";
 import attLogTwoRoutes from "./modules/att-log-two/att-log-two.routes.js";
 
+import coreHrRoutes from "./modules/core-hr/core-hr.routes.js";
+
 import { v2 as cloudinary } from "cloudinary";
 
 config();
@@ -264,7 +266,7 @@ app.use("/api/supervisor-lite", supervisorLiteRoutes);
 
 app.use("/api/v2/auth", authV2Route);
 app.use("/api", attLogTwoRoutes);
-
+app.use("/api/core-hr", coreHrRoutes);
 
 startAttendanceScheduler();
 
