@@ -513,12 +513,23 @@ export const getEmployeeList = async ({
     : `e.${safeSortBy} ${safeSortOrder} NULLS LAST`;
 
   // ── Build dynamic WHERE + bind params ────────────────────────────
+// const conditions = status === "all"
+//   ? []
+//   : status === ""  || status == null
+//     ? ["(e.STATUS IS NULL OR e.STATUS = 1)"]      // default — active only
+//     : [`e.STATUS = ${parseInt(status, 10)}`];
+
+
+//! assume null as 1
 const conditions = status === "all"
   ? []
-  : status === ""  || status == null
-    ? ["(e.STATUS IS NULL OR e.STATUS = 1)"]      // default — active only
-    : [`e.STATUS = ${parseInt(status, 10)}`];
-  const bindParams = {};
+  : status === "" || status == null
+    ? ["(e.STATUS IS NULL OR e.STATUS = 1)"]   // no filter passed → active only
+    : status === "1"
+      ? ["(e.STATUS IS NULL OR e.STATUS = 1)"] // ✅ active filter → include NULLs too
+      : [`e.STATUS = ${parseInt(status, 10)}`]; // ended (2) or deleted (0) → exact match
+
+        const bindParams = {};
 
   if (search && search.trim()) {
     conditions.push(`(
