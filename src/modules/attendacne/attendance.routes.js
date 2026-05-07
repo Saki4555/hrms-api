@@ -10,7 +10,8 @@ import {
   getTeamAttendance,              
   getTeamStats,                   
   getMyAttendance,                
-  getMyAttendanceSummaryHandler,  
+  getMyAttendanceSummaryHandler,
+  reprocessEmployee, 
 } from "./attendance.controller.js";
 
 const router = express.Router();
@@ -22,6 +23,7 @@ router.get("/detail/:employeeId/:date",        getDetail);
 
 // ── Manual processing trigger ──────────────────────────────────────────────
 router.post("/process",                        triggerProcess);
+router.post("/reprocess/employee",             reprocessEmployee); 
 
 // ── Export ────────────────────────────────────────────────────────────────
 router.get("/export/csv",                      exportCSV);

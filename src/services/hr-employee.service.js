@@ -9,11 +9,12 @@ export const createEmployee = async (data) => {
   const conn = await getConnection();
 
   try {
-    const { employee, address, assignment, shift } = data;
+    const { employee, address, assignment, shift, supervisor } = data;
     console.log(data);
 
     // 1️⃣ Employee Insert
-    const empResult = await conn.execute(`
+    const empResult = await conn.execute(
+      `
       INSERT INTO HR_EMPLOYEE (
         EMP_NO, TITLE, FIRST_NAME, LAST_NAME,
         FATHERS_NAME, FATHERS_NAME_B, MOTHERS_NAME, MOTHERS_NAME_B,
@@ -31,31 +32,33 @@ export const createEmployee = async (data) => {
         1, SYSTIMESTAMP
       )
       RETURNING PERSON_ID INTO :PERSON_ID
-    `, {
-      EMP_NO:               employee.EMP_NO,
-      TITLE:                employee.TITLE              ?? null,
-      FIRST_NAME:           employee.FIRST_NAME,
-      LAST_NAME:            employee.LAST_NAME          ?? null,
-      FATHERS_NAME:         employee.FATHERS_NAME       ?? null,
-      FATHERS_NAME_B:       employee.FATHERS_NAME_B     ?? null,
-      MOTHERS_NAME:         employee.MOTHERS_NAME       ?? null,
-      MOTHERS_NAME_B:       employee.MOTHERS_NAME_B     ?? null,
-      GENDER:               employee.GENDER             ?? null,
-      DATE_OF_BIRTH:        employee.DATE_OF_BIRTH,
-      NID:                  employee.NID                ?? null,
-      BIRTH_REG_NO:         employee.BIRTH_REG_NO       ?? null,
-      TOWN_OF_BIRTH:        employee.TOWN_OF_BIRTH      ?? null,
-      REGION_OF_BIRTH:      employee.REGION_OF_BIRTH    ?? null,
-      COUNTRY_OF_BIRTH:     employee.COUNTRY_OF_BIRTH   ?? null,
-      MARRITIAL_STATUS:     employee.MARRITIAL_STATUS   ?? null,
-      NATIONALITY:          employee.NATIONALITY        ?? null,
-      JOIN_DATE:            employee.JOIN_DATE,
-      PERSON_TYPE_ID:       employee.PERSON_TYPE_ID     ?? null,
-      REG_DISABILITY:       employee.REG_DISABILITY     ?? null,
-      EFFECTIVE_START_DATE: employee.EFFECTIVE_START_DATE,
-      EFFECTIVEEND_DATE:    employee.EFFECTIVEEND_DATE,
-      PERSON_ID: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
-    });
+    `,
+      {
+        EMP_NO: employee.EMP_NO,
+        TITLE: employee.TITLE ?? null,
+        FIRST_NAME: employee.FIRST_NAME,
+        LAST_NAME: employee.LAST_NAME ?? null,
+        FATHERS_NAME: employee.FATHERS_NAME ?? null,
+        FATHERS_NAME_B: employee.FATHERS_NAME_B ?? null,
+        MOTHERS_NAME: employee.MOTHERS_NAME ?? null,
+        MOTHERS_NAME_B: employee.MOTHERS_NAME_B ?? null,
+        GENDER: employee.GENDER ?? null,
+        DATE_OF_BIRTH: employee.DATE_OF_BIRTH,
+        NID: employee.NID ?? null,
+        BIRTH_REG_NO: employee.BIRTH_REG_NO ?? null,
+        TOWN_OF_BIRTH: employee.TOWN_OF_BIRTH ?? null,
+        REGION_OF_BIRTH: employee.REGION_OF_BIRTH ?? null,
+        COUNTRY_OF_BIRTH: employee.COUNTRY_OF_BIRTH ?? null,
+        MARRITIAL_STATUS: employee.MARRITIAL_STATUS ?? null,
+        NATIONALITY: employee.NATIONALITY ?? null,
+        JOIN_DATE: employee.JOIN_DATE,
+        PERSON_TYPE_ID: employee.PERSON_TYPE_ID ?? null,
+        REG_DISABILITY: employee.REG_DISABILITY ?? null,
+        EFFECTIVE_START_DATE: employee.EFFECTIVE_START_DATE,
+        EFFECTIVEEND_DATE: employee.EFFECTIVEEND_DATE,
+        PERSON_ID: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER },
+      },
+    );
 
     const personId = empResult.outBinds.PERSON_ID[0];
 
@@ -66,7 +69,8 @@ export const createEmployee = async (data) => {
     ];
 
     for (const { typeId, addr } of addressTypes) {
-      await conn.execute(`
+      await conn.execute(
+        `
         INSERT INTO HR_EMP_ADDRESS (
           PERSON_ID, EMP_NO, ADDRESS_TYPE_ID, ADDRESS1, ADDRESS1_B,
           COUNTRY, REGION, DISTRICT, UPAZILLA, UNIONS, AREA,
@@ -78,64 +82,78 @@ export const createEmployee = async (data) => {
           TO_DATE(:EFFECTIVEEND_DATE, 'YYYY-MM-DD'),
           1, SYSTIMESTAMP
         )
-      `, {
-        PERSON_ID:            personId,
-        EMP_NO:               employee.EMP_NO,
-        ADDRESS_TYPE_ID:      typeId,
-        ADDRESS1:             addr.ADDRESS1             ?? null,
-        ADDRESS1_B:           addr.ADDRESS1_B           ?? null,
-        COUNTRY:              addr.COUNTRY              ?? null,
-        REGION:               addr.REGION               ?? null,
-        DISTRICT:             addr.DISTRICT             ?? null,
-        UPAZILLA:             addr.UPAZILLA             ?? null,
-        UNIONS:               addr.UNIONS               ?? null,
-        AREA:                 addr.AREA                 ?? null,
-        EFFECTIVE_START_DATE: addr.EFFECTIVE_START_DATE ?? employee.EFFECTIVE_START_DATE,
-        EFFECTIVEEND_DATE:    addr.EFFECTIVEEND_DATE    ?? employee.EFFECTIVEEND_DATE,
-      });
+      `,
+        {
+          PERSON_ID: personId,
+          EMP_NO: employee.EMP_NO,
+          ADDRESS_TYPE_ID: typeId,
+          ADDRESS1: addr.ADDRESS1 ?? null,
+          ADDRESS1_B: addr.ADDRESS1_B ?? null,
+          COUNTRY: addr.COUNTRY ?? null,
+          REGION: addr.REGION ?? null,
+          DISTRICT: addr.DISTRICT ?? null,
+          UPAZILLA: addr.UPAZILLA ?? null,
+          UNIONS: addr.UNIONS ?? null,
+          AREA: addr.AREA ?? null,
+          EFFECTIVE_START_DATE:
+            addr.EFFECTIVE_START_DATE ?? employee.EFFECTIVE_START_DATE,
+          EFFECTIVEEND_DATE:
+            addr.EFFECTIVEEND_DATE ?? employee.EFFECTIVEEND_DATE,
+        },
+      );
     }
 
     // 3️⃣ Assignment Insert — only if at least one assignment field exists
-    const hasAssignment = assignment?.COMPANY_ID || assignment?.OU_ID ||
-                          assignment?.ORG_ID      || assignment?.POSITION_ID;
+    const hasAssignment =
+      assignment?.COMPANY_ID ||
+      assignment?.OU_ID ||
+      assignment?.ORG_ID ||
+      assignment?.POSITION_ID;
 
     if (hasAssignment) {
-      await conn.execute(`
+      await conn.execute(
+        `
         INSERT INTO HR_EMP_ASSIGNMENT (
           PERSON_ID, COMPANY_ID, OU_ID, ORG_ID,
-          POSITION_ID, PAYROLL_ID, GRADE_ID,
+          POSITION_ID, PAYROLL_ID, GRADE_ID, LOCATION_ID,
           EFFECTIVE_START_DATE, EFFECTIVE_END_DATE, STATUS
         ) VALUES (
           :PERSON_ID, :COMPANY_ID, :OU_ID, :ORG_ID,
-          :POSITION_ID, :PAYROLL_ID, :GRADE_ID,
+          :POSITION_ID, :PAYROLL_ID, :GRADE_ID, :LOCATION_ID,
           TO_DATE(:EFFECTIVE_START_DATE,'YYYY-MM-DD'),
           TO_DATE(:EFFECTIVE_END_DATE,'YYYY-MM-DD'),
           1
         )
-      `, {
-        PERSON_ID:            personId,
-        COMPANY_ID:           assignment.COMPANY_ID          ?? null,
-        OU_ID:                assignment.OU_ID               ?? null,
-        ORG_ID:               assignment.ORG_ID              ?? null,
-        POSITION_ID:          assignment.POSITION_ID         ?? null,
-        PAYROLL_ID:           assignment.PAYROLL_ID          ?? null,
-        GRADE_ID:             assignment.GRADE_ID            ?? null,
-        EFFECTIVE_START_DATE: assignment.EFFECTIVE_START_DATE,
-        EFFECTIVE_END_DATE:   assignment.EFFECTIVE_END_DATE,
-      });
+      `,
+        {
+          PERSON_ID: personId,
+          COMPANY_ID: assignment.COMPANY_ID ?? null,
+          OU_ID: assignment.OU_ID ?? null,
+          ORG_ID: assignment.ORG_ID ?? null,
+          POSITION_ID: assignment.POSITION_ID ?? null,
+          PAYROLL_ID: assignment.PAYROLL_ID ?? null,
+          GRADE_ID: assignment.GRADE_ID ?? null,
+          LOCATION_ID: assignment.LOCATION_ID ?? null,
+          EFFECTIVE_START_DATE: assignment.EFFECTIVE_START_DATE,
+          EFFECTIVE_END_DATE: assignment.EFFECTIVE_END_DATE,
+        },
+      );
 
       // 4️⃣ Increment ACTUAL_COUNT — only if POSITION_ID is provided
       if (assignment.POSITION_ID) {
-        const countUpdateResult = await conn.execute(`
+        const countUpdateResult = await conn.execute(
+          `
           UPDATE HR_ORG_POSITION
              SET ACTUAL_COUNT = NVL(ACTUAL_COUNT, 0) + 1
            WHERE ID = :ID AND STATUS = 1
-        `, { ID: assignment.POSITION_ID });
+        `,
+          { ID: assignment.POSITION_ID },
+        );
 
         if (countUpdateResult.rowsAffected === 0) {
           throw new Error(
             `ACTUAL_COUNT increment failed: no active HR_ORG_POSITION found with ID ${assignment.POSITION_ID}. ` +
-            `Please verify the POSITION_ID is correct and the position is active (STATUS = 1).`
+              `Please verify the POSITION_ID is correct and the position is active (STATUS = 1).`,
           );
         }
       }
@@ -146,7 +164,8 @@ export const createEmployee = async (data) => {
     const hasShift = shift?.SHIFT_ID;
 
     if (hasShift) {
-      await conn.execute(`
+      await conn.execute(
+        `
         INSERT INTO HR_EMP_SHIFT (
           EMP_NO, SHIFT_ID,
           EFFECTIVE_START_DATE, EFFECTIVE_END_DATE,
@@ -157,18 +176,56 @@ export const createEmployee = async (data) => {
           TO_DATE(:EFFECTIVE_END_DATE,   'YYYY-MM-DD'),
           1, :UPDATE_BY, SYSDATE
         )
-      `, {
-        EMP_NO:               personId,                          // stores PERSON_ID
-        SHIFT_ID:             shift.SHIFT_ID,
-        EFFECTIVE_START_DATE: shift.EFFECTIVE_START_DATE ?? employee.EFFECTIVE_START_DATE,
-        EFFECTIVE_END_DATE:   shift.EFFECTIVE_END_DATE   ?? employee.EFFECTIVEEND_DATE,
-        UPDATE_BY:            shift.UPDATE_BY            ?? null,
-      });
+      `,
+        {
+          EMP_NO: personId, // stores PERSON_ID
+          SHIFT_ID: shift.SHIFT_ID,
+          EFFECTIVE_START_DATE:
+            shift.EFFECTIVE_START_DATE ?? employee.EFFECTIVE_START_DATE,
+          EFFECTIVE_END_DATE:
+            shift.EFFECTIVE_END_DATE ?? employee.EFFECTIVEEND_DATE,
+          UPDATE_BY: shift.UPDATE_BY ?? null,
+        },
+      );
+    }
+
+    // 6️⃣ Supervisor Upsert
+    if (supervisor?.SUPERVISOR_ID) {
+      const existingSup = await conn.execute(
+        `
+        SELECT ID FROM HR_EMPLOYEE_SUPERVISOR
+         WHERE PERSON_ID = :PERSON_ID AND STATUS = 1
+      `,
+        { PERSON_ID: personId },
+        { outFormat: oracledb.OUT_FORMAT_OBJECT },
+      );
+
+      if (existingSup.rows.length > 0) {
+        await conn.execute(
+          `
+          UPDATE HR_EMPLOYEE_SUPERVISOR
+             SET SUPERVISOR_ID = :SUPERVISOR_ID,
+                 UPDATED_DATE  = SYSDATE
+           WHERE PERSON_ID = :PERSON_ID AND STATUS = 1
+        `,
+          { PERSON_ID: personId, SUPERVISOR_ID: supervisor.SUPERVISOR_ID },
+        );
+      } else {
+        await conn.execute(
+          `
+          INSERT INTO HR_EMPLOYEE_SUPERVISOR (
+            PERSON_ID, SUPERVISOR_ID, STATUS, CREATED_DATE
+          ) VALUES (
+            :PERSON_ID, :SUPERVISOR_ID, 1, SYSDATE
+          )
+        `,
+          { PERSON_ID: personId, SUPERVISOR_ID: supervisor.SUPERVISOR_ID },
+        );
+      }
     }
 
     await conn.commit();
     return { success: true, PERSON_ID: personId };
-
   } catch (err) {
     await conn.rollback();
     console.error("Transaction Failed:", err);
@@ -178,7 +235,6 @@ export const createEmployee = async (data) => {
   }
 };
 
-
 /* ─────────────────────────────────────────
    UPDATE EMPLOYEE
 ───────────────────────────────────────── */
@@ -186,10 +242,11 @@ export const updateEmployee = async (personId, data) => {
   const conn = await getConnection();
 
   try {
-    const { employee, address, assignment, shift } = data;
+    const { employee, address, assignment, shift, supervisor } = data;
 
     // 1️⃣ Employee Update
-    await conn.execute(`
+    await conn.execute(
+      `
       UPDATE HR_EMPLOYEE
          SET EMP_NO               = :EMP_NO,
              TITLE                = :TITLE,
@@ -216,32 +273,34 @@ export const updateEmployee = async (personId, data) => {
              LAST_UPDATE_DATE     = SYSDATE,
              LAST_UPDATE_BY       = :LAST_UPDATE_BY
        WHERE PERSON_ID = :PERSON_ID
-    `, {
-      PERSON_ID:            personId,
-      EMP_NO:               employee.EMP_NO,
-      TITLE:                employee.TITLE              ?? null,
-      FIRST_NAME:           employee.FIRST_NAME,
-      LAST_NAME:            employee.LAST_NAME          ?? null,
-      FATHERS_NAME:         employee.FATHERS_NAME       ?? null,
-      FATHERS_NAME_B:       employee.FATHERS_NAME_B     ?? null,
-      MOTHERS_NAME:         employee.MOTHERS_NAME       ?? null,
-      MOTHERS_NAME_B:       employee.MOTHERS_NAME_B     ?? null,
-      GENDER:               employee.GENDER             ?? null,
-      DATE_OF_BIRTH:        employee.DATE_OF_BIRTH      ?? null,
-      NID:                  employee.NID                ?? null,
-      BIRTH_REG_NO:         employee.BIRTH_REG_NO       ?? null,
-      TOWN_OF_BIRTH:        employee.TOWN_OF_BIRTH      ?? null,
-      REGION_OF_BIRTH:      employee.REGION_OF_BIRTH    ?? null,
-      COUNTRY_OF_BIRTH:     employee.COUNTRY_OF_BIRTH   ?? null,
-      MARRITIAL_STATUS:     employee.MARRITIAL_STATUS   ?? null,
-      NATIONALITY:          employee.NATIONALITY        ?? null,
-      JOIN_DATE:            employee.JOIN_DATE,
-      PERSON_TYPE_ID:       employee.PERSON_TYPE_ID     ?? null,
-      REG_DISABILITY:       employee.REG_DISABILITY     ?? null,
-      EFFECTIVE_START_DATE: employee.EFFECTIVE_START_DATE,
-      EFFECTIVEEND_DATE:    employee.EFFECTIVEEND_DATE,
-      LAST_UPDATE_BY:       employee.LAST_UPDATE_BY     ?? null,
-    });
+    `,
+      {
+        PERSON_ID: personId,
+        EMP_NO: employee.EMP_NO,
+        TITLE: employee.TITLE ?? null,
+        FIRST_NAME: employee.FIRST_NAME,
+        LAST_NAME: employee.LAST_NAME ?? null,
+        FATHERS_NAME: employee.FATHERS_NAME ?? null,
+        FATHERS_NAME_B: employee.FATHERS_NAME_B ?? null,
+        MOTHERS_NAME: employee.MOTHERS_NAME ?? null,
+        MOTHERS_NAME_B: employee.MOTHERS_NAME_B ?? null,
+        GENDER: employee.GENDER ?? null,
+        DATE_OF_BIRTH: employee.DATE_OF_BIRTH ?? null,
+        NID: employee.NID ?? null,
+        BIRTH_REG_NO: employee.BIRTH_REG_NO ?? null,
+        TOWN_OF_BIRTH: employee.TOWN_OF_BIRTH ?? null,
+        REGION_OF_BIRTH: employee.REGION_OF_BIRTH ?? null,
+        COUNTRY_OF_BIRTH: employee.COUNTRY_OF_BIRTH ?? null,
+        MARRITIAL_STATUS: employee.MARRITIAL_STATUS ?? null,
+        NATIONALITY: employee.NATIONALITY ?? null,
+        JOIN_DATE: employee.JOIN_DATE,
+        PERSON_TYPE_ID: employee.PERSON_TYPE_ID ?? null,
+        REG_DISABILITY: employee.REG_DISABILITY ?? null,
+        EFFECTIVE_START_DATE: employee.EFFECTIVE_START_DATE,
+        EFFECTIVEEND_DATE: employee.EFFECTIVEEND_DATE,
+        LAST_UPDATE_BY: employee.LAST_UPDATE_BY ?? null,
+      },
+    );
 
     // 2️⃣ Address Update
     const addressTypes = [
@@ -250,7 +309,8 @@ export const updateEmployee = async (personId, data) => {
     ];
 
     for (const { typeId, addr } of addressTypes) {
-      await conn.execute(`
+      await conn.execute(
+        `
         UPDATE HR_EMP_ADDRESS
            SET ADDRESS1             = :ADDRESS1,
                ADDRESS1_B           = :ADDRESS1_B,
@@ -264,57 +324,92 @@ export const updateEmployee = async (personId, data) => {
                EFFECTIVEEND_DATE    = TO_DATE(:EFFECTIVEEND_DATE, 'YYYY-MM-DD'),
                LAST_UPDATE_DATE     = SYSDATE
          WHERE PERSON_ID = :PERSON_ID AND ADDRESS_TYPE_ID = :ADDRESS_TYPE_ID
-      `, {
-        PERSON_ID:            personId,
-        ADDRESS_TYPE_ID:      typeId,
-        ADDRESS1:             addr.ADDRESS1             ?? null,
-        ADDRESS1_B:           addr.ADDRESS1_B           ?? null,
-        COUNTRY:              addr.COUNTRY              ?? null,
-        REGION:               addr.REGION               ?? null,
-        DISTRICT:             addr.DISTRICT             ?? null,
-        UPAZILLA:             addr.UPAZILLA             ?? null,
-        UNIONS:               addr.UNIONS               ?? null,
-        AREA:                 addr.AREA                 ?? null,
-        EFFECTIVE_START_DATE: addr.EFFECTIVE_START_DATE ?? employee.EFFECTIVE_START_DATE,
-        EFFECTIVEEND_DATE:    addr.EFFECTIVEEND_DATE    ?? employee.EFFECTIVEEND_DATE,
-      });
+      `,
+        {
+          PERSON_ID: personId,
+          ADDRESS_TYPE_ID: typeId,
+          ADDRESS1: addr.ADDRESS1 ?? null,
+          ADDRESS1_B: addr.ADDRESS1_B ?? null,
+          COUNTRY: addr.COUNTRY ?? null,
+          REGION: addr.REGION ?? null,
+          DISTRICT: addr.DISTRICT ?? null,
+          UPAZILLA: addr.UPAZILLA ?? null,
+          UNIONS: addr.UNIONS ?? null,
+          AREA: addr.AREA ?? null,
+          EFFECTIVE_START_DATE:
+            addr.EFFECTIVE_START_DATE ?? employee.EFFECTIVE_START_DATE,
+          EFFECTIVEEND_DATE:
+            addr.EFFECTIVEEND_DATE ?? employee.EFFECTIVEEND_DATE,
+        },
+      );
     }
 
     // 3️⃣ Handle ACTUAL_COUNT adjustment if POSITION_ID changed
-    const oldAssignResult = await conn.execute(`
+    const oldAssignResult = await conn.execute(
+      `
       SELECT POSITION_ID
         FROM HR_EMP_ASSIGNMENT
        WHERE PERSON_ID = :PERSON_ID AND STATUS = 1
-    `, { PERSON_ID: personId }, { outFormat: oracledb.OUT_FORMAT_OBJECT });
+    `,
+      { PERSON_ID: personId },
+      { outFormat: oracledb.OUT_FORMAT_OBJECT },
+    );
+
+    console.log(
+      "[DEBUG] oldAssignResult rows:",
+      JSON.stringify(oldAssignResult.rows),
+    );
 
     const oldPositionId = oldAssignResult.rows[0]?.POSITION_ID ?? null;
     const newPositionId = assignment?.POSITION_ID ?? null;
 
+    console.log(
+      "[DEBUG] oldPositionId:",
+      oldPositionId,
+      "| newPositionId:",
+      newPositionId,
+    );
+
     if (newPositionId && oldPositionId !== newPositionId) {
       if (oldPositionId) {
-        await conn.execute(`
+        await conn.execute(
+          `
           UPDATE HR_ORG_POSITION
              SET ACTUAL_COUNT = GREATEST(NVL(ACTUAL_COUNT, 0) - 1, 0)
            WHERE ID = :ID AND STATUS = 1
-        `, { ID: oldPositionId });
+        `,
+          { ID: oldPositionId },
+        );
+        console.log(
+          "[DEBUG] Decremented ACTUAL_COUNT for old position:",
+          oldPositionId,
+        );
       }
 
-      const countUpdateResult = await conn.execute(`
+      const countUpdateResult = await conn.execute(
+        `
         UPDATE HR_ORG_POSITION
            SET ACTUAL_COUNT = NVL(ACTUAL_COUNT, 0) + 1
          WHERE ID = :ID AND STATUS = 1
-      `, { ID: newPositionId });
+      `,
+        { ID: newPositionId },
+      );
+
+      console.log(
+        "[DEBUG] ACTUAL_COUNT increment rowsAffected:",
+        countUpdateResult.rowsAffected,
+      );
 
       if (countUpdateResult.rowsAffected === 0) {
         throw new Error(
-          `ACTUAL_COUNT increment failed: no active HR_ORG_POSITION found with ID ${newPositionId}. ` +
-          `Please verify the POSITION_ID is correct and the position is active (STATUS = 1).`
+          `ACTUAL_COUNT increment failed: no active HR_ORG_POSITION found with ID ${newPositionId}.`,
         );
       }
     }
 
-    // 4️⃣ Assignment Update
-    await conn.execute(`
+    // 4️⃣ Assignment UPSERT — update if exists, INSERT if not (THE FIX)
+    const assignUpdateResult = await conn.execute(
+      `
       UPDATE HR_EMP_ASSIGNMENT
          SET COMPANY_ID           = :COMPANY_ID,
              OU_ID                = :OU_ID,
@@ -322,32 +417,77 @@ export const updateEmployee = async (personId, data) => {
              POSITION_ID          = :POSITION_ID,
              PAYROLL_ID           = :PAYROLL_ID,
              GRADE_ID             = :GRADE_ID,
+             LOCATION_ID          = :LOCATION_ID,
              EFFECTIVE_START_DATE = TO_DATE(:EFFECTIVE_START_DATE, 'YYYY-MM-DD'),
-             EFFECTIVE_END_DATE   = TO_DATE(:EFFECTIVE_END_DATE, 'YYYY-MM-DD')
+             EFFECTIVE_END_DATE   = TO_DATE(:EFFECTIVE_END_DATE, 'YYYY-MM-DD'),
+             STATUS               = 1
        WHERE PERSON_ID = :PERSON_ID
-    `, {
-      PERSON_ID:            personId,
-      COMPANY_ID:           assignment?.COMPANY_ID       ?? null,
-      OU_ID:                assignment?.OU_ID            ?? null,
-      ORG_ID:               assignment?.ORG_ID           ?? null,
-      POSITION_ID:          assignment?.POSITION_ID      ?? null,
-      PAYROLL_ID:           assignment?.PAYROLL_ID       ?? null,
-      GRADE_ID:             assignment?.GRADE_ID         ?? null,
-      EFFECTIVE_START_DATE: assignment?.EFFECTIVE_START_DATE,
-      EFFECTIVE_END_DATE:   assignment?.EFFECTIVE_END_DATE,
-    });
+    `,
+      {
+        PERSON_ID: personId,
+        COMPANY_ID: assignment?.COMPANY_ID ?? null,
+        OU_ID: assignment?.OU_ID ?? null,
+        ORG_ID: assignment?.ORG_ID ?? null,
+        POSITION_ID: assignment?.POSITION_ID ?? null,
+        PAYROLL_ID: assignment?.PAYROLL_ID ?? null,
+        GRADE_ID: assignment?.GRADE_ID ?? null,
+        LOCATION_ID: assignment?.LOCATION_ID ?? null,
+        EFFECTIVE_START_DATE: assignment?.EFFECTIVE_START_DATE,
+        EFFECTIVE_END_DATE: assignment?.EFFECTIVE_END_DATE,
+      },
+    );
+
+    // console.log("[DEBUG] Assignment UPDATE rowsAffected:", assignUpdateResult.rowsAffected);
+
+    if (assignUpdateResult.rowsAffected === 0) {
+      // No existing row — INSERT instead
+      // console.log("[DEBUG] No existing assignment row — inserting for PERSON_ID:", personId);
+      await conn.execute(
+        `
+        INSERT INTO HR_EMP_ASSIGNMENT (
+          PERSON_ID, COMPANY_ID, OU_ID, ORG_ID,
+          POSITION_ID, PAYROLL_ID, GRADE_ID,
+          EFFECTIVE_START_DATE, EFFECTIVE_END_DATE, STATUS
+        ) VALUES (
+          :PERSON_ID, :COMPANY_ID, :OU_ID, :ORG_ID,
+          :POSITION_ID, :PAYROLL_ID, :GRADE_ID,
+          TO_DATE(:EFFECTIVE_START_DATE, 'YYYY-MM-DD'),
+          TO_DATE(:EFFECTIVE_END_DATE,   'YYYY-MM-DD'),
+          1
+        )
+      `,
+        {
+          PERSON_ID: personId,
+          COMPANY_ID: assignment?.COMPANY_ID ?? null,
+          OU_ID: assignment?.OU_ID ?? null,
+          ORG_ID: assignment?.ORG_ID ?? null,
+          POSITION_ID: assignment?.POSITION_ID ?? null,
+          PAYROLL_ID: assignment?.PAYROLL_ID ?? null,
+          GRADE_ID: assignment?.GRADE_ID ?? null,
+          LOCATION_ID: assignment?.LOCATION_ID ?? null,
+          EFFECTIVE_START_DATE: assignment?.EFFECTIVE_START_DATE,
+          EFFECTIVE_END_DATE: assignment?.EFFECTIVE_END_DATE,
+        },
+      );
+      // console.log("[DEBUG] Assignment INSERT done for PERSON_ID:", personId);
+    }
 
     // 5️⃣ Shift Upsert — update if exists (STATUS=1), insert if not
     //    HR_EMP_SHIFT.EMP_NO holds PERSON_ID
     if (shift?.SHIFT_ID) {
-      const existingShift = await conn.execute(`
+      const existingShift = await conn.execute(
+        `
         SELECT ID FROM HR_EMP_SHIFT
          WHERE EMP_NO = :EMP_NO AND STATUS = 1
-      `, { EMP_NO: personId }, { outFormat: oracledb.OUT_FORMAT_OBJECT });
+      `,
+        { EMP_NO: personId },
+        { outFormat: oracledb.OUT_FORMAT_OBJECT },
+      );
 
       if (existingShift.rows.length > 0) {
         // Record exists — UPDATE
-        await conn.execute(`
+        await conn.execute(
+          `
           UPDATE HR_EMP_SHIFT
              SET SHIFT_ID             = :SHIFT_ID,
                  EFFECTIVE_START_DATE = TO_DATE(:EFFECTIVE_START_DATE, 'YYYY-MM-DD'),
@@ -355,16 +495,21 @@ export const updateEmployee = async (personId, data) => {
                  UPDATE_BY            = :UPDATE_BY,
                  LAST_UPDATED         = SYSDATE
            WHERE EMP_NO = :EMP_NO AND STATUS = 1
-        `, {
-          EMP_NO:               personId,
-          SHIFT_ID:             shift.SHIFT_ID,
-          EFFECTIVE_START_DATE: shift.EFFECTIVE_START_DATE ?? employee.EFFECTIVE_START_DATE,
-          EFFECTIVE_END_DATE:   shift.EFFECTIVE_END_DATE   ?? employee.EFFECTIVEEND_DATE,
-          UPDATE_BY:            shift.UPDATE_BY            ?? null,
-        });
+        `,
+          {
+            EMP_NO: personId,
+            SHIFT_ID: shift.SHIFT_ID,
+            EFFECTIVE_START_DATE:
+              shift.EFFECTIVE_START_DATE ?? employee.EFFECTIVE_START_DATE,
+            EFFECTIVE_END_DATE:
+              shift.EFFECTIVE_END_DATE ?? employee.EFFECTIVEEND_DATE,
+            UPDATE_BY: shift.UPDATE_BY ?? null,
+          },
+        );
       } else {
         // No active shift record yet — INSERT
-        await conn.execute(`
+        await conn.execute(
+          `
           INSERT INTO HR_EMP_SHIFT (
             EMP_NO, SHIFT_ID,
             EFFECTIVE_START_DATE, EFFECTIVE_END_DATE,
@@ -375,19 +520,22 @@ export const updateEmployee = async (personId, data) => {
             TO_DATE(:EFFECTIVE_END_DATE,   'YYYY-MM-DD'),
             1, :UPDATE_BY, SYSDATE
           )
-        `, {
-          EMP_NO:               personId,
-          SHIFT_ID:             shift.SHIFT_ID,
-          EFFECTIVE_START_DATE: shift.EFFECTIVE_START_DATE ?? employee.EFFECTIVE_START_DATE,
-          EFFECTIVE_END_DATE:   shift.EFFECTIVE_END_DATE   ?? employee.EFFECTIVEEND_DATE,
-          UPDATE_BY:            shift.UPDATE_BY            ?? null,
-        });
+        `,
+          {
+            EMP_NO: personId,
+            SHIFT_ID: shift.SHIFT_ID,
+            EFFECTIVE_START_DATE:
+              shift.EFFECTIVE_START_DATE ?? employee.EFFECTIVE_START_DATE,
+            EFFECTIVE_END_DATE:
+              shift.EFFECTIVE_END_DATE ?? employee.EFFECTIVEEND_DATE,
+            UPDATE_BY: shift.UPDATE_BY ?? null,
+          },
+        );
       }
     }
 
     await conn.commit();
     return { success: true, PERSON_ID: personId };
-
   } catch (err) {
     await conn.rollback();
     console.error("Update Failed:", err.message);
@@ -397,7 +545,6 @@ export const updateEmployee = async (personId, data) => {
   }
 };
 
-
 /* ─────────────────────────────────────────
    SOFT DELETE
 ───────────────────────────────────────── */
@@ -405,51 +552,69 @@ export const softDeleteEmployee = async (personId) => {
   const conn = await getConnection();
 
   try {
-    const assignRow = await conn.execute(`
+    const assignRow = await conn.execute(
+      `
       SELECT POSITION_ID
         FROM HR_EMP_ASSIGNMENT
        WHERE PERSON_ID = :PERSON_ID AND STATUS = 1
-    `, { PERSON_ID: personId }, { outFormat: oracledb.OUT_FORMAT_OBJECT });
+    `,
+      { PERSON_ID: personId },
+      { outFormat: oracledb.OUT_FORMAT_OBJECT },
+    );
 
     const orgPositionId = assignRow.rows[0]?.POSITION_ID ?? null;
 
-    await conn.execute(`
+    await conn.execute(
+      `
       UPDATE HR_EMPLOYEE
          SET STATUS = 0, LAST_UPDATE_DATE = SYSDATE
        WHERE PERSON_ID = :PERSON_ID
-    `, { PERSON_ID: personId });
+    `,
+      { PERSON_ID: personId },
+    );
 
-    await conn.execute(`
+    await conn.execute(
+      `
       UPDATE HR_EMP_ADDRESS
          SET STATUS = 0, LAST_UPDATE_DATE = SYSDATE
        WHERE PERSON_ID = :PERSON_ID
-    `, { PERSON_ID: personId });
+    `,
+      { PERSON_ID: personId },
+    );
 
-    await conn.execute(`
+    await conn.execute(
+      `
       UPDATE HR_EMP_ASSIGNMENT
          SET STATUS = 0
        WHERE PERSON_ID = :PERSON_ID
-    `, { PERSON_ID: personId });
+    `,
+      { PERSON_ID: personId },
+    );
 
     // Also soft-delete shift record
     // HR_EMP_SHIFT.EMP_NO holds PERSON_ID
-    await conn.execute(`
+    await conn.execute(
+      `
       UPDATE HR_EMP_SHIFT
          SET STATUS = 0, LAST_UPDATED = SYSDATE
        WHERE EMP_NO = :EMP_NO
-    `, { EMP_NO: personId });
+    `,
+      { EMP_NO: personId },
+    );
 
     if (orgPositionId) {
-      await conn.execute(`
+      await conn.execute(
+        `
         UPDATE HR_ORG_POSITION
            SET ACTUAL_COUNT = GREATEST(NVL(ACTUAL_COUNT, 0) - 1, 0)
          WHERE ID = :ID AND STATUS = 1
-      `, { ID: orgPositionId });
+      `,
+        { ID: orgPositionId },
+      );
     }
 
     await conn.commit();
     return { success: true, PERSON_ID: personId };
-
   } catch (err) {
     await conn.rollback();
     console.error("Delete Failed:", err.message);
@@ -458,7 +623,6 @@ export const softDeleteEmployee = async (personId) => {
     await conn.close();
   }
 };
-
 
 /* ─────────────────────────────────────────
    GET EMPLOYEE LIST
@@ -478,58 +642,68 @@ export const softDeleteEmployee = async (personId) => {
      shiftId     - HR_SHIFT.SHIFT_ID     (exact ID)
 ───────────────────────────────────────── */
 export const getEmployeeList = async ({
-  page       = 1,
-  limit      = 10,
-  search     = "",
-  sortBy     = "LAST_ACTIVITY",
-  sortOrder  = "DESC",
+  page = 1,
+  limit = 10,
+  search = "",
+  sortBy = "LAST_ACTIVITY",
+  sortOrder = "DESC",
   personType = "",
-  gender     = "",
-  companyId  = "",
+  gender = "",
+  companyId = "",
   positionId = "",
-  countryId  = "",
-  shiftId    = "",         // NEW: filter by HR_SHIFT.SHIFT_ID
-  status     = "1",       // ADD THIS — '1'=active | '2'=ended | '0'=deleted | 'all'=everything
+  countryId = "",
+  shiftId = "", // NEW: filter by HR_SHIFT.SHIFT_ID
+  status = "1", // ADD THIS — '1'=active | '2'=ended | '0'=deleted | 'all'=everything
 } = {}) => {
   const conn = await getConnection();
 
   // ── Sanitize pagination ──────────────────────────────────────────
-  const pageNum   = Math.max(1, parseInt(page,  10) || 1);
-  const limitNum  = Math.max(1, parseInt(limit, 10) || 10);
+  const pageNum = Math.max(1, parseInt(page, 10) || 1);
+  const limitNum = Math.max(1, parseInt(limit, 10) || 10);
   const rownumMin = (pageNum - 1) * limitNum + 1;
   const rownumMax = pageNum * limitNum;
 
   // ── Sanitize sort ────────────────────────────────────────────────
   const ALLOWED_SORT_COLUMNS = [
-    "EMP_NO", "FIRST_NAME", "LAST_NAME", "JOIN_DATE",
-    "DATE_OF_BIRTH", "CREATION_DATE", "LAST_UPDATE_DATE", "NID", "LAST_ACTIVITY",
+    "EMP_NO",
+    "FIRST_NAME",
+    "LAST_NAME",
+    "JOIN_DATE",
+    "DATE_OF_BIRTH",
+    "CREATION_DATE",
+    "LAST_UPDATE_DATE",
+    "NID",
+    "LAST_ACTIVITY",
   ];
-  const rawSortBy     = sortBy.toUpperCase();
-  const safeSortBy    = ALLOWED_SORT_COLUMNS.includes(rawSortBy) ? rawSortBy : "LAST_ACTIVITY";
+  const rawSortBy = sortBy.toUpperCase();
+  const safeSortBy = ALLOWED_SORT_COLUMNS.includes(rawSortBy)
+    ? rawSortBy
+    : "LAST_ACTIVITY";
   const safeSortOrder = sortOrder.toUpperCase() === "ASC" ? "ASC" : "DESC";
 
-  const orderByClause = safeSortBy === "LAST_ACTIVITY"
-    ? `GREATEST(NVL(e.CREATION_DATE, DATE '1900-01-01'), NVL(e.LAST_UPDATE_DATE, DATE '1900-01-01')) ${safeSortOrder} NULLS LAST`
-    : `e.${safeSortBy} ${safeSortOrder} NULLS LAST`;
+  const orderByClause =
+    safeSortBy === "LAST_ACTIVITY"
+      ? `GREATEST(NVL(e.CREATION_DATE, DATE '1900-01-01'), NVL(e.LAST_UPDATE_DATE, DATE '1900-01-01')) ${safeSortOrder} NULLS LAST`
+      : `e.${safeSortBy} ${safeSortOrder} NULLS LAST`;
 
   // ── Build dynamic WHERE + bind params ────────────────────────────
-// const conditions = status === "all"
-//   ? []
-//   : status === ""  || status == null
-//     ? ["(e.STATUS IS NULL OR e.STATUS = 1)"]      // default — active only
-//     : [`e.STATUS = ${parseInt(status, 10)}`];
+  // const conditions = status === "all"
+  //   ? []
+  //   : status === ""  || status == null
+  //     ? ["(e.STATUS IS NULL OR e.STATUS = 1)"]      // default — active only
+  //     : [`e.STATUS = ${parseInt(status, 10)}`];
 
+  //! assume null as 1
+  const conditions =
+    status === "all"
+      ? []
+      : status === "" || status == null
+        ? ["(e.STATUS IS NULL OR e.STATUS = 1)"] // no filter passed → active only
+        : status === "1"
+          ? ["(e.STATUS IS NULL OR e.STATUS = 1)"] // ✅ active filter → include NULLs too
+          : [`e.STATUS = ${parseInt(status, 10)}`]; // ended (2) or deleted (0) → exact match
 
-//! assume null as 1
-const conditions = status === "all"
-  ? []
-  : status === "" || status == null
-    ? ["(e.STATUS IS NULL OR e.STATUS = 1)"]   // no filter passed → active only
-    : status === "1"
-      ? ["(e.STATUS IS NULL OR e.STATUS = 1)"] // ✅ active filter → include NULLs too
-      : [`e.STATUS = ${parseInt(status, 10)}`]; // ended (2) or deleted (0) → exact match
-
-        const bindParams = {};
+  const bindParams = {};
 
   if (search && search.trim()) {
     conditions.push(`(
@@ -562,7 +736,9 @@ const conditions = status === "all"
   }
 
   if (countryId !== "" && countryId != null) {
-    conditions.push(`pa.COUNTRY IN (SELECT COUNTRY_NAME FROM COUNTRY_LIST WHERE COUNTRY_ID = :COUNTRY_ID)`);
+    conditions.push(
+      `pa.COUNTRY IN (SELECT COUNTRY_NAME FROM COUNTRY_LIST WHERE COUNTRY_ID = :COUNTRY_ID)`,
+    );
     bindParams.COUNTRY_ID = parseInt(countryId, 10);
   }
 
@@ -573,8 +749,8 @@ const conditions = status === "all"
   }
 
   const whereClause = conditions.length
-  ? `WHERE ${conditions.join("\n      AND ")}`
-  : "";   // no WHERE clause when status=all and no other filters
+    ? `WHERE ${conditions.join("\n      AND ")}`
+    : ""; // no WHERE clause when status=all and no other filters
 
   // ── Shared JOIN block (used in both COUNT and data queries) ───────
   const joinBlock = `
@@ -598,6 +774,9 @@ const conditions = status === "all"
     LEFT JOIN UPAZILLA_LIST ul_pma   ON pma.UPAZILLA = ul_pma.UPAZILLA_NAME AND ul_pma.DISTRICT_ID = dl_pma.DISTRICT_ID
     LEFT JOIN HR_EMP_SHIFT  esh      ON e.PERSON_ID = esh.EMP_NO AND esh.STATUS = 1
     LEFT JOIN HR_SHIFT      sh       ON esh.SHIFT_ID = sh.SHIFT_ID
+    LEFT JOIN HR_LOCATION   loc      ON s.LOCATION_ID = loc.ID
+    LEFT JOIN HR_EMPLOYEE_SUPERVISOR es  ON e.PERSON_ID = es.PERSON_ID AND es.STATUS = 1
+  LEFT JOIN HR_EMPLOYEE sup            ON es.SUPERVISOR_ID = sup.PERSON_ID
   `;
 
   try {
@@ -605,12 +784,13 @@ const conditions = status === "all"
     const countResult = await conn.execute(
       `SELECT COUNT(*) AS TOTAL ${joinBlock} ${whereClause}`,
       bindParams,
-      { outFormat: oracledb.OUT_FORMAT_OBJECT }
+      { outFormat: oracledb.OUT_FORMAT_OBJECT },
     );
     const total = countResult.rows[0].TOTAL;
 
     // 2️⃣ Paginated data
-    const result = await conn.execute(`
+    const result = await conn.execute(
+      `
       SELECT * FROM (
         SELECT ROWNUM AS RN, sq.* FROM (
 
@@ -668,6 +848,8 @@ const conditions = status === "all"
             op.POSITION_ID   AS MASTER_POSITION_ID,
             p.TITLE          AS POSITION_TITLE,
             p.LEVELS         AS POSITION_LEVEL,
+            s.LOCATION_ID,                    
+loc.LOCATION_NAME,               
 
             esh.ID                   AS SHIFT_RECORD_ID,
             esh.SHIFT_ID             AS EMP_SHIFT_ID,
@@ -679,7 +861,11 @@ const conditions = status === "all"
             sh.END_TIME              AS SHIFT_END_TIME,
             sh.GRACE_IN_MINUTES,
             sh.GRACE_OUT_MINUTES,
-            sh.OVERNIGHT_FLAG
+            sh.OVERNIGHT_FLAG,
+            es.SUPERVISOR_ID,
+sup.FIRST_NAME  AS SUPERVISOR_FIRST_NAME,
+sup.LAST_NAME   AS SUPERVISOR_LAST_NAME,
+sup.EMP_NO      AS SUPERVISOR_EMP_NO
 
           ${joinBlock}
           ${whereClause}
@@ -687,23 +873,24 @@ const conditions = status === "all"
 
         ) sq WHERE ROWNUM <= ${rownumMax}
       ) WHERE RN >= ${rownumMin}
-    `, bindParams, { outFormat: oracledb.OUT_FORMAT_OBJECT });
+    `,
+      bindParams,
+      { outFormat: oracledb.OUT_FORMAT_OBJECT },
+    );
 
     return {
       data: result.rows.map(formatEmployee),
       pagination: {
         total,
-        page:       pageNum,
-        limit:      limitNum,
+        page: pageNum,
+        limit: limitNum,
         totalPages: Math.ceil(total / limitNum),
       },
     };
-
   } finally {
     await conn.close();
   }
 };
-
 
 /* ─────────────────────────────────────────
    GET EMPLOYEE BY ID
@@ -711,7 +898,8 @@ const conditions = status === "all"
 export const getEmployeeById = async (personId) => {
   const conn = await getConnection();
 
-  const result = await conn.execute(`
+  const result = await conn.execute(
+    `
     SELECT
       e.PERSON_ID, e.EMP_NO, e.TITLE, e.FIRST_NAME, e.LAST_NAME,
       e.FATHERS_NAME, e.FATHERS_NAME_B, e.MOTHERS_NAME, e.MOTHERS_NAME_B,
@@ -766,6 +954,8 @@ export const getEmployeeById = async (personId) => {
       op.POSITION_ID   AS MASTER_POSITION_ID,
       p.TITLE          AS POSITION_TITLE,
       p.LEVELS         AS POSITION_LEVEL,
+      s.LOCATION_ID,                   
+loc.LOCATION_NAME,                
 
       esh.ID                   AS SHIFT_RECORD_ID,
       esh.SHIFT_ID             AS EMP_SHIFT_ID,
@@ -777,7 +967,11 @@ export const getEmployeeById = async (personId) => {
       sh.END_TIME              AS SHIFT_END_TIME,
       sh.GRACE_IN_MINUTES,
       sh.GRACE_OUT_MINUTES,
-      sh.OVERNIGHT_FLAG
+      sh.OVERNIGHT_FLAG,
+      es.SUPERVISOR_ID,
+sup.FIRST_NAME  AS SUPERVISOR_FIRST_NAME,
+sup.LAST_NAME   AS SUPERVISOR_LAST_NAME,
+sup.EMP_NO      AS SUPERVISOR_EMP_NO
 
     FROM HR_EMPLOYEE e
     LEFT JOIN hr_person_type pt      ON e.PERSON_TYPE_ID  = pt.PERSON_TYPE_ID
@@ -799,6 +993,9 @@ export const getEmployeeById = async (personId) => {
     LEFT JOIN UPAZILLA_LIST ul_pma   ON pma.UPAZILLA = ul_pma.UPAZILLA_NAME AND ul_pma.DISTRICT_ID = dl_pma.DISTRICT_ID
     LEFT JOIN HR_EMP_SHIFT  esh      ON e.PERSON_ID = esh.EMP_NO AND esh.STATUS = 1
     LEFT JOIN HR_SHIFT      sh       ON esh.SHIFT_ID = sh.SHIFT_ID
+    LEFT JOIN HR_LOCATION   loc      ON s.LOCATION_ID = loc.ID
+    LEFT JOIN HR_EMPLOYEE_SUPERVISOR es  ON e.PERSON_ID = es.PERSON_ID AND es.STATUS = 1
+LEFT JOIN HR_EMPLOYEE sup            ON es.SUPERVISOR_ID = sup.PERSON_ID
 
     WHERE e.PERSON_ID = :id
     ORDER BY
@@ -806,7 +1003,10 @@ export const getEmployeeById = async (personId) => {
         NVL(e.CREATION_DATE,    DATE '1900-01-01'),
         NVL(e.LAST_UPDATE_DATE, DATE '1900-01-01')
       ) DESC NULLS LAST
-  `, [personId], { outFormat: oracledb.OUT_FORMAT_OBJECT });
+  `,
+    [personId],
+    { outFormat: oracledb.OUT_FORMAT_OBJECT },
+  );
 
   await conn.close();
   return result.rows.map(formatEmployee);

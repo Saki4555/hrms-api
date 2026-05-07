@@ -1,3 +1,5 @@
+
+// src\utils\employee-formatter.js
 export const formatEmployee = (row) => {
   if (!row) return null;
 
@@ -82,6 +84,8 @@ export const formatEmployee = (row) => {
       PAYROLL_ID:           row.PAYROLL_ID,
       GRADE_ID:             row.GRADE_ID,
       GRADE_NAME:           row.GRADE_NAME,
+       LOCATION_ID:          row.LOCATION_ID,       
+  LOCATION_NAME:        row.LOCATION_NAME,     
       EFFECTIVE_START_DATE: row.ASSIGN_EFFECTIVE_START_DATE,
       EFFECTIVE_END_DATE:   row.ASSIGN_EFFECTIVE_END_DATE,
     },
@@ -104,5 +108,11 @@ export const formatEmployee = (row) => {
       EFFECTIVE_START_DATE: row.SHIFT_EFFECTIVE_START_DATE,
       EFFECTIVE_END_DATE:   row.SHIFT_EFFECTIVE_END_DATE,
     } : null,
+    
+supervisor: row.SUPERVISOR_ID ? {
+  employeeId: row.SUPERVISOR_ID,
+  name: `${row.SUPERVISOR_FIRST_NAME ?? ""} ${row.SUPERVISOR_LAST_NAME ?? ""}`.trim(),
+  empNo: row.SUPERVISOR_EMP_NO,
+} : null,
   };
 };
