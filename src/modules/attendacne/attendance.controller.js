@@ -4,10 +4,12 @@ import {
   getAttendanceForExport,
   getAttendanceSummary,
   processAttendance,
-  getSupervisorTeamAttendance,  
-  getTeamAttendanceStats,       
-  getMyAttendanceList,          
-  getMyAttendanceSummary,       
+  getSupervisorTeamAttendance,
+  getTeamAttendanceStats,
+  getMyAttendanceList,
+  getMyAttendanceSummary,
+ 
+  reprocessAttendanceForEmployee,
 } from "./attendance.service.js";
 import {
   generateCSV,
@@ -27,21 +29,21 @@ import { format } from "date-fns";
 export const getAttendance = async (req, res) => {
   try {
     const result = await getAttendanceList({
-      page:       req.query.page,
-      limit:      req.query.limit,
-      date:       req.query.date,
-      fromDate:   req.query.fromDate,
-      toDate:     req.query.toDate,
+      page: req.query.page,
+      limit: req.query.limit,
+      date: req.query.date,
+      fromDate: req.query.fromDate,
+      toDate: req.query.toDate,
       employeeId: req.query.employeeId,
-      companyId:  req.query.companyId,
-      orgId:      req.query.orgId,
-      shiftId:    req.query.shiftId,
+      companyId: req.query.companyId,
+      orgId: req.query.orgId,
+      shiftId: req.query.shiftId,
       locationId: req.query.locationId,
       supervisorId: req.query.supervisorId,
-      status:     req.query.status,
-      search:     req.query.search,
-      sortBy:     req.query.sortBy,     
-      sortOrder:  req.query.sortOrder, 
+      status: req.query.status,
+      search: req.query.search,
+      sortBy: req.query.sortBy,
+      sortOrder: req.query.sortOrder,
     });
 
     res.json({ success: true, ...result });
@@ -64,7 +66,9 @@ export const getDetail = async (req, res) => {
   try {
     const { employeeId, date } = req.params;
     if (!employeeId || !date) {
-      return res.status(400).json({ error: "employeeId and date are required" });
+      return res
+        .status(400)
+        .json({ error: "employeeId and date are required" });
     }
     const data = await getAttendanceDetail(employeeId, date);
     res.json({ success: true, count: data.length, data });
@@ -85,16 +89,16 @@ export const getDetail = async (req, res) => {
 export const getSummary = async (req, res) => {
   try {
     const data = await getAttendanceSummary({
-      date:         req.query.date,
-      fromDate:     req.query.fromDate,
-      toDate:       req.query.toDate,
-      employeeId:   req.query.employeeId,   
-      companyId:    req.query.companyId,
-      orgId:        req.query.orgId,
-      locationId:   req.query.locationId,
-      shiftId:      req.query.shiftId,
-      status:       req.query.status,       
-      supervisorId: req.query.supervisorId, 
+      date: req.query.date,
+      fromDate: req.query.fromDate,
+      toDate: req.query.toDate,
+      employeeId: req.query.employeeId,
+      companyId: req.query.companyId,
+      orgId: req.query.orgId,
+      locationId: req.query.locationId,
+      shiftId: req.query.shiftId,
+      status: req.query.status,
+      supervisorId: req.query.supervisorId,
     });
     res.json({ success: true, data });
   } catch (err) {
@@ -119,7 +123,9 @@ export const triggerProcess = async (req, res) => {
     const { fromDate, toDate } = req.body;
 
     if (!fromDate || !toDate) {
-      return res.status(400).json({ error: "fromDate and toDate are required" });
+      return res
+        .status(400)
+        .json({ error: "fromDate and toDate are required" });
     }
 
     const result = await processAttendance(fromDate, toDate);
@@ -139,8 +145,9 @@ export const triggerProcess = async (req, res) => {
  */
 const buildMeta = (query, companyName = "HRMS") => {
   let dateLabel = "";
-  if (query.date)                   dateLabel = query.date;
-  else if (query.fromDate && query.toDate) dateLabel = `${query.fromDate} to ${query.toDate}`;
+  if (query.date) dateLabel = query.date;
+  else if (query.fromDate && query.toDate)
+    dateLabel = `${query.fromDate} to ${query.toDate}`;
   return { dateLabel, companyName };
 };
 
@@ -152,7 +159,7 @@ export const exportCSV = async (req, res) => {
   try {
     const rows = await getAttendanceForExport(req.query);
     const meta = buildMeta(req.query);
-    const csv  = generateCSV(rows, meta);
+    const csv = generateCSV(rows, meta);
 
     const filename = `attendance_${format(new Date(), "yyyyMMdd_HHmm")}.csv`;
     res.setHeader("Content-Type", "text/csv");
@@ -170,12 +177,15 @@ export const exportCSV = async (req, res) => {
  */
 export const exportExcel = async (req, res) => {
   try {
-    const rows   = await getAttendanceForExport(req.query);
-    const meta   = buildMeta(req.query);
+    const rows = await getAttendanceForExport(req.query);
+    const meta = buildMeta(req.query);
     const buffer = await generateExcel(rows, meta);
 
     const filename = `attendance_${format(new Date(), "yyyyMMdd_HHmm")}.xlsx`;
-    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    );
     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
     res.send(buffer);
   } catch (err) {
@@ -190,8 +200,8 @@ export const exportExcel = async (req, res) => {
  */
 export const exportPDF = async (req, res) => {
   try {
-    const rows   = await getAttendanceForExport(req.query);
-    const meta   = buildMeta(req.query);
+    const rows = await getAttendanceForExport(req.query);
+    const meta = buildMeta(req.query);
     const buffer = await generatePDF(rows, meta);
 
     const filename = `attendance_${format(new Date(), "yyyyMMdd_HHmm")}.pdf`;
@@ -204,21 +214,19 @@ export const exportPDF = async (req, res) => {
   }
 };
 
-
-
 // ── Supervisor: team attendance list ───────────────────────────────────────
 // GET /api/attendance/team/:supervisorId
 export const getTeamAttendance = async (req, res) => {
   try {
     const { supervisorId } = req.params;
     const result = await getSupervisorTeamAttendance(supervisorId, {
-      page:      req.query.page,
-      limit:     req.query.limit,
-      date:      req.query.date,
-      fromDate:  req.query.fromDate,
-      toDate:    req.query.toDate,
-      status:    req.query.status,
-      sortBy:    req.query.sortBy,
+      page: req.query.page,
+      limit: req.query.limit,
+      date: req.query.date,
+      fromDate: req.query.fromDate,
+      toDate: req.query.toDate,
+      status: req.query.status,
+      sortBy: req.query.sortBy,
       sortOrder: req.query.sortOrder,
     });
     res.json({ success: true, ...result });
@@ -234,9 +242,9 @@ export const getTeamStats = async (req, res) => {
   try {
     const { supervisorId } = req.params;
     const data = await getTeamAttendanceStats(supervisorId, {
-      date:     req.query.date,
+      date: req.query.date,
       fromDate: req.query.fromDate,
-      toDate:   req.query.toDate,
+      toDate: req.query.toDate,
     });
     res.json({ success: true, data });
   } catch (err) {
@@ -251,13 +259,13 @@ export const getMyAttendance = async (req, res) => {
   try {
     const { employeeId } = req.params;
     const result = await getMyAttendanceList(employeeId, {
-      page:      req.query.page,
-      limit:     req.query.limit,
-      date:      req.query.date,
-      fromDate:  req.query.fromDate,
-      toDate:    req.query.toDate,
-      status:    req.query.status,
-      sortBy:    req.query.sortBy,
+      page: req.query.page,
+      limit: req.query.limit,
+      date: req.query.date,
+      fromDate: req.query.fromDate,
+      toDate: req.query.toDate,
+      status: req.query.status,
+      sortBy: req.query.sortBy,
       sortOrder: req.query.sortOrder,
     });
     res.json({ success: true, ...result });
@@ -274,12 +282,35 @@ export const getMyAttendanceSummaryHandler = async (req, res) => {
     const { employeeId } = req.params;
     const data = await getMyAttendanceSummary(employeeId, {
       fromDate: req.query.fromDate,
-      toDate:   req.query.toDate,
+      toDate: req.query.toDate,
     });
-    
+
     res.json({ success: true, data });
   } catch (err) {
     console.error("[Attendance] getMyAttendanceSummary error:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// ── Reprocess single employee by date range (Admin / HR) ───────────────────
+// POST /api/attendance/reprocess/employee
+// Body: { employeeId, fromDate: "YYYY-MM-DD", toDate: "YYYY-MM-DD" }
+export const reprocessEmployee = async (req, res) => {
+  try {
+    const { employeeId, fromDate, toDate } = req.body;
+    if (!employeeId || !fromDate || !toDate) {
+      return res
+        .status(400)
+        .json({ error: "employeeId, fromDate and toDate are required" });
+    }
+    const result = await reprocessAttendanceForEmployee(
+      employeeId,
+      fromDate,
+      toDate,
+    );
+    res.json({ success: true, ...result });
+  } catch (err) {
+    console.error("[Attendance] reprocessEmployee error:", err.message);
     res.status(500).json({ error: err.message });
   }
 };

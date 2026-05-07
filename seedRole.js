@@ -1,4 +1,5 @@
 // seedRole.js
+// run node seedRole.js
 
 import { getConnection, connectDB } from "./src/config/db.js";
 
