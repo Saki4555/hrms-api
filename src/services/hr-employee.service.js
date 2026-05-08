@@ -446,11 +446,11 @@ export const updateEmployee = async (personId, data) => {
         `
         INSERT INTO HR_EMP_ASSIGNMENT (
           PERSON_ID, COMPANY_ID, OU_ID, ORG_ID,
-          POSITION_ID, PAYROLL_ID, GRADE_ID,
+          POSITION_ID, PAYROLL_ID, GRADE_ID, LOCATION_ID,
           EFFECTIVE_START_DATE, EFFECTIVE_END_DATE, STATUS
         ) VALUES (
           :PERSON_ID, :COMPANY_ID, :OU_ID, :ORG_ID,
-          :POSITION_ID, :PAYROLL_ID, :GRADE_ID,
+          :POSITION_ID, :PAYROLL_ID, :GRADE_ID, :LOCATION_ID,
           TO_DATE(:EFFECTIVE_START_DATE, 'YYYY-MM-DD'),
           TO_DATE(:EFFECTIVE_END_DATE,   'YYYY-MM-DD'),
           1
@@ -533,6 +533,31 @@ export const updateEmployee = async (personId, data) => {
         );
       }
     }
+
+    // 6️⃣ Supervisor Upsert
+if (supervisor?.SUPERVISOR_ID) {
+  const existingSup = await conn.execute(
+    `SELECT ID FROM HR_EMPLOYEE_SUPERVISOR
+      WHERE PERSON_ID = :PERSON_ID AND STATUS = 1`,
+    { PERSON_ID: personId },
+    { outFormat: oracledb.OUT_FORMAT_OBJECT },
+  );
+
+  if (existingSup.rows.length > 0) {
+    await conn.execute(
+      `UPDATE HR_EMPLOYEE_SUPERVISOR
+          SET SUPERVISOR_ID = :SUPERVISOR_ID, UPDATED_DATE = SYSDATE
+        WHERE PERSON_ID = :PERSON_ID AND STATUS = 1`,
+      { PERSON_ID: personId, SUPERVISOR_ID: supervisor.SUPERVISOR_ID },
+    );
+  } else {
+    await conn.execute(
+      `INSERT INTO HR_EMPLOYEE_SUPERVISOR (PERSON_ID, SUPERVISOR_ID, STATUS, CREATED_DATE)
+        VALUES (:PERSON_ID, :SUPERVISOR_ID, 1, SYSDATE)`,
+      { PERSON_ID: personId, SUPERVISOR_ID: supervisor.SUPERVISOR_ID },
+    );
+  }
+}
 
     await conn.commit();
     return { success: true, PERSON_ID: personId };
