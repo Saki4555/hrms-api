@@ -49,26 +49,21 @@ export const assignSupervisor = async (data) => {
       throw new Error("An employee cannot be their own supervisor.");
     }
 
-    // ── Guard 2: Duplicate active assignment (same pair already exists) ───────
-    //
-    //  Multiple supervisors per employee are allowed, but the exact same
-    //  (PERSON_ID, SUPERVISOR_ID) pair cannot be active twice.
-    const duplicate = await conn.execute(
+    // ── Guard 2: Already has an active supervisor ─────────────────────────────
+    const existing = await conn.execute(
       `SELECT ID FROM HR_EMPLOYEE_SUPERVISOR
-        WHERE PERSON_ID     = :PERSON_ID
-          AND SUPERVISOR_ID = :SUPERVISOR_ID
-          AND STATUS        = 1`,
-      { PERSON_ID: parseInt(data.PERSON_ID), SUPERVISOR_ID: parseInt(data.SUPERVISOR_ID) },
+        WHERE PERSON_ID = :PERSON_ID AND STATUS = 1`,
+      { PERSON_ID: parseInt(data.PERSON_ID) },
       { outFormat: oracledb.OUT_FORMAT_OBJECT }
     );
-    if (duplicate.rows.length > 0) {
-      throw new Error("This supervisor is already actively assigned to this employee.");
+    if (existing.rows.length > 0) {
+      throw new Error(
+        "This employee already has an active supervisor. " +
+        "Please remove the existing supervisor before assigning a new one."
+      );
     }
 
     // ── Guard 3: Circular chain ───────────────────────────────────────────────
-    //
-    //  Prevents: A reports to B, B reports to C, C reports to A.
-    //  Uses Oracle CONNECT BY to walk the full chain upward from supervisorId.
     const isCircular = await wouldCreateCircularChain(
       conn,
       data.PERSON_ID,
