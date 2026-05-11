@@ -21,7 +21,7 @@ export const startAttendanceScheduler = () => {
   cron.schedule(schedule, async () => {
     // Process yesterday's data by default (most common use case)
     // const yesterday = format(subDays(new Date(), 1), "yyyy-MM-dd");
-    const yesterday = "2026-04-22";
+    const yesterday = "2026-04-28";
 
     console.log(`[Scheduler] Nightly attendance run started for: ${yesterday}`);
 

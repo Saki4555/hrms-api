@@ -140,32 +140,31 @@ const calculateStatusAndHours = (inTime, outTime, shift) => {
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  PROCESS ATTENDANCE
+//  employeeId is optional — pass it to scope the run to a single employee.
+//  When null (default), all employees in the date range are processed.
+//  Called by:
+//    • Nightly scheduler      → processAttendance(yesterday, yesterday)
+//    • triggerProcess (bulk)  → processAttendance(fromDate, toDate)
+//    • reprocessAttendance    → processAttendance(fromDate, toDate, employeeId)
 // ─────────────────────────────────────────────────────────────────────────────
-//
-// Five-step priority for each attendance row (highest priority wins):
-//
-//   1. PUBLIC HOLIDAY — HR_HOLIDAY_CALENDER for the employee's location on that date
-//   2. WEEKLY OFF     — attendance date's day name matches SHIFT.WEEKLY_HOLIDAY_1/2
-//   3. ON LEAVE       — an APPROVED HR_LEAVE_REQUEST covers that date
-//   4. ABSENT         — no ATT_LOG punch exists for that date
-//   5. LATE / EARLY_LEAVE / PRESENT — calculated from IN/OUT vs shift times
-//
-// HR_ATTENDANCE.WORK_MINUTES and OVERTIME_MINUTES are set to 0 for statuses
-// 1–3 (non-working days) and computed normally for 4–5.
-
-export const processAttendance = async (fromDate, toDate) => {
+ 
+export const processAttendance = async (fromDate, toDate, employeeId = null) => {
   const conn = await getConnection();
   try {
     console.log(
-      `[Attendance] Processing ATT_LOG from ${fromDate} to ${toDate}...`,
+      `[Attendance] Processing ATT_LOG from ${fromDate} to ${toDate}` +
+      (employeeId ? ` for employee ${employeeId}` : " (all employees)") + "...",
     );
-
+ 
     // ── STEP 1: MERGE raw punches → HR_ATTENDANCE ────────────────────────────
     //
     // SHIFT_ID comes from HR_EMP_SHIFT (effective-dated).
     // MIN(AM_MAC_ID) collapses multiple devices per employee per day
     // to avoid ORA-30926 (unstable row set in MERGE).
-
+    //
+    // :EMPLOYEE_ID IS NULL → bulk mode (all employees)
+    // :EMPLOYEE_ID = value → single-employee reprocess mode
+ 
     await conn.execute(
       `
       MERGE INTO HR_ATTENDANCE target
@@ -189,6 +188,7 @@ export const processAttendance = async (fromDate, toDate) => {
         WHERE TRUNC(TO_TIMESTAMP_TZ(L.AM_TIME_IN_OUT, ${ISO_TZ_FMT}))
               BETWEEN TO_DATE(:FROM_DATE,'YYYY-MM-DD')
                   AND TO_DATE(:TO_DATE,  'YYYY-MM-DD')
+          AND (:EMPLOYEE_ID IS NULL OR E.PERSON_ID = :EMPLOYEE_ID)
         GROUP BY
           E.PERSON_ID,
           TRUNC(TO_TIMESTAMP_TZ(L.AM_TIME_IN_OUT, ${ISO_TZ_FMT}))
@@ -219,16 +219,16 @@ export const processAttendance = async (fromDate, toDate) => {
           'SCHEDULER', SYSTIMESTAMP
         )
       `,
-      { FROM_DATE: fromDate, TO_DATE: toDate },
+      { FROM_DATE: fromDate, TO_DATE: toDate, EMPLOYEE_ID: employeeId ?? null },
     );
-
+ 
     // ── STEP 1.5: Seed ABSENT rows for employees with no punch ───────────────
     //
     // For every active employee who has a shift assignment covering the date
     // but zero ATT_LOG records on that date → insert HR_ATTENDANCE with
     // STATUS = 'PENDING' (IN_TIME = NULL). Step 3 will classify as ABSENT.
     // Already-existing rows (from Step 1) are skipped via WHEN NOT MATCHED.
-
+ 
     await conn.execute(
       `
       MERGE INTO HR_ATTENDANCE target
@@ -256,6 +256,7 @@ export const processAttendance = async (fromDate, toDate) => {
            WHERE TO_CHAR(l.AM_EMPNO) = e.EMP_NO
              AND TRUNC(TO_TIMESTAMP_TZ(l.AM_TIME_IN_OUT, ${ISO_TZ_FMT})) = cal.DT
         )
+          AND (:EMPLOYEE_ID IS NULL OR e.PERSON_ID = :EMPLOYEE_ID)
       ) source
       ON (
             target.EMPLOYEE_ID     = source.PERSON_ID
@@ -275,9 +276,9 @@ export const processAttendance = async (fromDate, toDate) => {
           'SCHEDULER', SYSTIMESTAMP
         )
       `,
-      { FROM_DATE: fromDate, TO_DATE: toDate },
+      { FROM_DATE: fromDate, TO_DATE: toDate, EMPLOYEE_ID: employeeId ?? null },
     );
-
+ 
     // ── STEP 2: Fetch PENDING rows with all classification data ──────────────
     //
     // IS_HOLIDAY  — 1 if HR_HOLIDAY_CALENDER has an active record for the
@@ -287,7 +288,7 @@ export const processAttendance = async (fromDate, toDate) => {
     //
     // DAY_OF_WEEK — TRIM(UPPER(TO_CHAR(...,'DAY'))) to avoid Oracle padding.
     //               Compared against WEEKLY_HOLIDAY_1/2 stored in HR_SHIFT.
-
+ 
     const pendingResult = await conn.execute(
       `
       SELECT
@@ -332,11 +333,12 @@ export const processAttendance = async (fromDate, toDate) => {
         AND att.ATTENDANCE_DATE
             BETWEEN TO_DATE(:FROM_DATE,'YYYY-MM-DD')
                 AND TO_DATE(:TO_DATE,  'YYYY-MM-DD')
+        AND (:EMPLOYEE_ID IS NULL OR att.EMPLOYEE_ID = :EMPLOYEE_ID)
       `,
-      { FROM_DATE: fromDate, TO_DATE: toDate },
+      { FROM_DATE: fromDate, TO_DATE: toDate, EMPLOYEE_ID: employeeId ?? null },
       { outFormat: oracledb.OUT_FORMAT_OBJECT },
     );
-
+ 
     // ── STEP 3: Classify each PENDING row (5-step priority) ──────────────────
     //
     //   1. HOLIDAY    — public holiday for employee's location
@@ -344,12 +346,12 @@ export const processAttendance = async (fromDate, toDate) => {
     //   3. ON_LEAVE   — approved leave covers this date
     //   4. ABSENT     — no IN_TIME punch (IN_TIME = NULL)
     //   5. LATE / EARLY_LEAVE / PRESENT — calculated from punch vs shift
-
+ 
     for (const row of pendingResult.rows) {
       let status = null;
       let workMinutes = 0;
       let overtimeMinutes = 0;
-
+ 
       // Priority 1 — Public holiday
       if (row.IS_HOLIDAY > 0) {
         status = STATUS.HOLIDAY;
@@ -378,7 +380,7 @@ export const processAttendance = async (fromDate, toDate) => {
           row, // contains START_TIME, END_TIME, GRACE_IN_MINUTES, GRACE_OUT_MINUTES, OVERNIGHT_FLAG
         ));
       }
-
+ 
       await conn.execute(
         `
         UPDATE HR_ATTENDANCE
@@ -397,9 +399,9 @@ export const processAttendance = async (fromDate, toDate) => {
         },
       );
     }
-
+ 
     // ── STEP 4: Mark processed ATT_LOG rows ───────────────────────────────────
-
+ 
     await conn.execute(
       `
       UPDATE ATT_LOG
@@ -408,13 +410,17 @@ export const processAttendance = async (fromDate, toDate) => {
          AND TRUNC(TO_TIMESTAMP_TZ(AM_TIME_IN_OUT, ${ISO_TZ_FMT}))
              BETWEEN TO_DATE(:FROM_DATE,'YYYY-MM-DD')
                  AND TO_DATE(:TO_DATE,  'YYYY-MM-DD')
+         AND (:EMPLOYEE_ID IS NULL OR TO_CHAR(AM_EMPNO) = TO_CHAR(:EMPLOYEE_ID))
       `,
-      { FROM_DATE: fromDate, TO_DATE: toDate },
+      { FROM_DATE: fromDate, TO_DATE: toDate, EMPLOYEE_ID: employeeId ?? null },
     );
-
+ 
     await conn.commit();
-    console.log(`[Attendance] Processing complete for ${fromDate} → ${toDate}`);
-
+    console.log(
+      `[Attendance] Processing complete for ${fromDate} → ${toDate}` +
+      (employeeId ? ` (employee ${employeeId})` : ""),
+    );
+ 
     return {
       success: true,
       processedDate: `${fromDate} → ${toDate}`,
@@ -867,19 +873,30 @@ export const getAttendanceSummary = async ({
 //  Call after assigning / changing a shift so past rows get reclassified with
 //  the correct shift, holiday, leave, status, work hours and overtime.
 //
-//  POST /api/attendance/reprocess
+//  POST /api/attendance/reprocess/employee
 //  Body : { employeeId, fromDate, toDate }
 //  Roles: Admin, HR only
+//
+//  Fix notes:
+//  1. conn is closed BEFORE calling processAttendance — avoids orphaned
+//     rollback calls if processAttendance throws.
+//  2. processAttendance is called with employeeId so only that employee's
+//     PENDING rows are picked up — no bleed into other employees.
+//  3. SHIFT_ID subquery uses ORDER BY EFFECTIVE_START_DATE DESC so the
+//     most recently effective shift wins instead of a random ROWNUM = 1 pick.
 // ─────────────────────────────────────────────────────────────────────────────
-
+ 
 export const reprocessAttendanceForEmployee = async (
   employeeId,
   fromDate,
   toDate,
 ) => {
+  // ── Phase 1: Reset existing rows to PENDING ──────────────────────────────
+  // Scoped strictly to this employee. Connection is opened and closed here
+  // independently of processAttendance, which manages its own connection.
+ 
   const conn = await getConnection();
   try {
-    // Reset rows to PENDING and re-stamp the correct SHIFT_ID from HR_EMP_SHIFT
     await conn.execute(
       `
       UPDATE HR_ATTENDANCE att
@@ -892,7 +909,8 @@ export const reprocessAttendanceForEmployee = async (
                   AND att.ATTENDANCE_DATE
                       BETWEEN NVL(ES.EFFECTIVE_START_DATE, TO_DATE('1900-01-01','YYYY-MM-DD'))
                           AND NVL(ES.EFFECTIVE_END_DATE,   TO_DATE('9999-12-31','YYYY-MM-DD'))
-                  AND ROWNUM = 1
+                ORDER BY ES.EFFECTIVE_START_DATE DESC
+                FETCH FIRST 1 ROW ONLY
              ),
              att.UPDATED_BY   = 'REPROCESS',
              att.UPDATED_DATE = SYSTIMESTAMP
@@ -903,18 +921,21 @@ export const reprocessAttendanceForEmployee = async (
       `,
       { EMPLOYEE_ID: employeeId, FROM_DATE: fromDate, TO_DATE: toDate },
     );
-
     await conn.commit();
-
-    // Re-run the full 5-step processor — picks up PENDING rows
-    return await processAttendance(fromDate, toDate);
   } catch (err) {
     await conn.rollback();
     throw err;
   } finally {
+    // Close before calling processAttendance so there is no orphaned
+    // connection and no risk of calling rollback on an already-closed conn.
     await conn.close();
   }
+ 
+  // ── Phase 2: Re-run the full 5-step processor scoped to this employee ────
+  // processAttendance opens its own connection internally.
+  return await processAttendance(fromDate, toDate, employeeId);
 };
+ 
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  SUPERVISOR — TEAM ATTENDANCE LIST
