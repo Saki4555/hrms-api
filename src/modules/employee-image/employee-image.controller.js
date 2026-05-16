@@ -1,3 +1,4 @@
+// src\modules\employee-image\employee-image.controller.js
 import * as imageService from "./employee-image.service.js";
 
 /* POST — upload image for an employee */

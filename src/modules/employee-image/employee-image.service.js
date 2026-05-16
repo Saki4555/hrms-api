@@ -1,3 +1,4 @@
+// src\modules\employee-image\employee-image.service.js
 import oracledb from "oracledb";
 import sharp from "sharp";
 import { fileTypeFromBuffer } from "file-type";
