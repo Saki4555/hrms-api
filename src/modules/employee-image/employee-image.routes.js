@@ -1,3 +1,4 @@
+// src\modules\employee-image\employee-image.routes.js
 import express from "express";
 import multer from "multer";
 import * as imageController from "./employee-image.controller.js";

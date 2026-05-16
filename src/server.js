@@ -56,6 +56,10 @@ import authV2Route from "./modules/auth-v2/auth-v2.routes.js";
 import attLogTwoRoutes from "./modules/att-log-two/att-log-two.routes.js";
 
 import coreHrRoutes from "./modules/core-hr/core-hr.routes.js";
+import payrollRoutes from "./modules/payroll/payroll.routes.js";
+import payStructureRoutes from "./modules/pay-structure/pay-structure.routes.js";
+
+
 
 import { v2 as cloudinary } from "cloudinary";
 
@@ -267,6 +271,8 @@ app.use("/api/supervisor-lite", supervisorLiteRoutes);
 app.use("/api/v2/auth", authV2Route);
 app.use("/api", attLogTwoRoutes);
 app.use("/api/core-hr", coreHrRoutes);
+app.use("/api/payroll", payrollRoutes);
+app.use("/api/pay-structure", payStructureRoutes);
 
 startAttendanceScheduler();
 

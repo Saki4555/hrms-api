@@ -1,3 +1,5 @@
+// src\modules\core-hr\core-hr.service.js
+
 import oracledb from "oracledb";
 import { getConnection } from "../../config/db.js";
 import { logAudit } from "../../utils/audit-logger.js";
@@ -428,11 +430,9 @@ export const getEmployeeAuditHistory = async (personId, { page = 1, limit = 10 }
   const limitNum  = Math.max(1, parseInt(limit, 10) || 10);
   const rownumMin = (pageNum - 1) * limitNum + 1;
   const rownumMax = pageNum * limitNum;
-
   const keyValues = `PERSON_ID=${personId}`;
 
   try {
-    // 1️⃣ Total count
     const countResult = await conn.execute(
       `SELECT COUNT(*) AS TOTAL FROM HR_AUDIT_LOG WHERE KEY_VALUES = :KEY_VALUES`,
       { KEY_VALUES: keyValues },
@@ -440,7 +440,6 @@ export const getEmployeeAuditHistory = async (personId, { page = 1, limit = 10 }
     );
     const total = countResult.rows[0].TOTAL;
 
-    // 2️⃣ Paginated rows
     const result = await conn.execute(
       `SELECT * FROM (
          SELECT ROWNUM AS RN, sq.* FROM (
@@ -452,18 +451,86 @@ export const getEmployeeAuditHistory = async (personId, { page = 1, limit = 10 }
          ) sq WHERE ROWNUM <= ${rownumMax}
        ) WHERE RN >= ${rownumMin}`,
       { KEY_VALUES: keyValues },
-      { outFormat: oracledb.OUT_FORMAT_OBJECT }
+      {
+        outFormat: oracledb.OUT_FORMAT_OBJECT,
+        fetchInfo: {
+          OLD_VALUES: { type: oracledb.STRING },
+          NEW_VALUES: { type: oracledb.STRING },
+        },
+      }
     );
 
+    // Parse JSON strings into objects
+    const parsed = result.rows.map((row) => ({
+      ...row,
+      OLD_VALUES: row.OLD_VALUES ? JSON.parse(row.OLD_VALUES) : null,
+      NEW_VALUES: row.NEW_VALUES ? JSON.parse(row.NEW_VALUES) : null,
+    }));
+
+    // ── Collect all unique IDs across all rows ──────────────────────────────
+    const ids = {
+      company:  new Set(),
+      org:      new Set(),
+      position: new Set(),
+      grade:    new Set(),
+      location: new Set(),
+    };
+
+    parsed.forEach(({ OLD_VALUES, NEW_VALUES }) => {
+      [OLD_VALUES, NEW_VALUES].forEach((v) => {
+        if (!v) return;
+        if (v.COMPANY_ID)  ids.company.add(v.COMPANY_ID);
+        if (v.OU_ID)       ids.org.add(v.OU_ID);
+        if (v.ORG_ID)      ids.org.add(v.ORG_ID);
+        if (v.POSITION_ID) ids.position.add(v.POSITION_ID);
+        if (v.GRADE_ID)    ids.grade.add(v.GRADE_ID);
+        if (v.LOCATION_ID) ids.location.add(v.LOCATION_ID);
+      });
+    });
+
+    // ── Bulk fetch names — one query per entity ─────────────────────────────
+    const bulkFetch = async (sql, idSet) => {
+      if (!idSet.size) return {};
+      const idList = [...idSet].join(",");
+      const r = await conn.execute(
+        sql.replace("__IDS__", idList),
+        [],
+        { outFormat: oracledb.OUT_FORMAT_OBJECT }
+      );
+      return Object.fromEntries(r.rows.map((row) => [row.ID, row.NAME]));
+    };
+
+    const [companies, orgs, positions, grades, locations] = await Promise.all([
+      bulkFetch(`SELECT COMPANY_ID AS ID, COMPANY_NAME AS NAME FROM HR_COMPANY  WHERE COMPANY_ID  IN (__IDS__)`, ids.company),
+      bulkFetch(`SELECT ID, NAME                                FROM HR_ORG      WHERE ID          IN (__IDS__)`, ids.org),
+      bulkFetch(`SELECT POSITION_ID AS ID, TITLE AS NAME        FROM HR_POSITION WHERE POSITION_ID IN (__IDS__)`, ids.position),
+      bulkFetch(`SELECT ID, GRADE AS NAME                       FROM HR_GRADE    WHERE ID          IN (__IDS__)`, ids.grade),
+      bulkFetch(`SELECT ID, LOCATION_NAME AS NAME               FROM HR_LOCATION WHERE ID          IN (__IDS__)`, ids.location),
+    ]);
+
+    // ── Enrich values with resolved names ───────────────────────────────────
+    const enrich = (v) => {
+      if (!v) return null;
+      return {
+        ...v,
+        ...(v.COMPANY_ID  && { COMPANY_NAME:  companies[v.COMPANY_ID]  ?? null }),
+        ...(v.OU_ID       && { OU_NAME:        orgs[v.OU_ID]            ?? null }),
+        ...(v.ORG_ID      && { ORG_NAME:       orgs[v.ORG_ID]           ?? null }),
+        ...(v.POSITION_ID && { POSITION_NAME:  positions[v.POSITION_ID] ?? null }),
+        ...(v.GRADE_ID    && { GRADE_NAME:     grades[v.GRADE_ID]       ?? null }),
+        ...(v.LOCATION_ID && { LOCATION_NAME:  locations[v.LOCATION_ID] ?? null }),
+      };
+    };
+
     return {
-      data: result.rows.map((row) => ({
+      data: parsed.map((row) => ({
         auditId:   row.AUDIT_ID,
         table:     row.TABLE_NAME,
         operation: row.OPERATION,
         changedBy: row.CHANGED_BY,
         changedOn: row.CHANGED_ON,
-        oldValues: row.OLD_VALUES ? JSON.parse(row.OLD_VALUES) : null,
-        newValues: row.NEW_VALUES ? JSON.parse(row.NEW_VALUES) : null,
+        oldValues: enrich(row.OLD_VALUES),
+        newValues: enrich(row.NEW_VALUES),
       })),
       pagination: {
         total,
