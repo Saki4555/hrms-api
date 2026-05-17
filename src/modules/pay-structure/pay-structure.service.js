@@ -17,7 +17,7 @@ export const getPayStructures = async () => {
                  PS.CREATED_BY, PS.CREATED_DATE
         ORDER BY PS.NAME`,
       {},
-      { outFormat: oracledb.OUT_FORMAT_OBJECT }
+      { outFormat: oracledb.OUT_FORMAT_OBJECT },
     );
     return result.rows;
   } finally {
@@ -35,7 +35,7 @@ export const getPayStructureById = async (id) => {
          FROM HR_PAY_STRUCTURE
         WHERE PAY_STRUCTURE_ID = :ID`,
       { ID: parseInt(id) },
-      { outFormat: oracledb.OUT_FORMAT_OBJECT }
+      { outFormat: oracledb.OUT_FORMAT_OBJECT },
     );
     if (structResult.rows.length === 0) return null;
     const structure = structResult.rows[0];
@@ -50,7 +50,7 @@ export const getPayStructureById = async (id) => {
         WHERE PSC.PAY_STRUCTURE_ID = :ID
         ORDER BY PSC.COMPONENT_ORDER`,
       { ID: parseInt(id) },
-      { outFormat: oracledb.OUT_FORMAT_OBJECT }
+      { outFormat: oracledb.OUT_FORMAT_OBJECT },
     );
 
     return { ...structure, components: compResult.rows };
@@ -66,21 +66,22 @@ export const createPayStructure = async ({ name, description, created_by }) => {
     const existing = await conn.execute(
       `SELECT PAY_STRUCTURE_ID FROM HR_PAY_STRUCTURE WHERE UPPER(NAME) = UPPER(:NAME)`,
       { NAME: name },
-      { outFormat: oracledb.OUT_FORMAT_OBJECT }
+      { outFormat: oracledb.OUT_FORMAT_OBJECT },
     );
-    if (existing.rows.length > 0) throw new Error(`Pay structure '${name}' already exists.`);
+    if (existing.rows.length > 0)
+      throw new Error(`Pay structure '${name}' already exists.`);
 
     const result = await conn.execute(
       `INSERT INTO HR_PAY_STRUCTURE (NAME, DESCRIPTION, CREATED_BY)
        VALUES (:NAME, :DESCRIPTION, :CREATED_BY)
        RETURNING PAY_STRUCTURE_ID INTO :ID`,
       {
-        NAME:        name.trim(),
+        NAME: name.trim(),
         DESCRIPTION: description ?? null,
-        CREATED_BY:  created_by ?? "SYSTEM",
-        ID:          { dir: oracledb.BIND_OUT, type: oracledb.NUMBER },
+        CREATED_BY: created_by ?? "SYSTEM",
+        ID: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER },
       },
-      { autoCommit: true }
+      { autoCommit: true },
     );
     return { pay_structure_id: result.outBinds.ID[0] };
   } finally {
@@ -89,7 +90,10 @@ export const createPayStructure = async ({ name, description, created_by }) => {
 };
 
 // ── UPDATE ───────────────────────────────────────────────────────────────────
-export const updatePayStructure = async (id, { name, description, updated_by }) => {
+export const updatePayStructure = async (
+  id,
+  { name, description, updated_by },
+) => {
   const conn = await getConnection();
   try {
     const result = await conn.execute(
@@ -100,12 +104,12 @@ export const updatePayStructure = async (id, { name, description, updated_by }) 
               UPDATED_DATE = SYSTIMESTAMP
         WHERE PAY_STRUCTURE_ID = :ID`,
       {
-        NAME:        name.trim(),
+        NAME: name.trim(),
         DESCRIPTION: description ?? null,
-        UPDATED_BY:  updated_by ?? "SYSTEM",
-        ID:          parseInt(id),
+        UPDATED_BY: updated_by ?? "SYSTEM",
+        ID: parseInt(id),
       },
-      { autoCommit: true }
+      { autoCommit: true },
     );
     if (result.rowsAffected === 0) throw new Error("Pay structure not found.");
     return { rows_affected: result.rowsAffected };
@@ -123,23 +127,25 @@ export const deletePayStructure = async (id) => {
       `SELECT ASSIGNMENT_ID FROM HR_EMP_ASSIGNMENT
         WHERE PAY_STRUCTURE_ID = :ID AND STATUS = 1 AND ROWNUM = 1`,
       { ID: parseInt(id) },
-      { outFormat: oracledb.OUT_FORMAT_OBJECT }
+      { outFormat: oracledb.OUT_FORMAT_OBJECT },
     );
     if (used.rows.length > 0) {
-      throw new Error("Cannot delete — this structure is assigned to active employees.");
+      throw new Error(
+        "Cannot delete — this structure is assigned to active employees.",
+      );
     }
 
     // Delete linked components first
     await conn.execute(
       `DELETE FROM HR_PAY_STRUCTURE_COMPONENT WHERE PAY_STRUCTURE_ID = :ID`,
       { ID: parseInt(id) },
-      { autoCommit: false }
+      { autoCommit: false },
     );
 
     const result = await conn.execute(
       `DELETE FROM HR_PAY_STRUCTURE WHERE PAY_STRUCTURE_ID = :ID`,
       { ID: parseInt(id) },
-      { autoCommit: false }
+      { autoCommit: false },
     );
     if (result.rowsAffected === 0) throw new Error("Pay structure not found.");
 
@@ -158,7 +164,10 @@ export const deletePayStructure = async (id) => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 // ── ADD COMPONENT TO STRUCTURE ───────────────────────────────────────────────
-export const addComponentToStructure = async (structureId, { component_id, default_value, component_order }) => {
+export const addComponentToStructure = async (
+  structureId,
+  { component_id, default_value, component_order },
+) => {
   const conn = await getConnection();
   try {
     // Check duplicate
@@ -166,7 +175,7 @@ export const addComponentToStructure = async (structureId, { component_id, defau
       `SELECT COMPONENT_ID FROM HR_PAY_STRUCTURE_COMPONENT
         WHERE PAY_STRUCTURE_ID = :SID AND COMPONENT_ID = :CID`,
       { SID: parseInt(structureId), CID: parseInt(component_id) },
-      { outFormat: oracledb.OUT_FORMAT_OBJECT }
+      { outFormat: oracledb.OUT_FORMAT_OBJECT },
     );
     if (existing.rows.length > 0) {
       throw new Error("This component is already added to the structure.");
@@ -180,22 +189,22 @@ export const addComponentToStructure = async (structureId, { component_id, defau
            FROM HR_PAY_STRUCTURE_COMPONENT
           WHERE PAY_STRUCTURE_ID = :SID`,
         { SID: parseInt(structureId) },
-        { outFormat: oracledb.OUT_FORMAT_OBJECT }
+        { outFormat: oracledb.OUT_FORMAT_OBJECT },
       );
       order = (maxOrder.rows[0]?.MAX_ORDER ?? 0) + 1;
     }
 
     await conn.execute(
       `INSERT INTO HR_PAY_STRUCTURE_COMPONENT
-             (PAY_STRUCTURE_ID, COMPONENT_ID, COMPONENT_ORDER, DEFAULT_VALUE)
-       VALUES (:SID, :CID, :ORDER, :VALUE)`,
-      {
-        SID:   parseInt(structureId),
-        CID:   parseInt(component_id),
-        ORDER: order,
-        VALUE: default_value ?? 0,
-      },
-      { autoCommit: true }
+   (PAY_STRUCTURE_ID, COMPONENT_ID, COMPONENT_ORDER, DEFAULT_VALUE)
+    VALUES (:SID, :CID, :COMP_ORDER, :COMP_VAL)`,
+{
+  SID:        parseInt(structureId),
+  CID:        parseInt(component_id),
+  COMP_ORDER: order,
+  COMP_VAL:   default_value ?? 0,  // ← fixed
+},
+      { autoCommit: true },
     );
     return { success: true };
   } finally {
@@ -204,24 +213,29 @@ export const addComponentToStructure = async (structureId, { component_id, defau
 };
 
 // ── UPDATE COMPONENT IN STRUCTURE (amount / order) ───────────────────────────
-export const updateComponentInStructure = async (structureId, componentId, { default_value, component_order }) => {
+export const updateComponentInStructure = async (
+  structureId,
+  componentId,
+  { default_value, component_order },
+) => {
   const conn = await getConnection();
   try {
     const result = await conn.execute(
       `UPDATE HR_PAY_STRUCTURE_COMPONENT
-          SET DEFAULT_VALUE   = :VALUE,
-              COMPONENT_ORDER = :ORDER
-        WHERE PAY_STRUCTURE_ID = :SID
-          AND COMPONENT_ID     = :CID`,
+    SET DEFAULT_VALUE   = :COMP_VAL,
+        COMPONENT_ORDER = :COMP_ORDER
+  WHERE PAY_STRUCTURE_ID = :SID
+    AND COMPONENT_ID     = :CID`,
       {
-        VALUE: default_value ?? 0,
-        ORDER: component_order ?? 1,
-        SID:   parseInt(structureId),
-        CID:   parseInt(componentId),
+        COMP_VAL: default_value ?? 0,
+        COMP_ORDER: component_order ?? 1,
+        SID: parseInt(structureId),
+        CID: parseInt(componentId),
       },
-      { autoCommit: true }
+      { autoCommit: true },
     );
-    if (result.rowsAffected === 0) throw new Error("Component not found in this structure.");
+    if (result.rowsAffected === 0)
+      throw new Error("Component not found in this structure.");
     return { rows_affected: result.rowsAffected };
   } finally {
     await conn.close();
@@ -229,7 +243,10 @@ export const updateComponentInStructure = async (structureId, componentId, { def
 };
 
 // ── REMOVE COMPONENT FROM STRUCTURE ─────────────────────────────────────────
-export const removeComponentFromStructure = async (structureId, componentId) => {
+export const removeComponentFromStructure = async (
+  structureId,
+  componentId,
+) => {
   const conn = await getConnection();
   try {
     const result = await conn.execute(
@@ -237,9 +254,10 @@ export const removeComponentFromStructure = async (structureId, componentId) => 
         WHERE PAY_STRUCTURE_ID = :SID
           AND COMPONENT_ID     = :CID`,
       { SID: parseInt(structureId), CID: parseInt(componentId) },
-      { autoCommit: true }
+      { autoCommit: true },
     );
-    if (result.rowsAffected === 0) throw new Error("Component not found in this structure.");
+    if (result.rowsAffected === 0)
+      throw new Error("Component not found in this structure.");
     return { rows_affected: result.rowsAffected };
   } finally {
     await conn.close();

@@ -1,3 +1,4 @@
+// src\services\hr-employee.service.js
 import { getConnection } from "../config/db.js";
 import oracledb from "oracledb";
 import { formatEmployee } from "../utils/employee-formatter.js";
@@ -115,11 +116,11 @@ export const createEmployee = async (data) => {
         `
         INSERT INTO HR_EMP_ASSIGNMENT (
           PERSON_ID, COMPANY_ID, OU_ID, ORG_ID,
-          POSITION_ID, PAYROLL_ID, GRADE_ID, LOCATION_ID,
+          POSITION_ID, PAY_STRUCTURE_ID, GRADE_ID, LOCATION_ID,
           EFFECTIVE_START_DATE, EFFECTIVE_END_DATE, STATUS
         ) VALUES (
           :PERSON_ID, :COMPANY_ID, :OU_ID, :ORG_ID,
-          :POSITION_ID, :PAYROLL_ID, :GRADE_ID, :LOCATION_ID,
+          :POSITION_ID, :PAY_STRUCTURE_ID, :GRADE_ID, :LOCATION_ID,
           TO_DATE(:EFFECTIVE_START_DATE,'YYYY-MM-DD'),
           TO_DATE(:EFFECTIVE_END_DATE,'YYYY-MM-DD'),
           1
@@ -131,7 +132,7 @@ export const createEmployee = async (data) => {
           OU_ID: assignment.OU_ID ?? null,
           ORG_ID: assignment.ORG_ID ?? null,
           POSITION_ID: assignment.POSITION_ID ?? null,
-          PAYROLL_ID: assignment.PAYROLL_ID ?? null,
+          PAY_STRUCTURE_ID: assignment.PAY_STRUCTURE_ID ?? null,
           GRADE_ID: assignment.GRADE_ID ?? null,
           LOCATION_ID: assignment.LOCATION_ID ?? null,
           EFFECTIVE_START_DATE: assignment.EFFECTIVE_START_DATE,
@@ -415,7 +416,7 @@ export const updateEmployee = async (personId, data) => {
              OU_ID                = :OU_ID,
              ORG_ID               = :ORG_ID,
              POSITION_ID          = :POSITION_ID,
-             PAYROLL_ID           = :PAYROLL_ID,
+             PAY_STRUCTURE_ID     = :PAY_STRUCTURE_ID,
              GRADE_ID             = :GRADE_ID,
              LOCATION_ID          = :LOCATION_ID,
              EFFECTIVE_START_DATE = TO_DATE(:EFFECTIVE_START_DATE, 'YYYY-MM-DD'),
@@ -429,7 +430,7 @@ export const updateEmployee = async (personId, data) => {
         OU_ID: assignment?.OU_ID ?? null,
         ORG_ID: assignment?.ORG_ID ?? null,
         POSITION_ID: assignment?.POSITION_ID ?? null,
-        PAYROLL_ID: assignment?.PAYROLL_ID ?? null,
+        PAY_STRUCTURE_ID: assignment?.PAY_STRUCTURE_ID ?? null,
         GRADE_ID: assignment?.GRADE_ID ?? null,
         LOCATION_ID: assignment?.LOCATION_ID ?? null,
         EFFECTIVE_START_DATE: assignment?.EFFECTIVE_START_DATE,
@@ -446,11 +447,11 @@ export const updateEmployee = async (personId, data) => {
         `
         INSERT INTO HR_EMP_ASSIGNMENT (
           PERSON_ID, COMPANY_ID, OU_ID, ORG_ID,
-          POSITION_ID, PAYROLL_ID, GRADE_ID, LOCATION_ID,
+          POSITION_ID, PAY_STRUCTURE_ID, GRADE_ID, LOCATION_ID,
           EFFECTIVE_START_DATE, EFFECTIVE_END_DATE, STATUS
         ) VALUES (
           :PERSON_ID, :COMPANY_ID, :OU_ID, :ORG_ID,
-          :POSITION_ID, :PAYROLL_ID, :GRADE_ID, :LOCATION_ID,
+          :POSITION_ID, :PAY_STRUCTURE_ID, :GRADE_ID, :LOCATION_ID,
           TO_DATE(:EFFECTIVE_START_DATE, 'YYYY-MM-DD'),
           TO_DATE(:EFFECTIVE_END_DATE,   'YYYY-MM-DD'),
           1
@@ -462,7 +463,7 @@ export const updateEmployee = async (personId, data) => {
           OU_ID: assignment?.OU_ID ?? null,
           ORG_ID: assignment?.ORG_ID ?? null,
           POSITION_ID: assignment?.POSITION_ID ?? null,
-          PAYROLL_ID: assignment?.PAYROLL_ID ?? null,
+          PAY_STRUCTURE_ID: assignment?.PAY_STRUCTURE_ID ?? null,
           GRADE_ID: assignment?.GRADE_ID ?? null,
           LOCATION_ID: assignment?.LOCATION_ID ?? null,
           EFFECTIVE_START_DATE: assignment?.EFFECTIVE_START_DATE,
@@ -535,29 +536,29 @@ export const updateEmployee = async (personId, data) => {
     }
 
     // 6️⃣ Supervisor Upsert
-if (supervisor?.SUPERVISOR_ID) {
-  const existingSup = await conn.execute(
-    `SELECT ID FROM HR_EMPLOYEE_SUPERVISOR
+    if (supervisor?.SUPERVISOR_ID) {
+      const existingSup = await conn.execute(
+        `SELECT ID FROM HR_EMPLOYEE_SUPERVISOR
       WHERE PERSON_ID = :PERSON_ID AND STATUS = 1`,
-    { PERSON_ID: personId },
-    { outFormat: oracledb.OUT_FORMAT_OBJECT },
-  );
+        { PERSON_ID: personId },
+        { outFormat: oracledb.OUT_FORMAT_OBJECT },
+      );
 
-  if (existingSup.rows.length > 0) {
-    await conn.execute(
-      `UPDATE HR_EMPLOYEE_SUPERVISOR
+      if (existingSup.rows.length > 0) {
+        await conn.execute(
+          `UPDATE HR_EMPLOYEE_SUPERVISOR
           SET SUPERVISOR_ID = :SUPERVISOR_ID, UPDATED_DATE = SYSDATE
         WHERE PERSON_ID = :PERSON_ID AND STATUS = 1`,
-      { PERSON_ID: personId, SUPERVISOR_ID: supervisor.SUPERVISOR_ID },
-    );
-  } else {
-    await conn.execute(
-      `INSERT INTO HR_EMPLOYEE_SUPERVISOR (PERSON_ID, SUPERVISOR_ID, STATUS, CREATED_DATE)
+          { PERSON_ID: personId, SUPERVISOR_ID: supervisor.SUPERVISOR_ID },
+        );
+      } else {
+        await conn.execute(
+          `INSERT INTO HR_EMPLOYEE_SUPERVISOR (PERSON_ID, SUPERVISOR_ID, STATUS, CREATED_DATE)
         VALUES (:PERSON_ID, :SUPERVISOR_ID, 1, SYSDATE)`,
-      { PERSON_ID: personId, SUPERVISOR_ID: supervisor.SUPERVISOR_ID },
-    );
-  }
-}
+          { PERSON_ID: personId, SUPERVISOR_ID: supervisor.SUPERVISOR_ID },
+        );
+      }
+    }
 
     await conn.commit();
     return { success: true, PERSON_ID: personId };
@@ -783,7 +784,7 @@ export const getEmployeeList = async ({
     LEFT JOIN hr_person_type pt      ON e.PERSON_TYPE_ID  = pt.PERSON_TYPE_ID
     LEFT JOIN hr_emp_address pa      ON e.PERSON_ID = pa.PERSON_ID  AND pa.ADDRESS_TYPE_ID  = 1
     LEFT JOIN hr_emp_address pma     ON e.PERSON_ID = pma.PERSON_ID AND pma.ADDRESS_TYPE_ID = 2
-    LEFT JOIN hr_emp_assignment s    ON e.PERSON_ID = s.PERSON_ID
+    LEFT JOIN hr_emp_assignment s    ON e.PERSON_ID = s.PERSON_ID AND s.STATUS = 1
     LEFT JOIN hr_company c           ON s.COMPANY_ID = c.COMPANY_ID
     LEFT JOIN hr_org o               ON s.ORG_ID     = o.ID
     LEFT JOIN hr_grade g             ON s.GRADE_ID   = g.ID
@@ -800,6 +801,7 @@ export const getEmployeeList = async ({
     LEFT JOIN HR_EMP_SHIFT  esh      ON e.PERSON_ID = esh.EMP_NO AND esh.STATUS = 1
     LEFT JOIN HR_SHIFT      sh       ON esh.SHIFT_ID = sh.SHIFT_ID
     LEFT JOIN HR_LOCATION   loc      ON s.LOCATION_ID = loc.ID
+    LEFT JOIN HR_PAY_STRUCTURE ps    ON s.PAY_STRUCTURE_ID = ps.PAY_STRUCTURE_ID 
     LEFT JOIN HR_EMPLOYEE_SUPERVISOR es  ON e.PERSON_ID = es.PERSON_ID AND es.STATUS = 1
   LEFT JOIN HR_EMPLOYEE sup            ON es.SUPERVISOR_ID = sup.PERSON_ID
   `;
@@ -863,7 +865,7 @@ export const getEmployeeList = async ({
             ul_pma.UPAZILLA_ID AS PERMANENT_UPAZILLA_ID,
 
             s.ASSIGNMENT_ID, s.COMPANY_ID, s.OU_ID, s.ORG_ID,
-            s.POSITION_ID,   s.PAYROLL_ID, s.GRADE_ID,
+            s.POSITION_ID,   s.PAYROLL_ID, s.PAY_STRUCTURE_ID, ps.NAME AS PAY_STRUCTURE_NAME, s.GRADE_ID,
             s.EFFECTIVE_START_DATE AS ASSIGN_EFFECTIVE_START_DATE,
             s.EFFECTIVE_END_DATE   AS ASSIGN_EFFECTIVE_END_DATE,
             c.COMPANY_NAME,
@@ -969,7 +971,7 @@ export const getEmployeeById = async (personId) => {
       ul_pma.UPAZILLA_ID AS PERMANENT_UPAZILLA_ID,
 
       s.ASSIGNMENT_ID, s.COMPANY_ID, s.OU_ID, s.ORG_ID,
-      s.POSITION_ID,   s.PAYROLL_ID, s.GRADE_ID,
+      s.POSITION_ID,   s.PAYROLL_ID, s.PAY_STRUCTURE_ID, ps.NAME AS PAY_STRUCTURE_NAME, s.GRADE_ID,
       s.EFFECTIVE_START_DATE AS ASSIGN_EFFECTIVE_START_DATE,
       s.EFFECTIVE_END_DATE   AS ASSIGN_EFFECTIVE_END_DATE,
       c.COMPANY_NAME,
@@ -1002,7 +1004,7 @@ sup.EMP_NO      AS SUPERVISOR_EMP_NO
     LEFT JOIN hr_person_type pt      ON e.PERSON_TYPE_ID  = pt.PERSON_TYPE_ID
     LEFT JOIN hr_emp_address pa      ON e.PERSON_ID = pa.PERSON_ID  AND pa.ADDRESS_TYPE_ID  = 1
     LEFT JOIN hr_emp_address pma     ON e.PERSON_ID = pma.PERSON_ID AND pma.ADDRESS_TYPE_ID = 2
-    LEFT JOIN hr_emp_assignment s    ON e.PERSON_ID = s.PERSON_ID
+    LEFT JOIN hr_emp_assignment s    ON e.PERSON_ID = s.PERSON_ID AND s.STATUS = 1
     LEFT JOIN hr_company c           ON s.COMPANY_ID = c.COMPANY_ID
     LEFT JOIN hr_org o               ON s.ORG_ID     = o.ID
     LEFT JOIN hr_grade g             ON s.GRADE_ID   = g.ID
@@ -1019,6 +1021,7 @@ sup.EMP_NO      AS SUPERVISOR_EMP_NO
     LEFT JOIN HR_EMP_SHIFT  esh      ON e.PERSON_ID = esh.EMP_NO AND esh.STATUS = 1
     LEFT JOIN HR_SHIFT      sh       ON esh.SHIFT_ID = sh.SHIFT_ID
     LEFT JOIN HR_LOCATION   loc      ON s.LOCATION_ID = loc.ID
+    LEFT JOIN HR_PAY_STRUCTURE ps    ON s.PAY_STRUCTURE_ID = ps.PAY_STRUCTURE_ID
     LEFT JOIN HR_EMPLOYEE_SUPERVISOR es  ON e.PERSON_ID = es.PERSON_ID AND es.STATUS = 1
 LEFT JOIN HR_EMPLOYEE sup            ON es.SUPERVISOR_ID = sup.PERSON_ID
 

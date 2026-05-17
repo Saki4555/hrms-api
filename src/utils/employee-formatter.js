@@ -82,6 +82,8 @@ export const formatEmployee = (row) => {
       POSITION_TITLE:       row.POSITION_TITLE,
       POSITION_LEVEL:       row.POSITION_LEVEL,
       PAYROLL_ID:           row.PAYROLL_ID,
+      PAY_STRUCTURE_ID:     row.PAY_STRUCTURE_ID ?? null,
+      PAY_STRUCTURE_NAME: row.PAY_STRUCTURE_NAME ?? null,
       GRADE_ID:             row.GRADE_ID,
       GRADE_NAME:           row.GRADE_NAME,
        LOCATION_ID:          row.LOCATION_ID,       
