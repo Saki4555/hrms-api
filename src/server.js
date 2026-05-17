@@ -58,7 +58,7 @@ import attLogTwoRoutes from "./modules/att-log-two/att-log-two.routes.js";
 import coreHrRoutes from "./modules/core-hr/core-hr.routes.js";
 import payrollRoutes from "./modules/payroll/payroll.routes.js";
 import payStructureRoutes from "./modules/pay-structure/pay-structure.routes.js";
-
+import leaveBalanceRoutes from "./modules/leave-balance/leave-balance.routes.js";
 
 
 import { v2 as cloudinary } from "cloudinary";
@@ -245,6 +245,7 @@ app.use("/api/emp-images", empImageRoutes);
 app.use("/api/leave-types", leaveTypeRoutes);
 
 app.use("/api/leave-request", leaveRoutes);
+app.use("/api/leave-balance", leaveBalanceRoutes);
 
 
 app.use("/api/users", userManagementRoutes);

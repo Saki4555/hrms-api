@@ -1,28 +1,14 @@
+// src\services\hr-leave-request.service.js
 // ─────────────────────────────────────────────────────────────────────────────
 //  LEAVE REQUEST SERVICE — TODO
 // ─────────────────────────────────────────────────────────────────────────────
 
 // ── MISSING CORE FEATURES ─────────────────────────────────────────────────────
 
-// ── LEAVE BALANCE ─────────────────────────────────────────────────────────────
-
-// TODO: getLeaveBalance
-//       — returns remaining leave days per employee per leave type
-//       — formula: allocated days - approved days used in current year
-//       — critical for ESS: employee sees balance before applying
-//       — needed for payroll: leave encashment calculation
-
-// TODO: checkLeaveBalanceBeforeApply
-//       — validation inside createLeaveService before inserting
-//       — if requested days > remaining balance, reject with meaningful error
-//       — currently createLeaveService inserts without any balance check
 
 // ── FILTERING & PAGINATION ────────────────────────────────────────────────────
 
-// TODO: getAllLeavesService needs pagination + filters
-//       — currently returns ALL rows with no limit (will be slow with 1000 employees)
-//       — add: page, limit, fromDate, toDate, employeeId, status, leaveTypeId filters
-//       — same pattern as getAttendanceList
+
 
 // TODO: getPendingLeaves
 //       — quick filter for dashboard pending approvals count
@@ -41,6 +27,7 @@
 
 import { getConnection } from "../config/db.js";
 import oracledb from "oracledb";
+import { checkLeaveBalanceBeforeApply } from "../modules/leave-balance/leave-balance.service.js";
 
 oracledb.outFormat = oracledb.OUT_FORMAT_OBJECT;
 
@@ -84,8 +71,19 @@ const notifySupervior = async (conn, employeeId, leaveData) => {
 export const createLeaveService = async (data) => {
   const conn = await getConnection();
   try {
-    const isAdminHR = data.status === "APPROVED"; // Admin/HR always creates as APPROVED
-
+    const isAdminHR = data.status === "APPROVED";
+ 
+    // ── Balance check (skip for Admin/HR — they can force-create any leave) ──
+    if (!isAdminHR) {
+      await checkLeaveBalanceBeforeApply(
+        data.employee_id,
+        data.leave_type_id,
+        data.days,
+        // derive year from start_date so cross-year requests check correctly
+        new Date(data.start_date).getFullYear(),
+      );
+    }
+ 
     const result = await conn.execute(
       `INSERT INTO HR_LEAVE_REQUEST
         (EMPLOYEE_ID, LEAVE_TYPE_ID, START_DATE, END_DATE, DAYS, REASON,
@@ -95,35 +93,34 @@ export const createLeaveService = async (data) => {
          :status, :approver_id, :approved_on, :created_by)
        RETURNING LEAVE_ID INTO :leave_id`,
       {
-        employee_id: data.employee_id,
+        employee_id:   data.employee_id,
         leave_type_id: data.leave_type_id,
-        start_date: new Date(data.start_date),
-        end_date: new Date(data.end_date),
-        days: data.days,
-        reason: data.reason,
-        status: data.status ?? "PENDING",
-        approver_id: data.approver_id ?? null,
-        approved_on: isAdminHR ? new Date() : null,
-        created_by: data.created_by,
-        leave_id: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER },
+        start_date:    new Date(data.start_date),
+        end_date:      new Date(data.end_date),
+        days:          data.days,
+        reason:        data.reason,
+        status:        data.status ?? "PENDING",
+        approver_id:   data.approver_id ?? null,
+        approved_on:   isAdminHR ? new Date() : null,
+        created_by:    data.created_by,
+        leave_id:      { dir: oracledb.BIND_OUT, type: oracledb.NUMBER },
       },
     );
-
+ 
     const newLeaveId = result.outBinds.leave_id[0];
-
-    // Only notify supervisor if PENDING — Admin/HR created leaves skip this
+ 
     if (!isAdminHR) {
       await notifySupervior(conn, data.employee_id, {
         ...data,
         leave_id: newLeaveId,
       });
     }
-
+ 
     await conn.commit();
     return result;
   } catch (err) {
     await conn.rollback();
-    console.error("createLeaveService error:", err);
+    // Re-throw as-is — balance errors already have a clean user-facing message
     throw err;
   } finally {
     await conn.close();
