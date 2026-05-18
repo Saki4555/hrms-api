@@ -1,3 +1,4 @@
+// src\modules\employee-notification\employee-notification.service.js
 import { getConnection } from "../../config/db.js";
 import oracledb from "oracledb";
 
