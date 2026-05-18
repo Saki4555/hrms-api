@@ -1,3 +1,4 @@
+-- src\extra-tables.sql (i added them in the db)
 -- ─────────────────────────────────────────────────────────────────────────────
 -- TABLE 1: HR_LATE_APPLICATION
 -- Employee submits when they arrive late — supervisor approves/rejects
@@ -8,7 +9,6 @@ CREATE TABLE HCM.HR_LATE_APPLICATION
   LATE_ID          NUMBER                        NOT NULL,
   PERSON_ID        NUMBER                        NOT NULL,  -- FK → HR_EMPLOYEE.PERSON_ID
   LATE_DATE        DATE                          NOT NULL,
-  EXPECTED_IN_TIME TIMESTAMP(6),                            -- from their shift
   ACTUAL_IN_TIME   TIMESTAMP(6),                            -- when they actually arrived
   REASON           VARCHAR2(2000 BYTE),
   STATUS           VARCHAR2(20 BYTE)             DEFAULT 'PENDING' NOT NULL,
@@ -98,3 +98,14 @@ BEGIN
   END IF;
 END;
 /
+
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- ALTER: HR_EMPLOYEE_NOTIFICATION
+-- Add LATE_ID and CORRECTION_ID so notifications can be linked back to
+-- the specific request — same pattern as existing LEAVE_ID column.
+-- ─────────────────────────────────────────────────────────────────────────────
+
+ALTER TABLE HCM.HR_EMPLOYEE_NOTIFICATION
+  ADD LATE_ID        NUMBER DEFAULT NULL,  -- FK → HR_LATE_APPLICATION.LATE_ID
+  ADD CORRECTION_ID  NUMBER DEFAULT NULL;  -- FK → HR_ATTENDANCE_CORRECTION.CORRECTION_ID

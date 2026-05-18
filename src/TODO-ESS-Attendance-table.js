@@ -1,14 +1,17 @@
 // ─────────────────────────────────────────────────────────────────────────────
-//  TODO: ESS Attendance Tables — Late Application & Attendance Correction
+//  TODO [done]: ESS Attendance Tables — Late Application & Attendance Correction
 //  Waiting for DB tables to be created by boss before building these modules.
 // ─────────────────────────────────────────────────────────────────────────────
 
 // ── TABLE STATUS ──────────────────────────────────────────────────────────────
 
-// TODO: Ask boss to run create-late-correction-tables.sql on the Oracle DB
+// TODO[done]: Ask boss to run create-late-correction-tables.sql on the Oracle DB
 //       Tables needed:
-//         - HR_LATE_APPLICATION      (with sequence + trigger)
-//         - HR_ATTENDANCE_CORRECTION (with sequence + trigger)
+//         - HR_LATE_APPLICATION         (with sequence + trigger)
+//         - HR_ATTENDANCE_CORRECTION    (with sequence + trigger)
+//       Alter needed:
+//         - HR_EMPLOYEE_NOTIFICATION    ADD LATE_ID, CORRECTION_ID columns
+//           ← required before building either module, notifications depend on it
 
 // ── MODULE 1: LATE APPLICATION ────────────────────────────────────────────────
 //
@@ -23,7 +26,9 @@
 //  Backend:
 //    src/modules/late-application/
 //      late-application.service.js
-//        - createLateApplication(data)        — employee submits
+//        - createLateApplication(data)
+//            fields: person_id, late_date, actual_in_time, reason
+//            — employee submits
 //        - getLateApplicationsByEmployee(personId, status)  — ESS view
 //        - getLateApplicationsByTeam(supervisorId, status)  — MSS view
 //        - getAllLateApplications(params)      — Admin/HR paginated view
@@ -46,10 +51,11 @@
 //      queries.js
 //      late-application-list.jsx   — same pattern as leave-request-list.jsx
 //      add-late-application-sheet.jsx
+//        Fields: late_date, actual_in_time, reason
 //
 //  Notification:
 //    Same pattern as leave — notify supervisor on create, notify employee on approve/reject
-//    Plug into HR_EMPLOYEE_NOTIFICATION (same table, same pattern)
+//    Plug into HR_EMPLOYEE_NOTIFICATION using LATE_ID column (newly added)
 
 // ── MODULE 2: ATTENDANCE CORRECTION ──────────────────────────────────────────
 //
@@ -72,6 +78,7 @@
 //    src/modules/attendance-correction/
 //      attendance-correction.service.js
 //        - createCorrectionRequest(data)
+//            fields: person_id, correction_date, requested_in_time, requested_out_time, reason
 //        - getCorrectionsByEmployee(personId, status)
 //        - getCorrectionsByTeam(supervisorId, status)
 //        - getAllCorrections(params)
@@ -97,16 +104,16 @@
 //      attendance-correction-list.jsx
 //      add-correction-request-sheet.jsx
 //        Fields: correction_date, requested_in_time, requested_out_time, reason
+//
+//  Notification:
+//    Plug into HR_EMPLOYEE_NOTIFICATION using CORRECTION_ID column (newly added)
 
 // ── REGISTER IN app.js WHEN READY ────────────────────────────────────────────
 //
-// import lateApplicationRoutes    from "./modules/late-application/late-application.routes.js";
-// import attendanceCorrectionRoutes from "./modules/attendance-correction/attendance-correction.routes.js";
+// import lateApplicationRoutes       from "./modules/late-application/late-application.routes.js";
+// import attendanceCorrectionRoutes  from "./modules/attendance-correction/attendance-correction.routes.js";
 //
-// app.use("/api/late-application",     lateApplicationRoutes);
+// app.use("/api/late-application",      lateApplicationRoutes);
 // app.use("/api/attendance-correction", attendanceCorrectionRoutes);
-
-
-
 
 // ! src\extra-tables.sql

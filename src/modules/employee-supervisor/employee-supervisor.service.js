@@ -1,3 +1,4 @@
+// src\modules\employee-supervisor\employee-supervisor.service.js
 import { getConnection } from "../../config/db.js";
 import oracledb from "oracledb";
 
