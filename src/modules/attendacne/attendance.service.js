@@ -1,3 +1,4 @@
+// src\modules\attendacne\attendance.service.js
 // ─────────────────────────────────────────────────────────────────────────────
 //  ATTENDANCE SERVICE
 // ─────────────────────────────────────────────────────────────────────────────
@@ -10,8 +11,6 @@
 
 // TODO: manualAttendanceEdit     — Admin/HR restricted direct edit of HR_ATTENDANCE
 //                                  (ATT_CORRECTION_APPROVE); must log editor + timestamp
-
-
 
 // ── 3.5 ATTENDANCE REPORTS ───────────────────────────────────────────────────
 // TODO: getLateReport            — employees late in a date range with minutes late
@@ -29,7 +28,7 @@
 
 import { getConnection } from "../../config/db.js";
 import oracledb from "oracledb";
-import { format, startOfMonth, endOfMonth } from "date-fns";
+import { format, startOfMonth, endOfMonth, parseISO } from "date-fns";
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  CONSTANTS
@@ -147,15 +146,20 @@ const calculateStatusAndHours = (inTime, outTime, shift) => {
 //    • triggerProcess (bulk)  → processAttendance(fromDate, toDate)
 //    • reprocessAttendance    → processAttendance(fromDate, toDate, employeeId)
 // ─────────────────────────────────────────────────────────────────────────────
- 
-export const processAttendance = async (fromDate, toDate, employeeId = null) => {
+
+export const processAttendance = async (
+  fromDate,
+  toDate,
+  employeeId = null,
+) => {
   const conn = await getConnection();
   try {
     console.log(
       `[Attendance] Processing ATT_LOG from ${fromDate} to ${toDate}` +
-      (employeeId ? ` for employee ${employeeId}` : " (all employees)") + "...",
+        (employeeId ? ` for employee ${employeeId}` : " (all employees)") +
+        "...",
     );
- 
+
     // ── STEP 1: MERGE raw punches → HR_ATTENDANCE ────────────────────────────
     //
     // SHIFT_ID comes from HR_EMP_SHIFT (effective-dated).
@@ -164,7 +168,7 @@ export const processAttendance = async (fromDate, toDate, employeeId = null) => 
     //
     // :EMPLOYEE_ID IS NULL → bulk mode (all employees)
     // :EMPLOYEE_ID = value → single-employee reprocess mode
- 
+
     await conn.execute(
       `
       MERGE INTO HR_ATTENDANCE target
@@ -221,14 +225,14 @@ export const processAttendance = async (fromDate, toDate, employeeId = null) => 
       `,
       { FROM_DATE: fromDate, TO_DATE: toDate, EMPLOYEE_ID: employeeId ?? null },
     );
- 
+
     // ── STEP 1.5: Seed ABSENT rows for employees with no punch ───────────────
     //
     // For every active employee who has a shift assignment covering the date
     // but zero ATT_LOG records on that date → insert HR_ATTENDANCE with
     // STATUS = 'PENDING' (IN_TIME = NULL). Step 3 will classify as ABSENT.
     // Already-existing rows (from Step 1) are skipped via WHEN NOT MATCHED.
- 
+
     await conn.execute(
       `
       MERGE INTO HR_ATTENDANCE target
@@ -278,7 +282,7 @@ export const processAttendance = async (fromDate, toDate, employeeId = null) => 
       `,
       { FROM_DATE: fromDate, TO_DATE: toDate, EMPLOYEE_ID: employeeId ?? null },
     );
- 
+
     // ── STEP 2: Fetch PENDING rows with all classification data ──────────────
     //
     // IS_HOLIDAY  — 1 if HR_HOLIDAY_CALENDER has an active record for the
@@ -288,7 +292,7 @@ export const processAttendance = async (fromDate, toDate, employeeId = null) => 
     //
     // DAY_OF_WEEK — TRIM(UPPER(TO_CHAR(...,'DAY'))) to avoid Oracle padding.
     //               Compared against WEEKLY_HOLIDAY_1/2 stored in HR_SHIFT.
- 
+
     const pendingResult = await conn.execute(
       `
       SELECT
@@ -338,7 +342,7 @@ export const processAttendance = async (fromDate, toDate, employeeId = null) => 
       { FROM_DATE: fromDate, TO_DATE: toDate, EMPLOYEE_ID: employeeId ?? null },
       { outFormat: oracledb.OUT_FORMAT_OBJECT },
     );
- 
+
     // ── STEP 3: Classify each PENDING row (5-step priority) ──────────────────
     //
     //   1. HOLIDAY    — public holiday for employee's location
@@ -346,12 +350,12 @@ export const processAttendance = async (fromDate, toDate, employeeId = null) => 
     //   3. ON_LEAVE   — approved leave covers this date
     //   4. ABSENT     — no IN_TIME punch (IN_TIME = NULL)
     //   5. LATE / EARLY_LEAVE / PRESENT — calculated from punch vs shift
- 
+
     for (const row of pendingResult.rows) {
       let status = null;
       let workMinutes = 0;
       let overtimeMinutes = 0;
- 
+
       // Priority 1 — Public holiday
       if (row.IS_HOLIDAY > 0) {
         status = STATUS.HOLIDAY;
@@ -380,7 +384,7 @@ export const processAttendance = async (fromDate, toDate, employeeId = null) => 
           row, // contains START_TIME, END_TIME, GRACE_IN_MINUTES, GRACE_OUT_MINUTES, OVERNIGHT_FLAG
         ));
       }
- 
+
       await conn.execute(
         `
         UPDATE HR_ATTENDANCE
@@ -399,9 +403,9 @@ export const processAttendance = async (fromDate, toDate, employeeId = null) => 
         },
       );
     }
- 
+
     // ── STEP 4: Mark processed ATT_LOG rows ───────────────────────────────────
- 
+
     await conn.execute(
       `
       UPDATE ATT_LOG
@@ -414,13 +418,13 @@ export const processAttendance = async (fromDate, toDate, employeeId = null) => 
       `,
       { FROM_DATE: fromDate, TO_DATE: toDate, EMPLOYEE_ID: employeeId ?? null },
     );
- 
+
     await conn.commit();
     console.log(
       `[Attendance] Processing complete for ${fromDate} → ${toDate}` +
-      (employeeId ? ` (employee ${employeeId})` : ""),
+        (employeeId ? ` (employee ${employeeId})` : ""),
     );
- 
+
     return {
       success: true,
       processedDate: `${fromDate} → ${toDate}`,
@@ -511,7 +515,7 @@ export const getAttendanceList = async ({
     conditions.push(`att.SHIFT_ID = :SHIFT_ID`); // HR_ATTENDANCE.SHIFT_ID directly
     bindParams.SHIFT_ID = parseInt(shiftId, 10);
   }
-   if (supervisorId && supervisorId !== "") {
+  if (supervisorId && supervisorId !== "") {
     conditions.push(`es.SUPERVISOR_ID = :SUPERVISOR_ID`);
     bindParams.SUPERVISOR_ID = parseInt(supervisorId, 10);
   }
@@ -523,7 +527,7 @@ export const getAttendanceList = async ({
 
   const whereClause =
     conditions.length > 0 ? `WHERE ${conditions.join("\n      AND ")}` : "";
-    const supervisorJoin = supervisorId
+  const supervisorJoin = supervisorId
     ? `JOIN HR_EMPLOYEE_SUPERVISOR es ON e.PERSON_ID = es.PERSON_ID AND es.STATUS = 1`
     : "";
 
@@ -671,7 +675,7 @@ export const getAttendanceForExport = async (filters = {}) => {
     companyId = "",
     orgId = "",
     status = "",
-    supervisorId = "",   // ← ADD
+    supervisorId = "", // ← ADD
   } = filters;
 
   const conn = await getConnection();
@@ -691,7 +695,7 @@ export const getAttendanceForExport = async (filters = {}) => {
       `att.ATTENDANCE_DATE BETWEEN TO_DATE(:FROM_DATE,'YYYY-MM-DD') AND TO_DATE(:TO_DATE,'YYYY-MM-DD')`,
     );
     bindParams.FROM_DATE = fromDate;
-    bindParams.TO_DATE   = toDate;
+    bindParams.TO_DATE = toDate;
   }
 
   if (employeeId && employeeId !== "") {
@@ -774,13 +778,13 @@ export const getAttendanceForExport = async (filters = {}) => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const getAttendanceSummary = async ({
-  date         = "",
-  fromDate     = "",
-  toDate       = "",
-  employeeId   = "",
-  companyId    = "",
-  orgId        = "",
-  status       = "",
+  date = "",
+  fromDate = "",
+  toDate = "",
+  employeeId = "",
+  companyId = "",
+  orgId = "",
+  status = "",
   supervisorId = "",
 } = {}) => {
   const conn = await getConnection();
@@ -789,12 +793,16 @@ export const getAttendanceSummary = async ({
     const bindParams = {};
 
     if (date && date.trim()) {
-      conditions.push(`TRUNC(att.ATTENDANCE_DATE) = TO_DATE(:ATT_DATE, 'YYYY-MM-DD')`);
+      conditions.push(
+        `TRUNC(att.ATTENDANCE_DATE) = TO_DATE(:ATT_DATE, 'YYYY-MM-DD')`,
+      );
       bindParams.ATT_DATE = date.trim();
     } else if (fromDate && toDate) {
-      conditions.push(`att.ATTENDANCE_DATE BETWEEN TO_DATE(:FROM_DATE,'YYYY-MM-DD') AND TO_DATE(:TO_DATE,'YYYY-MM-DD')`);
+      conditions.push(
+        `att.ATTENDANCE_DATE BETWEEN TO_DATE(:FROM_DATE,'YYYY-MM-DD') AND TO_DATE(:TO_DATE,'YYYY-MM-DD')`,
+      );
       bindParams.FROM_DATE = fromDate;
-      bindParams.TO_DATE   = toDate;
+      bindParams.TO_DATE = toDate;
     }
 
     if (employeeId && employeeId !== "") {
@@ -885,7 +893,7 @@ export const getAttendanceSummary = async ({
 //  3. SHIFT_ID subquery uses ORDER BY EFFECTIVE_START_DATE DESC so the
 //     most recently effective shift wins instead of a random ROWNUM = 1 pick.
 // ─────────────────────────────────────────────────────────────────────────────
- 
+
 export const reprocessAttendanceForEmployee = async (
   employeeId,
   fromDate,
@@ -894,7 +902,7 @@ export const reprocessAttendanceForEmployee = async (
   // ── Phase 1: Reset existing rows to PENDING ──────────────────────────────
   // Scoped strictly to this employee. Connection is opened and closed here
   // independently of processAttendance, which manages its own connection.
- 
+
   const conn = await getConnection();
   try {
     await conn.execute(
@@ -930,12 +938,11 @@ export const reprocessAttendanceForEmployee = async (
     // connection and no risk of calling rollback on an already-closed conn.
     await conn.close();
   }
- 
+
   // ── Phase 2: Re-run the full 5-step processor scoped to this employee ────
   // processAttendance opens its own connection internally.
   return await processAttendance(fromDate, toDate, employeeId);
 };
- 
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  SUPERVISOR — TEAM ATTENDANCE LIST
@@ -1347,4 +1354,152 @@ export const getMyAttendanceSummary = async (
   } finally {
     await conn.close();
   }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  MANUAL ATTENDANCE EDIT  (Admin & HR only — ATT_CORRECTION_APPROVE)
+//  Direct privileged edit of HR_ATTENDANCE IN_TIME / OUT_TIME.
+//  No approval flow — this is a restricted direct write.
+//  Every edit is logged to HR_AUDIT_LOG with OPERATION = 'MAN_EDIT'.
+//  The connection is closed BEFORE calling reprocessAttendanceForEmployee
+//  because reprocess opens its own connection internally.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const manualAttendanceEdit = async (
+  attendanceId,
+  inTime,
+  outTime,
+  editorUsername,
+) => {
+  const conn = await getConnection();
+
+  let oldRow = null; // captured in step 2, used after conn.close() for reprocess call
+
+  try {
+    // ── STEP 2: Fetch the existing row ───────────────────────────────────────
+    const selectResult = await conn.execute(
+      `
+      SELECT
+        ATTENDANCE_ID,
+        EMPLOYEE_ID,
+        ATTENDANCE_DATE,
+        IN_TIME,
+        OUT_TIME,
+        STATUS
+      FROM HR_ATTENDANCE
+      WHERE ATTENDANCE_ID = :ATTENDANCE_ID
+      `,
+      { ATTENDANCE_ID: attendanceId },
+      { outFormat: oracledb.OUT_FORMAT_OBJECT },
+    );
+
+    if (!selectResult.rows || selectResult.rows.length === 0) {
+      throw new Error("Attendance record not found");
+    }
+
+    oldRow = selectResult.rows[0];
+    // ── STEP 2.5: Normalize inTime / outTime for Oracle binding ─────────────────
+    // Oracle's oracledb driver maps JS Date → TIMESTAMP(6) WITH TIME ZONE natively.
+    // Raw ISO strings go through NLS parsing and fail with ORA-01843.
+    // date-fns/parseISO handles the ISO string safely; null passthrough = no-punch.
+
+    const inTimeVal = inTime ? parseISO(inTime) : null;
+    const outTimeVal = outTime ? parseISO(outTime) : null;
+
+    // ── STEP 3: Insert audit log row ─────────────────────────────────────────
+    // AUDIT_ID: no sequence or BEFORE-INSERT trigger exists for HR_AUDIT_LOG
+    //           in the schema, so we derive the next value with MAX+1.
+    // CHANGED_ON: has DEFAULT SYSTIMESTAMP on the column — omitted from INSERT.
+    await conn.execute(
+      `
+      INSERT INTO HR_AUDIT_LOG (
+        AUDIT_ID,
+        TABLE_NAME,
+        OPERATION,
+        CHANGED_BY,
+        KEY_VALUES,
+        OLD_VALUES,
+        NEW_VALUES
+      ) VALUES (
+        (SELECT NVL(MAX(AUDIT_ID), 0) + 1 FROM HR_AUDIT_LOG),
+        'HR_ATTENDANCE',
+        'MAN_EDIT',
+        :CHANGED_BY,
+        :KEY_VALUES,
+        :OLD_VALUES,
+        :NEW_VALUES
+      )
+      `,
+      {
+        CHANGED_BY: editorUsername,
+        KEY_VALUES: `ATTENDANCE_ID=${attendanceId}`,
+        OLD_VALUES: JSON.stringify({
+          ATTENDANCE_ID: oldRow.ATTENDANCE_ID,
+          IN_TIME: oldRow.IN_TIME,
+          OUT_TIME: oldRow.OUT_TIME,
+          STATUS: oldRow.STATUS,
+        }),
+        NEW_VALUES: JSON.stringify({
+          IN_TIME: inTime ?? null,
+          OUT_TIME: outTime ?? null,
+          STATUS: "PENDING",
+        }),
+      },
+    );
+
+    // ── STEP 4: Update HR_ATTENDANCE ─────────────────────────────────────────
+    // STATUS is reset to PENDING so reprocessAttendanceForEmployee picks it up.
+    // Passing null for IN_TIME / OUT_TIME is valid — marks the record as no-punch
+    // which reprocess will classify as ABSENT.
+    await conn.execute(
+      `
+      UPDATE HR_ATTENDANCE
+         SET IN_TIME      = :IN_TIME,
+             OUT_TIME     = :OUT_TIME,
+             STATUS       = 'PENDING',
+             UPDATED_BY   = :UPDATED_BY,
+             UPDATED_DATE = SYSTIMESTAMP
+       WHERE ATTENDANCE_ID = :ATTENDANCE_ID
+      `,
+      {
+  IN_TIME:       inTimeVal,        
+  OUT_TIME:      outTimeVal,       
+  UPDATED_BY:    editorUsername,
+  ATTENDANCE_ID: attendanceId,
+},
+    );
+
+    // ── STEP 5: Commit ───────────────────────────────────────────────────────
+    await conn.commit();
+  } catch (err) {
+    // Rollback covers both the audit log insert and the attendance update
+    // if either fails before commit.
+    await conn.rollback();
+    throw err;
+  } finally {
+    // ── STEP 6: Close connection BEFORE calling reprocess ───────────────────
+    // reprocessAttendanceForEmployee opens its own connection internally.
+    // Closing here prevents orphaned connections and avoids any risk of
+    // calling rollback on an already-committed / closed connection.
+    await conn.close();
+  }
+
+  // ── STEP 7: Reprocess outside try/catch ─────────────────────────────────
+  // The edit is already committed. If reprocess throws, the correction is
+  // preserved — the failure is a separate concern and must not roll back the
+  // edit that the admin/HR intentionally made.
+  const attendanceDate = format(new Date(oldRow.ATTENDANCE_DATE), "yyyy-MM-dd");
+
+  const reprocessResult = await reprocessAttendanceForEmployee(
+    oldRow.EMPLOYEE_ID,
+    attendanceDate,
+    attendanceDate,
+  );
+
+  // ── STEP 8: Return ────────────────────────────────────────────────────────
+  return {
+    success: true,
+    attendanceId,
+    newStatus: reprocessResult,
+  };
 };

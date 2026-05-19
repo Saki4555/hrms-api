@@ -60,7 +60,8 @@ import payrollRoutes from "./modules/payroll/payroll.routes.js";
 import payStructureRoutes from "./modules/pay-structure/pay-structure.routes.js";
 import leaveBalanceRoutes from "./modules/leave-balance/leave-balance.routes.js";
 import lateApplicationRoutes from "./modules/late-application/late-application.routes.js";
-
+import attendanceCorrectionRoutes from "./modules/attendance-correction/attendance-correction.routes.js";
+import dashboardRoutes from "./modules/dashboard/dashboard.routes.js";
 
 
 import { v2 as cloudinary } from "cloudinary";
@@ -277,6 +278,8 @@ app.use("/api/core-hr", coreHrRoutes);
 app.use("/api/payroll", payrollRoutes);
 app.use("/api/pay-structure", payStructureRoutes);
 app.use("/api/late-application", lateApplicationRoutes);
+app.use("/api/attendance-correction", attendanceCorrectionRoutes);
+app.use("/api/dashboard", dashboardRoutes);
 
 startAttendanceScheduler();
 
