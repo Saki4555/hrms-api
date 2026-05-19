@@ -1,3 +1,4 @@
+// src\modules\attendacne\attendance.controller.js
 import {
   getAttendanceList,
   getAttendanceDetail,
@@ -8,7 +9,7 @@ import {
   getTeamAttendanceStats,
   getMyAttendanceList,
   getMyAttendanceSummary,
- 
+ manualAttendanceEdit,
   reprocessAttendanceForEmployee,
 } from "./attendance.service.js";
 import {
@@ -312,5 +313,68 @@ export const reprocessEmployee = async (req, res) => {
   } catch (err) {
     console.error("[Attendance] reprocessEmployee error:", err.message);
     res.status(500).json({ error: err.message });
+  }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  MANUAL ATTENDANCE EDIT  (Admin & HR only — ATT_CORRECTION_APPROVE)
+//  PUT /api/attendance/:attendanceId/manual-edit
+//
+//  Body   : { inTime?: string (ISO), outTime?: string (ISO) }
+//  Auth   : editorUsername is taken from req.user — NEVER from the body
+//  Access : Admin & HR only (enforced at the route layer)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const manualAttendanceEditController = async (req, res) => {
+  try {
+    // ── Validation ───────────────────────────────────────────────────────────
+    const attendanceId = parseInt(req.params.attendanceId, 10);
+
+    if (!req.params.attendanceId || isNaN(attendanceId)) {
+      return res.status(400).json({
+        success: false,
+        message: "attendanceId is required and must be a valid number.",
+      });
+    }
+
+    // Both inTime and outTime may be null/omitted — that is a valid "no-punch"
+    // edit that reprocess will classify as ABSENT.  We only reject if the param
+    // key is missing entirely AND neither is provided at all; but since the spec
+    // treats both-null as intentional, we accept it without further restriction.
+    const inTime  = req.body.inTime  ?? null;
+    const outTime = req.body.outTime ?? null;
+
+    //TODO: editorUsername comes exclusively from the auth middleware — never the body
+    const editorUsername = req.user?.username || "SYSTEM";
+
+    if (!editorUsername) {
+      return res.status(400).json({
+        success: false,
+        message: "Authenticated user context is missing.",
+      });
+    }
+
+    // ── Service call ─────────────────────────────────────────────────────────
+    await manualAttendanceEdit(attendanceId, inTime, outTime, editorUsername);
+
+    return res.status(200).json({
+      success: true,
+      message: "Attendance updated and reprocessed.",
+    });
+
+  } catch (err) {
+    // Surface 404 from service as a proper HTTP 404
+    if (err.message === "Attendance record not found") {
+      return res.status(404).json({
+        success: false,
+        message: "Attendance record not found.",
+      });
+    }
+
+    console.error("[Attendance] manualAttendanceEdit error:", err.message);
+    return res.status(500).json({
+      success: false,
+      message: err.message,
+    });
   }
 };
